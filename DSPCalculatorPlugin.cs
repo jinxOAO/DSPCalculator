@@ -7,6 +7,7 @@ using BepInEx;
 using CommonAPI;
 using CommonAPI.Systems;
 using CommonAPI.Systems.ModLocalization;
+using DSPCalculator.Logic;
 using DSPCalculator.UI;
 using HarmonyLib;
 
@@ -23,9 +24,14 @@ namespace DSPCalculator
         public const string GUID = "com.GniMaerd.DSPCalculator";
         public const string VERSION = "0.1.0";
 
+        // ---------------------------------------------------------------------------
+        public static bool developerMode = true; //           发布前修改             |
+        // ---------------------------------------------------------------------------
+
+
         public void Awake()
         {
-
+            Harmony.CreateAndPatchAll(typeof(DSPCalculatorPlugin));
         }
 
         public void Start()
@@ -37,6 +43,15 @@ namespace DSPCalculator
         public void Update()
         {
             WindowsManager.OnUpdate();
+        }
+
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(GameData), "NewGame")]
+        [HarmonyPatch(typeof(GameData), "Import")]
+        public static void OnLoadGame()
+        {
+            CalcDB.TryInit();
         }
     }
 }
