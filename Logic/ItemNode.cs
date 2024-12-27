@@ -14,8 +14,8 @@ namespace DSPCalculator.Logic
     {
         public int itemId;
         public SolutionTree solutionTree;
-        public float needCount; // 所需数量
-        public float satisfiedCount; // 配方已产出的数量
+        public float needSpeed; // 所需数量
+        public float satisfiedSpeed; // 配方已产出的数量
         public RecipeInfo mainRecipe; // 最初用于生成此Item的recipe的信息
         public List<RecipeInfo> byProductRecipes; // 在建立solutionTree完成之后，会因为配方的副产物，连接数个节点，连过来时，要在byProductRecipes里面加入
         public List<ItemNode> parents; // 此物品被用于制造
@@ -23,11 +23,11 @@ namespace DSPCalculator.Logic
         public int unsolvedCount; // 寻找路径的过程中，子物品还未被完全解决的数量，如果为0，则代表此物品已经可以无环地由原矿链式合成。初始时，未解决数量为所用配方的净原材料数
         public bool isOre { get { return children.Count == 0; } } // 该节点是否是原矿
 
-        public ItemNode(int itemId, float needCount, SolutionTree solutionTree)
+        public ItemNode(int itemId, float needSpeed, SolutionTree solutionTree)
         {
             this.itemId = itemId;
-            this.needCount = needCount;
-            this.satisfiedCount = 0f;
+            this.needSpeed = needSpeed;
+            this.satisfiedSpeed = 0f;
             byProductRecipes = new List<RecipeInfo>();
             parents = new List<ItemNode>();
             children = new List<ItemNode>();
@@ -60,6 +60,18 @@ namespace DSPCalculator.Logic
                 mainRecipe = new RecipeInfo(recipe, solutionTree.userPreference);
                 solutionTree.recipeInfos[recipe.ID] = mainRecipe;
             }
+        }
+
+        public void SetUnsolvedCountByRecipe(NormalizedRecipe recipe)
+        {
+            int count = 0;
+            for (int i = 0; i < recipe.resourceCounts.Length; i++)
+            {
+                if (recipe.resourceCounts[i] > 0) // 只有净原材料才会被计数
+                    count++;
+            }
+
+            unsolvedCount = count; // 这个很重要，决定着这个节点是否解决！
         }
 
         public void AddChild(ItemNode child)

@@ -28,16 +28,23 @@ namespace DSPCalculator.Logic
             this.recipeNorm = recipe;
             productIndices = new Dictionary<int, int>();
             resourceIndices = new Dictionary<int, int>();
+            this.count = 0;
 
             for (int i = 0; i < recipe.products.Length; i++)
             {
-                int productId = recipe.products[i];
-                productIndices[productId] = i;
+                if (recipe.productCounts[i] > 0) // 只有净产物才算
+                {
+                    int productId = recipe.products[i];
+                    productIndices[productId] = i;
+                }
             }
             for (int i = 0; i < recipe.resources.Length; i++)
             {
-                int resourceId = recipe.resources[i];
-                resourceIndices[resourceId] = i;
+                if (recipe.resourceCounts[i] > 0) // 只有净原材料才算
+                {
+                    int resourceId = recipe.resources[i];
+                    resourceIndices[resourceId] = i;
+                }
             }
 
 
@@ -61,15 +68,58 @@ namespace DSPCalculator.Logic
             }
         }
 
-        public float GetOutputCount(int itemId)
+        /// <summary>
+        /// 根据传入的目标物品的需求速度（/s），增加recipeInfo的最终倍率，来提供足够的输出
+        /// </summary>
+        /// <param name="itemId"></param>
+        /// <param name="needSpeed"></param>
+        /// <returns></returns>
+        public float AddCountByOutputNeed(int itemId, float needSpeed)
+        {
+            float addedCount = CalcCountByOutputSpeed(itemId, needSpeed);
+            this.count += addedCount;
+            return addedCount;
+        }
+
+        public float CalcCountByOutputSpeed(int itemId, float speed)
         {
             if (productIndices.ContainsKey(itemId))
             {
                 int index = productIndices[itemId];
-                return count * recipeNorm.productCounts[index];
+                float addedCount = speed / recipeNorm.productCounts[index] * recipeNorm.time;
+                return addedCount;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+
+        public float GetOutputSpeedByChangedCount(int itemId, float changedCount)
+        {
+            if (productIndices.ContainsKey(itemId))
+            {
+                int index = productIndices[itemId];
+                return changedCount * recipeNorm.productCounts[index] / recipeNorm.time;
             }
             Debug.LogWarning($"获取配方输出数量时，试图用非此配方{recipeNorm.oriProto.name}的产物{itemId}计算，先前路径可能存在逻辑错误。");
             return 0;
+        }
+
+        public float GetInputSpeedByChangedCount(int itemId, float changedCount)
+        {
+            if (resourceIndices.ContainsKey(itemId))
+            {
+                int index = resourceIndices[itemId];
+                return changedCount * recipeNorm.resourceCounts[index] / recipeNorm.time;
+            }
+            Debug.LogWarning($"获取配方输入数量时，试图用非此配方{recipeNorm.oriProto.name}的原材料{itemId}计算，先前路径可能存在逻辑错误。");
+            return 0;
+        }
+
+        public float GetOutputSpeedByItemId(int itemId)
+        {
+            return GetOutputSpeedByChangedCount(itemId, count);
         }
     }
 }

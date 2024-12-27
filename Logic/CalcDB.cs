@@ -183,6 +183,7 @@ namespace DSPCalculator.Logic
         public static int factionateType = (int)ERecipeType.Fractionate;
         public static int researchType = (int)ERecipeType.Research;
 
+        // 处理分馏！！！！！！！
         public NormalizedRecipe(RecipeProto recipe)
         {
             ID = recipe.ID;

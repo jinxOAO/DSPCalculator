@@ -90,6 +90,8 @@
     <Compile Include="UI\UICalcWindow.cs" />
     <Compile Include="UI\WindowsManager.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Utils\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
