@@ -32,6 +32,8 @@ namespace DSPCalculator
         public void Awake()
         {
             Harmony.CreateAndPatchAll(typeof(DSPCalculatorPlugin));
+            Harmony.CreateAndPatchAll(typeof(RecipePickerPatcher));
+            Localizations.AddLocalizations();
         }
 
         public void Start()

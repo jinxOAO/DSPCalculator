@@ -15,7 +15,10 @@ namespace DSPCalculator.Logic
         public static bool inited = false;
         public static Dictionary<int, NormalizedRecipe> recipeDict;
         public static Dictionary<int, ItemData> itemDict;
-        public static Dictionary<int, List<AssemblerData>> assemblerDict; // key为可以处理的recipeType，将符合的工厂建筑全部放入list里面
+        public static Dictionary<int, List<AssemblerData>> assemblerListByType; // key为可以处理的recipeType，将符合的工厂建筑全部放入list里面
+        public static Dictionary<int, AssemblerData> assemblerDict; // key为assembler的itemId
+        public static List<int> proliferatorItemIds;
+        public static List<int> proliferatorAbilities;
 
         public static int energyNexusID = 2209;
         public static int emptyBatteryID = 2206;
@@ -33,7 +36,10 @@ namespace DSPCalculator.Logic
             {
                 recipeDict = new Dictionary<int, NormalizedRecipe>();
                 itemDict = new Dictionary<int, ItemData>();
-                assemblerDict = new Dictionary<int, List<AssemblerData>>();
+                assemblerListByType = new Dictionary<int, List<AssemblerData>>();
+                assemblerDict = new Dictionary<int, AssemblerData>();
+                proliferatorItemIds = new List<int> { 1141, 1142, 1143 };
+                proliferatorAbilities = new List<int>();
 
                 // 加载配方
                 int recipeLen = LDB.recipes.Length;
@@ -69,27 +75,29 @@ namespace DSPCalculator.Logic
                             {
                                 AssemblerData assemblerData = new AssemblerData(item, model.prefabDesc);
                                 int type = NormalizedRecipe.researchType;
-                                if (assemblerDict.ContainsKey(NormalizedRecipe.researchType))
+                                if (assemblerListByType.ContainsKey(NormalizedRecipe.researchType))
                                 {
-                                    assemblerDict[type].Add(assemblerData);
+                                    assemblerListByType[type].Add(assemblerData);
                                 }
                                 else
                                 {
-                                    assemblerDict[type] = new List<AssemblerData> { assemblerData };
+                                    assemblerListByType[type] = new List<AssemblerData> { assemblerData };
                                 }
+                                assemblerDict[item.ID] = assemblerData;
                             }
                             else if (model.prefabDesc.isAssembler)
                             {
                                 AssemblerData assemblerData = new AssemblerData(item, model.prefabDesc);
                                 int type = (int)model.prefabDesc.assemblerRecipeType;
-                                if(assemblerDict.ContainsKey(type))
+                                if(assemblerListByType.ContainsKey(type))
                                 {
-                                    assemblerDict[type].Add(assemblerData);
+                                    assemblerListByType[type].Add(assemblerData);
                                 }
                                 else
                                 {
-                                    assemblerDict[type] = new List<AssemblerData> { assemblerData };
+                                    assemblerListByType[type] = new List<AssemblerData> { assemblerData };
                                 }
+                                assemblerDict[item.ID] = assemblerData;
                             }
                         }
                     }
@@ -113,12 +121,12 @@ namespace DSPCalculator.Logic
                     ModelProto batteryModel = LDB.models.Select(LDB.items.Select(emptyBatteryID).ModelIndex);
                     if (nexusModel?.prefabDesc != null && batteryModel?.prefabDesc != null && nexusModel.prefabDesc.exchangeEnergyPerTick > 0)
                     {
-                        float timeSpend = batteryModel.prefabDesc.maxAcuEnergy / nexusModel.prefabDesc.exchangeEnergyPerTick / 60; // 满功率充满需要多少秒
+                        float timeSpend = 1.0f * batteryModel.prefabDesc.maxAcuEnergy / nexusModel.prefabDesc.exchangeEnergyPerTick / 60; // 满功率充满需要多少秒
                         if(timeSpend > 0)
                         {
-                            int timeInt = (int)Math.Ceiling(timeSpend); // 向上取整
+                            int timeInt = (int)Math.Ceiling(timeSpend * 60); // 向上取整
                             chargeRecipe.TimeSpend = timeInt;
-                            chargeNormed.time = timeInt;
+                            chargeNormed.time = timeSpend;
                         }
                     }
                     recipeDict[-1] = chargeNormed;
@@ -126,38 +134,25 @@ namespace DSPCalculator.Logic
 
                 // 处理所有工厂
 
-                // 仅用于测试！！！！
-                if(DSPCalculatorPlugin.developerMode)
+                // 处理增产剂
+                for (int i = 0; i < proliferatorItemIds.Count; i++)
                 {
-                    //foreach(var item in itemDict)
-                    //{
-                    //    string name = LDB.items.Select(item.Value.ID).name;
-                    //    var itemData = item.Value;
-                    //    if (itemData.defaultAsOre)
-                    //    {
-                    //        Debug.Log("--- " + name + $" (ID{itemData.ID}) 视为原矿");
-                    //    }
-                    //    else
-                    //    {
-                    //        Debug.Log("--- " + name + $" (ID{itemData.ID}) 的配方包含");
-                    //        for (int i = 0; i < itemData.recipes.Count; i++)
-                    //        {
-                    //            Debug.Log("  |--- " + itemData.recipes[i].oriProto.name);
-                    //        }
-                    //    }
-                    //    Debug.Log("");
-                    //}
-
-                    foreach(var item in assemblerDict)
+                    ItemProto proto = LDB.items.Select(proliferatorItemIds[i]);
+                    if(proto!= null)
                     {
-                        ERecipeType type = (ERecipeType)item.Key;
-                        Debug.Log($"for type {type}, we have");
-                        for (int i = 0; i < item.Value.Count; i++)
-                        {
-                            Debug.Log($"     {LDB.items.Select(item.Value[i].ID).name}");
-                        }
+                        if (proto.Ability > 10)
+                            proliferatorAbilities.Add(10);
+                        else if (proto.Ability >= 0)
+                            proliferatorAbilities.Add(proto.Ability);
+                        else
+                            proliferatorAbilities.Add(0);
+                    }
+                    else
+                    {
+                        proliferatorAbilities.Add(0);
                     }
                 }
+
                 inited = true;
             }
         }
@@ -178,12 +173,12 @@ namespace DSPCalculator.Logic
         // public float factoryCount; // 达到1个/s时需要的工厂数量，相当于    原配方的耗时 / 首产物（的净产出）产出数量
         public bool productive; // 是否可增产
         public int type; // 转化为int之后的recipe类型，用于确定UI中的工厂可选项
-        public int time;
+        public double time;
 
         public static int factionateType = (int)ERecipeType.Fractionate;
         public static int researchType = (int)ERecipeType.Research;
 
-        // 处理分馏！！！！！！！
+        
         public NormalizedRecipe(RecipeProto recipe)
         {
             ID = recipe.ID;
@@ -221,7 +216,19 @@ namespace DSPCalculator.Logic
 
             productive = recipe.productive;
             type = (int)recipe.Type;
-            time = recipe.TimeSpend;
+            time = 1.0 * recipe.TimeSpend / 60;
+
+            if (type == (int)ERecipeType.Fractionate && productCounts.Length > 0 && resourceCounts.Length > 0)
+            {
+                for (int i = 0; i < productCounts.Length; i++)
+                {
+                    productCounts[i] = 1;
+                }
+                for (int i = 0; i < resourceCounts.Length; i++)
+                {
+                    resourceCounts[i] = 1;
+                }
+            }
 
             Init();
         }
@@ -294,18 +301,18 @@ namespace DSPCalculator.Logic
     public class AssemblerData
     {
         public int ID;
-        public Sprite icon;
+        public Sprite iconSprite;
         public float speed;
         public float workEnergyKW; // 以KW为单位的每个工厂的能量需求
 
         public AssemblerData(ItemProto item, PrefabDesc desc)
         {
             ID = item.ID;
-            icon = item.iconSprite;
+            iconSprite = item.iconSprite;
             workEnergyKW = (1.0f * desc.workEnergyPerTick * 60 / 1000);
             if (desc.isLab)
             {
-                speed = 1.0f * desc.labResearchSpeed / CalcDB.researchSpeedNormalized;
+                speed = 1.0f * desc.labAssembleSpeed / CalcDB.researchSpeedNormalized;
             }
             else if (desc.isAssembler)
             {

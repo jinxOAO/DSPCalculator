@@ -70,6 +70,10 @@
       <HintPath>D:\SteamLibrary\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>D:\SteamLibrary\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>D:\SteamLibrary\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
@@ -84,14 +88,19 @@
     <Compile Include="Logic\CalcDB.cs" />
     <Compile Include="Logic\ItemNode.cs" />
     <Compile Include="Logic\RecipeInfo.cs" />
+    <Compile Include="Logic\RecipePickerPatcher.cs" />
     <Compile Include="Logic\SolutionPath.cs" />
     <Compile Include="Logic\UserPreference.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UI\UICalcWindow.cs" />
+    <Compile Include="UI\UIItemNode.cs" />
+    <Compile Include="UI\UIItemNodeSimple.cs" />
     <Compile Include="UI\WindowsManager.cs" />
+    <Compile Include="Utils\Localizations.cs" />
+    <Compile Include="Utils\Utils.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Utils\" />
+    <Folder Include="Compatibility\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

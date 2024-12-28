@@ -14,8 +14,8 @@ namespace DSPCalculator.Logic
     public class SolutionTree
     {
         public int targetItem { get; private set; } // 需要计算的最终产物
-        public float targetSpeed; // 最终产物需要的速度（/s)
-        public float displaySpeedRatio; // 允许玩家随时修改targetSpeed而不重新计算整个树，则通过最后所有显示都追加一个系数来实现
+        public double targetSpeed; // 最终产物需要的速度（/s)
+        public double displaySpeedRatio; // 允许玩家随时修改targetSpeed而不重新计算整个树，则通过最后所有显示都追加一个系数来实现
 
         public UserPreference userPreference; // 用户规定的，比如：某些物品需要用特定配方生产、某些物品的配方需要几级增产剂等等
 
@@ -31,11 +31,12 @@ namespace DSPCalculator.Logic
 
         public SolutionTree() 
         {
+            targetItem = 0;
             itemNodes = new Dictionary<int, ItemNode>();
             recipeInfos = new Dictionary<int, RecipeInfo>();
             nodeStack = new List<ItemNode>();
             userPreference = new UserPreference();
-            targetSpeed = 60;
+            targetSpeed = 3600;
             displaySpeedRatio = 1;
         }
 
@@ -50,38 +51,50 @@ namespace DSPCalculator.Logic
             userPreference.Clear();
         }
 
-        public void SetTargetItemAndBeginSolve(int targetItem)
+        public bool SetTargetItemAndBeginSolve(int targetItem)
         {
             ClearTree();
             this.targetItem = targetItem;
-            Solve();
+            return Solve();
         }
 
-        public void ChangeTargetSpeed(float targetSpeed)
+        public bool ChangeTargetSpeedAndSolve(double targetSpeed)
         {
             this.targetSpeed = targetSpeed;
+            ClearTree();
+            return Solve();
         }
 
-
-        public void Solve()
+        public bool ReSolve()
         {
-            root = new ItemNode(targetItem, targetSpeed, this);
-            ItemNode node = root;
-            Push(node);
+            ClearTree();
+            return Solve();
+        }
 
-            SolvePath();
-            //TestLog();
+        public bool Solve()
+        {
+            if (targetItem > 0)
+            {
+                root = new ItemNode(targetItem, targetSpeed, this);
+                ItemNode node = root;
+                Push(node);
 
-            CalcAll();
-            RemoveOverflow();
-
-            TestLog2();
+                if (SolvePath())
+                {
+                    //TestLog();
+                    CalcAll();
+                    RemoveOverflow();
+                    return true;
+                }
+                //TestLog2();
+            }
+            return false;
         }
 
         /// <summary>
         /// 解决物品合成路径（找到一个无环有向图）
         /// </summary>
-        public void SolvePath()
+        public bool SolvePath()
         {
             while (unsolved)
             {
@@ -201,6 +214,7 @@ namespace DSPCalculator.Logic
                         else // 说明一路到了顶，到了最初的需求产物，都没能找到不成环的路线，这时要提示玩家，存在环路（并不一定不可解，但是环路接起来好麻烦？），是否清除用户配置
                         {
                             UIRealtimeTip.Popup("存在环路！请清除用户配置".Translate());
+                            return false;
                         }
                     }
 
@@ -220,9 +234,11 @@ namespace DSPCalculator.Logic
                     itemNodes[itemId] = cur;
 
                     bool isOre = CalcDB.itemDict[itemId].defaultAsOre || CalcDB.itemDict[itemId].recipes.Count == 0;
-                    if (userPreference.itemConfigs.ContainsKey(itemId))
+                    if (userPreference.itemConfigs.ContainsKey(itemId)) // 查询用户是否指定了该物品的处理规则，是否视为原矿
                     {
                         isOre = userPreference.itemConfigs[itemId].consideredAsOre || isOre;
+                        if (userPreference.itemConfigs[itemId].forceNotOre && CalcDB.itemDict[itemId].recipes.Count > 0)
+                            isOre = false;
                     }
                     if (isOre) // 如果是原矿
                     {
@@ -233,7 +249,7 @@ namespace DSPCalculator.Logic
                     else
                     {
                         int recipeId = CalcDB.itemDict[itemId].recipes[0].ID; // 默认取这个物品0号位的配方
-                        if (userPreference.itemConfigs.ContainsKey(itemId)) // 配方查询用哪个配方：用户是否指定了该物品的处理规则（特定配方或者视为原矿），如果有则读取用户设置
+                        if (userPreference.itemConfigs.ContainsKey(itemId) && userPreference.itemConfigs[itemId].recipeID > 0) // 配方查询用哪个配方：用户是否指定了该物品的处理规则，如果有则读取用户设置
                         {
                             recipeId = userPreference.itemConfigs[itemId].recipeID;
                         }
@@ -253,16 +269,10 @@ namespace DSPCalculator.Logic
                     }
                 }
             }
-
-            Debug.Log("SOLVED!");
+            return true;
+            // Debug.Log("Solved");
         }
 
-
-        // 将所有节点融合
-        public void MergeNodes()
-        {
-
-        }
 
         /// <summary>
         /// 在准备好的有向图的基础上，计算各个节点需要的生产速度
@@ -290,20 +300,20 @@ namespace DSPCalculator.Logic
                     {
                         RecipeInfo recipeInfo = sharedItemNode.mainRecipe;
                         int recipeId = recipeInfo.ID;
-                        float unsatisfiedSpeed = sharedItemNode.needSpeed - sharedItemNode.satisfiedSpeed;
+                        double unsatisfiedSpeed = sharedItemNode.needSpeed - sharedItemNode.satisfiedSpeed;
                         if (unsatisfiedSpeed > 0.0001f) // 仍未满足
                         {
                             if (!recipeInfos.ContainsKey(recipeId))
                             {
                                 recipeInfos[recipeId] = recipeInfo;
                             }
-                            float addedCount = recipeInfos[recipeId].AddCountByOutputNeed(itemId, unsatisfiedSpeed); // 所有操作都要在recipeInfos的字典中进行
+                            double addedCount = recipeInfos[recipeId].AddCountByOutputNeed(itemId, unsatisfiedSpeed); // 所有操作都要在recipeInfos的字典中进行
 
                             // 如果该配方有多种产物，记得在配方增加后，将所有的产物新增速度都加入itemNodes对应的item中。并且记录此配方会生成该item（记录在itemNode的byProductRecipes里，如果与mainRecipe不同的话）
                             foreach (var item in recipeInfo.productIndices)
                             {
                                 int productId = item.Key;
-                                float addedSatisfiedSpeed = recipeInfo.GetOutputSpeedByChangedCount(productId, addedCount);
+                                double addedSatisfiedSpeed = recipeInfo.GetOutputSpeedByChangedCount(productId, addedCount);
                                 if (!itemNodes.ContainsKey(productId))
                                 {
                                     itemNodes[productId] = new ItemNode(productId, 0, this);
@@ -384,17 +394,22 @@ namespace DSPCalculator.Logic
                 if (userPreference.itemConfigs.ContainsKey(itemId))
                 {
                     isOre = userPreference.itemConfigs[itemId].consideredAsOre || isOre;
+                    if (userPreference.itemConfigs[itemId].forceNotOre && CalcDB.itemDict[itemId].recipes.Count > 0)
+                        isOre = false;
                 }
                 if (isOre)
                 {
                     oriSignNode.unsolvedCount = 0;
-                    oriSignNode.parents[0].SolveOne();
+
+                    if(oriSignNode.parents.Count > 0)
+                        oriSignNode.parents[0].SolveOne();
+
                     sharedNode.satisfiedSpeed = sharedNode.needSpeed;
                     continue;
                 }
                 else
                 {
-                    float overflowSpeed = sharedNode.satisfiedSpeed - sharedNode.needSpeed;
+                    double overflowSpeed = sharedNode.satisfiedSpeed - sharedNode.needSpeed;
                     if (overflowSpeed > 0.0001f) // 如果有溢出
                     {
                         if (DSPCalculatorPlugin.developerMode)
@@ -427,11 +442,11 @@ namespace DSPCalculator.Logic
                             continue;
 
                         // 接下来开始对选定配方进行处理
-                        float minShrinkCount = sharedRecipeInfo.count;
+                        double minShrinkCount = sharedRecipeInfo.count;
                         foreach (var item in sharedRecipeInfo.productIndices) // 对于每个产物，看看他是不是溢出，最终取最小的可缩减数目
                         {
                             int productId = item.Key;
-                            float relatedOverflowSpd = itemNodes[productId].satisfiedSpeed - itemNodes[productId].needSpeed;
+                            double relatedOverflowSpd = itemNodes[productId].satisfiedSpeed - itemNodes[productId].needSpeed;
                             if (relatedOverflowSpd > 0.0001f)
                             {
                                 minShrinkCount = Math.Min(minShrinkCount, sharedRecipeInfo.CalcCountByOutputSpeed(productId, relatedOverflowSpd));
@@ -451,11 +466,11 @@ namespace DSPCalculator.Logic
                                 Debug.Log($"该溢出可以削减 {minShrinkCount}x");
                             }
 
-                            float addedCount = -minShrinkCount;
+                            double addedCount = -minShrinkCount;
                             foreach (var item in sharedRecipeInfo.productIndices)
                             {
                                 int productId = item.Key;
-                                float addedSatisfiedSpeed = sharedRecipeInfo.GetOutputSpeedByChangedCount(productId, addedCount);
+                                double addedSatisfiedSpeed = sharedRecipeInfo.GetOutputSpeedByChangedCount(productId, addedCount);
                                 if (!itemNodes.ContainsKey(productId))
                                 {
                                     itemNodes[productId] = new ItemNode(productId, 0, this);
@@ -467,7 +482,7 @@ namespace DSPCalculator.Logic
                             foreach (var item in sharedRecipeInfo.resourceIndices)
                             {
                                 int resourceId = item.Key;
-                                float addedNeedSpeed = sharedRecipeInfo.GetInputSpeedByChangedCount(resourceId, addedCount);
+                                double addedNeedSpeed = sharedRecipeInfo.GetInputSpeedByChangedCount(resourceId, addedCount);
                                 itemNodes[resourceId].needSpeed += addedNeedSpeed; // 这个resourceId应该不可能不存在
 
                                 // 同时加入signNode最为子节点
@@ -485,7 +500,7 @@ namespace DSPCalculator.Logic
         /// 成比例地修改所有物品的生产和需求速度
         /// </summary>
         /// <param name="ratio"></param>
-        public void ChangeAllSpeedRatio(float ratio)
+        public void ChangeAllSpeedRatio(double ratio)
         {
             displaySpeedRatio = ratio;
             // Refresh 一些显示？ 应该由调用此方法的UI执行！

@@ -13,14 +13,15 @@ namespace DSPCalculator.Logic
     public class RecipeInfo
     {
         public int ID;
-        public float count; // 需要1.0倍率的工厂数量
+        public double count; // 需要1.0倍率的工厂数量，以每秒计算的话
         public NormalizedRecipe recipeNorm;
         public Dictionary<int, int> productIndices; // key为product的itemId, value为productId所在的index
         public Dictionary<int, int> resourceIndices; // key为resource的itemId, value为resourceId所在的index
         public int incLevel;
         public int accLevel;
         public bool isInc;
-        public int assemblerIndex;
+        public int assemblerItemId;
+        public double displayCount { get { return count / 60; } } // 以每分钟计算产量的话，则应该
 
         public RecipeInfo(NormalizedRecipe recipe, UserPreference preference)
         {
@@ -53,18 +54,46 @@ namespace DSPCalculator.Logic
                 RecipeConfig config = preference.recipeConfigs[ID];
                 incLevel = config.incLevel;
                 accLevel = config.accLevel;
-                isInc = config.isInc;
-                assemblerIndex = config.assemblerIndex;
+                if(config.forceIncMode < 0)
+                    isInc = recipe.productive && preference.globalIsInc;
+                else
+                    isInc = config.forceIncMode == 1; // 等于0代表强制加速
+                assemblerItemId = config.assemblerItemId;
             }
             else // 否则应用全局设置
             {
                 incLevel = preference.globalIncLevel;
                 accLevel = preference.globalAccLevel;
                 isInc = recipe.productive && preference.globalIsInc;
-                if (preference.globalAssemblerIndexByType.ContainsKey(recipe.type))
-                    assemblerIndex = preference.globalAssemblerIndexByType[recipe.type];
+                if (preference.globalAssemblerIdByType.ContainsKey(recipe.type))
+                    assemblerItemId = preference.globalAssemblerIdByType[recipe.type];
                 else
-                    assemblerIndex = 0;
+                    assemblerItemId = 0;
+            }
+        }
+
+        public void LoadConfig(UserPreference preference)
+        {
+            if (preference.recipeConfigs.ContainsKey(ID)) // 如果该配方有专属设置
+            {
+                RecipeConfig config = preference.recipeConfigs[ID];
+                incLevel = config.incLevel;
+                accLevel = config.accLevel;
+                if (config.forceIncMode < 0)
+                    isInc = recipeNorm.productive && preference.globalIsInc;
+                else
+                    isInc = config.forceIncMode == 1; // 等于0代表强制加速
+                assemblerItemId = config.assemblerItemId;
+            }
+            else // 否则应用全局设置
+            {
+                incLevel = preference.globalIncLevel;
+                accLevel = preference.globalAccLevel;
+                isInc = recipeNorm.productive && preference.globalIsInc;
+                if (preference.globalAssemblerIdByType.ContainsKey(recipeNorm.type))
+                    assemblerItemId = preference.globalAssemblerIdByType[recipeNorm.type];
+                else
+                    assemblerItemId = 0;
             }
         }
 
@@ -74,19 +103,19 @@ namespace DSPCalculator.Logic
         /// <param name="itemId"></param>
         /// <param name="needSpeed"></param>
         /// <returns></returns>
-        public float AddCountByOutputNeed(int itemId, float needSpeed)
+        public double AddCountByOutputNeed(int itemId, double needSpeed)
         {
-            float addedCount = CalcCountByOutputSpeed(itemId, needSpeed);
+            double addedCount = CalcCountByOutputSpeed(itemId, needSpeed);
             this.count += addedCount;
             return addedCount;
         }
 
-        public float CalcCountByOutputSpeed(int itemId, float speed)
+        public double CalcCountByOutputSpeed(int itemId, double speed)
         {
             if (productIndices.ContainsKey(itemId))
             {
                 int index = productIndices[itemId];
-                float addedCount = speed / recipeNorm.productCounts[index] * recipeNorm.time;
+                double addedCount = speed / recipeNorm.productCounts[index] * recipeNorm.time; 
                 return addedCount;
             }
             else
@@ -95,7 +124,7 @@ namespace DSPCalculator.Logic
             }
         }
 
-        public float GetOutputSpeedByChangedCount(int itemId, float changedCount)
+        public double GetOutputSpeedByChangedCount(int itemId, double changedCount)
         {
             if (productIndices.ContainsKey(itemId))
             {
@@ -106,7 +135,7 @@ namespace DSPCalculator.Logic
             return 0;
         }
 
-        public float GetInputSpeedByChangedCount(int itemId, float changedCount)
+        public double GetInputSpeedByChangedCount(int itemId, double changedCount)
         {
             if (resourceIndices.ContainsKey(itemId))
             {
@@ -117,7 +146,7 @@ namespace DSPCalculator.Logic
             return 0;
         }
 
-        public float GetOutputSpeedByItemId(int itemId)
+        public double GetOutputSpeedByItemId(int itemId)
         {
             return GetOutputSpeedByChangedCount(itemId, count);
         }

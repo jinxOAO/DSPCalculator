@@ -14,16 +14,16 @@ namespace DSPCalculator.Logic
     {
         public int itemId;
         public SolutionTree solutionTree;
-        public float needSpeed; // 所需数量
-        public float satisfiedSpeed; // 配方已产出的数量
+        public double needSpeed; // 所需数量
+        public double satisfiedSpeed; // 配方已产出的数量
         public RecipeInfo mainRecipe; // 最初用于生成此Item的recipe的信息
         public List<RecipeInfo> byProductRecipes; // 在建立solutionTree完成之后，会因为配方的副产物，连接数个节点，连过来时，要在byProductRecipes里面加入
         public List<ItemNode> parents; // 此物品被用于制造
         public List<ItemNode> children; // 制造此物品净需要的原材料物品
         public int unsolvedCount; // 寻找路径的过程中，子物品还未被完全解决的数量，如果为0，则代表此物品已经可以无环地由原矿链式合成。初始时，未解决数量为所用配方的净原材料数
-        public bool isOre { get { return children.Count == 0; } } // 该节点是否是原矿
+        
 
-        public ItemNode(int itemId, float needSpeed, SolutionTree solutionTree)
+        public ItemNode(int itemId, double needSpeed, SolutionTree solutionTree)
         {
             this.itemId = itemId;
             this.needSpeed = needSpeed;
@@ -94,6 +94,18 @@ namespace DSPCalculator.Logic
                     }
                 }
             }
+        }
+
+        public bool IsOre(UserPreference userPreference)
+        {
+            bool isOre = CalcDB.itemDict[itemId].defaultAsOre || CalcDB.itemDict[itemId].recipes.Count == 0;
+            if (userPreference.itemConfigs.ContainsKey(itemId)) // 查询用户是否指定了该物品的处理规则，是否视为原矿
+            {
+                isOre = userPreference.itemConfigs[itemId].consideredAsOre || isOre;
+                if (userPreference.itemConfigs[itemId].forceNotOre && CalcDB.itemDict[itemId].recipes.Count > 0)
+                    isOre = false;
+            }
+            return isOre;
         }
     }
 }

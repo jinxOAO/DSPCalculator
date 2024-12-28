@@ -41,6 +41,10 @@ namespace DSPCalculator.UI
                 }
             }
 
+            if (Input.GetKeyDown(KeyCode.F1))
+            {
+                OpenOne();
+            }
             if (Input.GetKeyDown(KeyCode.L))
             {
                 OpenOne();

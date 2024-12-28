@@ -18,7 +18,7 @@ namespace DSPCalculator.Logic
         public int globalIncLevel; // 如果非负，则视为全局属性
         public int globalAccLevel; // 如果非负，则视为全局属性
         public bool globalIsInc; // 全局是否是增产模式
-        public Dictionary<int, int> globalAssemblerIndexByType; // 全局：每种type的强制使用工厂
+        public Dictionary<int, int> globalAssemblerIdByType; // 全局：每种type的强制使用工厂。参数1是type的int，参数2是工厂的itemId而非index！
 
 
         public UserPreference()
@@ -28,7 +28,7 @@ namespace DSPCalculator.Logic
             globalIncLevel = 0;
             globalAccLevel = 0;
             globalIsInc = false;
-            globalAssemblerIndexByType = new Dictionary<int, int>();
+            globalAssemblerIdByType = new Dictionary<int, int>();
         }
 
         public void Clear()
@@ -38,17 +38,26 @@ namespace DSPCalculator.Logic
             globalIncLevel = 0;
             globalAccLevel = 0;
             globalIsInc = false;
-            globalAssemblerIndexByType.Clear();
+            globalAssemblerIdByType.Clear();
         }
     }
 
     public class RecipeConfig
     {
         public int ID; // recipeId
-        public int incLevel; // 如果非零，视为用户需要这个配方应用增产
-        public int accLevel; // 如果非零，视为用户需要这个配方应用加速
-        public bool isInc;
-        public int assemblerIndex; // 如果大于零，视为用户需要这个配方用特定的建筑生产，此处记录的是CalcDB.assemblerDict[对应配方的type]的list中的地址。
+        public int incLevel; // 如果非负，视为用户需要这个配方应用增产
+        public int accLevel; // 如果非负，视为用户需要这个配方应用加速
+        public int forceIncMode; // -1 为使用全局，0为强制加速，1为强制增产
+        public int assemblerItemId; // 如果大于零，视为用户需要这个配方用特定的建筑生产，此处记录的是对应建筑ItemId，要去CalcDB.assemblerDict[对应建筑ItemId]这里访问。
+
+        public RecipeConfig(RecipeInfo recipeInfo)
+        {
+            ID = recipeInfo.ID;
+            incLevel = -1; // -1为使用全局
+            accLevel = -1;
+            forceIncMode = -1;
+            assemblerItemId = -1;
+        }
     }
 
     public class ItemConfig
@@ -56,5 +65,14 @@ namespace DSPCalculator.Logic
         public int ID; // itemId
         public int recipeID; // 如果大于零，视为用户需要这个物品（不作为副产物的部分）必须由该配方生产
         public bool consideredAsOre; // 如果为true，无论如何视为原矿，直接输入产量。如果为false，则根据itemData.defaultAsOre决定。
+        public bool forceNotOre; // 如果为true，无论如何不视为原矿，如果为false，则根据itemData.defaultAsOre决定
+
+        public ItemConfig(int itemId)
+        {
+            ID= itemId;
+            recipeID = 0;
+            consideredAsOre = false;
+            forceNotOre = false;
+        }
     }
 }
