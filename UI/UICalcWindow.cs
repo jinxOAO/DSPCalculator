@@ -1,4 +1,5 @@
-﻿using DSPCalculator.Logic;
+﻿using DSPCalculator.Compatibility;
+using DSPCalculator.Logic;
 using NGPT;
 using System;
 using System.Collections.Generic;
@@ -20,16 +21,28 @@ namespace DSPCalculator.UI
         public const float sideCellWidth = 138.66f;
         public const float sideCellHeight = 45;
         public const int sideCellCountPerRow = 3;
+        public const float sidePanelWidth = 400;
+        public static float targetIconAnchoredPosX = 52;
+        public static float targetIconAnchoredPosYLargeWindow = -80;
+        public static float targetIconAnchoredPosYSmallWindow = -60;
+        public const int assemblerDemandCountPerRow = 4;
+        public const int TYPE_FILTER = 100000;
         public static Color itemIconNormalColor = new Color(0.6f, 0.6f, 0.6f, 1);
         public static Color itemIconHighlightColor = new Color(0.7f, 0.7f, 0.7f, 1);
         public static Color itemIconPressedColor = new Color(0.6f, 0.6f, 0.6f, 1);
         public static Color itemIconDisabledColor = new Color(0.5f, 0.5f, 0.5f, 1);
         public static Color TextWhiteColor = new Color(0.588f, 0.588f, 0.588f, 1f);
         public static Color TextWarningColor = new Color(0.852f, 0.487f, 0.022f, 1f);
+        public static Color incModeImageColor = new Color(0.287f, 0.824f, 1, 0.266f);
+        public static Color accModeImageColor = new Color(0.9906f, 0.5897f, 0.3691f, 0.384f);
+        public static Color incModeTextColor = new Color(0.282f, 0.845f, 1, 0.705f);
+        public static Color accModeTextColor = new Color(0.9906f, 0.5897f, 0.3691f, 0.705f);
         public static float largeWindowWidth = 1340;
         public static float smallWindowWidth = 315;
         public static float largeWindowViewGroupWidth = 890;
         public static float smallWindowViewGroupWidth = 290;
+        public static float largeWindowViewGroupHeight = 570;
+        public static float smallWindowViewGroupHeight = 610;
         public static float animationSpeed = 150;
         // "ui/textures/sprites/icons/eraser-icon" 橡皮擦
         // "ui/textures/sprites/icons/minus-32" 粗短横线
@@ -41,14 +54,27 @@ namespace DSPCalculator.UI
         public static GameObject recipeObj;
         public static GameObject arrowObj;
         public static GameObject iconObj_NoTip; // 无UITip的图标
-        public static GameObject iconButtonObj; // 有UITip且有Button的图标
+        public static GameObject iconObj_ButtonTip; // 有UITip且有Button的图标
         public static GameObject TextObj; // 文本
         public static GameObject TextWithUITip; // 具有UITip的文本
         public static GameObject textButtonObj; // 有文字的按钮
         public static GameObject imageButtonObj; // 只有图片的按钮
-        public static GameObject incToggleObj; // 增产切换按钮
+        public static GameObject incTogglePrefabObj; // 增产切换按钮
+        public static GameObject checkBoxObj;
         public static Sprite leftTriangleSprite;
         public static Sprite rightTriangleSprite;
+        public static Sprite backgroundSprite = null;
+        public static Sprite buttonBackgroundSprite = null;
+        public static Sprite gearSprite = null;
+        public static Sprite filterSprite = null;
+        public static Sprite biaxialArrowSprite = null;
+        public static Sprite oreSprite = null;
+        public static Sprite crossSprite = null;
+        public static Sprite bannedSprite = null;
+        public static Sprite todoListSprite = null;
+        public static Sprite resetSprite = null;
+        public static Sprite checkboxOnSprite = null;
+        public static Sprite checkboxOffSprite = null;
 
         // UI元素
         public GameObject windowObj;
@@ -56,6 +82,7 @@ namespace DSPCalculator.UI
         public GameObject mainCanvasObj;
         public GameObject switchSizeButtonObj;
         public Text titleText;
+        public GameObject targetProductTextObj;
         public Image targetProductIcon;
         public UIButton targetProductIconUIBtn;
         public List<UIItemNode> uiItemNodes;
@@ -66,7 +93,24 @@ namespace DSPCalculator.UI
         public GameObject speedInputObj; // 输入产物速度的
         public GameObject perMinTextObj; // /min 文本
         public Transform sideContentTrans; // 右侧防止小型溢出产物、原材料等的父级物体的transform
+        public GameObject incToggleObj; // 全局增产切换按钮
+        public Text incText;
+        public GameObject proliferatorSelectionObj; // 全局增产剂选择按钮
+        public GameObject assemblerSelectionObj; // 全局工厂选择按钮
+        public Dictionary<int, UIButton> proliferatorUsedButtons; // 增产剂选择按钮列表
+        public Dictionary<int, Dictionary<int, UIButton>> assemblerUsedButtons; // 工厂选择按钮列表
+        public Text finalInfoText;
+        public GameObject assemblersDemandsGroupObj; // 显示所有工厂数量的group
+        public List<GameObject> assemblersDemandObjs; // 所有工厂需求数量的obj列表
 
+        public Image cbBluebuff;
+        public Image cbEnergyBurst;
+        public Image cbDirac;
+        public Image cbInferior;
+        public Text txtBluebuff;
+        public Text txtEnergyBurst;
+        public Text txtDirac;
+        public Text txtInferior;
 
         public SolutionTree solution; // 该窗口对应的量化计算路径
 
@@ -75,13 +119,16 @@ namespace DSPCalculator.UI
         /// <summary>
         /// 创建新窗口
         /// </summary>
-        public UICalcWindow(int i)
+        public UICalcWindow(int idx)
         {
             TryInitStaticPrefabs();
 
             solution = new SolutionTree();
             uiItemNodes = new List<UIItemNode>();
             uiSideItemNodes = new List<UIItemNodeSimple>();
+            proliferatorUsedButtons = new Dictionary<int, UIButton>();
+            assemblerUsedButtons = new Dictionary<int, Dictionary<int, UIButton>>();
+            assemblersDemandObjs = new List<GameObject>();
             isTopAndActive = true;
             isLargeWindow = true;
             nextFrameRecalc = false;
@@ -90,7 +137,7 @@ namespace DSPCalculator.UI
             GameObject parentWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Calc Window Group");
 
             windowObj = GameObject.Instantiate(oriWindowObj);
-            windowObj.name = "calc-window" + " " + i.ToString();
+            windowObj.name = "calc-window" + " " + idx.ToString();
             windowObj.transform.SetParent(parentWindowObj.transform);
             windowObj.GetComponent<RectTransform>().pivot = new Vector2(0, 1); // 这是为了能让其在缩放时，以左上角为锚点，而不是中心
             windowObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(-670, 357,0);
@@ -114,11 +161,20 @@ namespace DSPCalculator.UI
             switchSizeButtonObj.name = "-";
             switchSizeButtonObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(-43, -13); // 原本的x是-13, -13
             switchSizeButtonObj.GetComponent<Image>().sprite = leftTriangleSprite;
+            switchSizeButtonObj.GetComponent<UIButton>().tips.tipTitle = "收起/展开".Translate();
+            switchSizeButtonObj.GetComponent<UIButton>().tips.corner = 3;
+            switchSizeButtonObj.GetComponent<UIButton>().tips.delay = 0.3f;
             Button switchSizeButton = switchSizeButtonObj.GetComponent<Button>();
             switchSizeButton.onClick.RemoveAllListeners();
             switchSizeButton.onClick.AddListener(() => { SwitchWindowSize(); });
 
             viewGroupObj = windowObj.transform.Find("view-group").gameObject;
+            // 下面调整至以左下角为基准，且调整一下大小
+            viewGroupObj.GetComponent<RectTransform>().anchorMax = new Vector2(0, 0);
+            viewGroupObj.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0);
+            viewGroupObj.GetComponent<RectTransform>().pivot = new Vector2(0, 0);
+            viewGroupObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(12, 12, 0);
+            viewGroupObj.GetComponent<RectTransform>().sizeDelta = new Vector2(largeWindowViewGroupWidth, largeWindowViewGroupHeight);
 
             // 将主要的浏览区 设置为可滚动，自动适配高度
             mainCanvasObj = windowObj.transform.Find("view-group/Scroll View/Viewport/Content").gameObject;
@@ -139,7 +195,7 @@ namespace DSPCalculator.UI
             sidePanel.GetComponent<RectTransform>().sizeDelta = new Vector2(416, 245); // 背景图片大小变成上半部分的背景 尽管还是掌握着整个右半部分的obj
             GameObject sideViewGroupObj = GameObject.Instantiate(viewGroupObj, sidePanel);
             sideViewGroupObj.GetComponent<RectTransform>().sizeDelta = new Vector2(416, 407);
-            sideViewGroupObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, -250, 0);
+            sideViewGroupObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, -412, 0);
             GameObject sideContentObj = sideViewGroupObj.transform.Find("Scroll View/Viewport/Content").gameObject;
             sideContentTrans = sideContentObj.transform;
             sideContentObj.GetComponent<GridLayoutGroup>().cellSize = new Vector2(sideCellWidth, sideCellHeight);
@@ -151,7 +207,13 @@ namespace DSPCalculator.UI
             Transform panelParent = windowObj.transform.Find("panel-bg");
 
            
-
+            // 目标产物文本
+            targetProductTextObj = GameObject.Instantiate(TextObj, panelParent);
+            targetProductTextObj.name = "target-title";
+            targetProductTextObj.transform.localScale = Vector3.one;
+            targetProductTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(25, 318, 0);
+            targetProductTextObj.GetComponent<Text>().text = "设置目标产物".Translate();
+            targetProductTextObj.GetComponent<Text>().fontSize = 16;
 
             // 目标产物图标
             GameObject oriItemIconObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Station Window/storage-box-0/storage-icon-empty");
@@ -165,7 +227,7 @@ namespace DSPCalculator.UI
                 RectTransform rect = targetProductIconObj.GetComponent<RectTransform>();
                 rect.anchorMax = new Vector2(0, 1);
                 rect.anchorMin = new Vector2(0, 1);
-                rect.anchoredPosition3D = new Vector3(52, -50, 0);
+                rect.anchoredPosition3D = new Vector3(targetIconAnchoredPosX, targetIconAnchoredPosYLargeWindow, 0);
                 rect.sizeDelta = new Vector2(54, 54); // 原本是64
                 targetProductIconObj.transform.Find("white").GetComponent<RectTransform>().sizeDelta = new Vector2(40, 40); // 原本是54
 
@@ -196,7 +258,7 @@ namespace DSPCalculator.UI
             speedInputObj.transform.localPosition = new Vector3(120, 0, 0);
             speedInputObj.GetComponent<RectTransform>().sizeDelta = new Vector2(100, 30);
             speedInputObj.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-            speedInputObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(100, -50, 0); 
+            speedInputObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(100, targetIconAnchoredPosYLargeWindow, 0); 
             speedInputObj.GetComponent<InputField>().text = "3600";
             speedInputObj.GetComponent<InputField>().contentType = InputField.ContentType.DecimalNumber;
             speedInputObj.GetComponent<InputField>().characterLimit = 12;
@@ -215,8 +277,196 @@ namespace DSPCalculator.UI
             perMinTextObj.name = "per-minute";
             perMinTextObj.GetComponent<RectTransform>().anchorMax = new Vector2(0, 1);
             perMinTextObj.GetComponent<RectTransform>().anchorMin = new Vector2(0, 1);
-            perMinTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(210, -50, 0);
+            perMinTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(210, targetIconAnchoredPosYLargeWindow, 0);
             perMinTextObj.GetComponent<Text>().text = "/min";
+
+            
+            // 切换增产按钮
+            incToggleObj = GameObject.Instantiate(incTogglePrefabObj, panelParent);
+            incToggleObj.name = "inc-setting";
+            incToggleObj.transform.localPosition = new Vector3(-38, 287, 0);
+            incToggleObj.transform.Find("inc-switch").GetComponent<Button>().onClick.AddListener(() => { OnGlobalIncToggleClick(); });
+            incText = incToggleObj.transform.Find("inc-effect-type-text").GetComponent<Text>();
+            GameObject incToggleThumb = incToggleObj.transform.Find("inc-switch/switch-thumb").gameObject;
+            bool isInc = solution.userPreference.globalIsInc;
+            if (isInc)
+            {
+                incToggleThumb.GetComponent<RectTransform>().anchoredPosition = new Vector2(-10, 0);
+                incText.text = "额外产出calc".Translate();
+                incText.color = incModeTextColor;
+                incToggleObj.transform.Find("inc-switch").GetComponent<Image>().color = incModeImageColor;
+            }
+            else
+            {
+                incToggleThumb.GetComponent<RectTransform>().anchoredPosition = new Vector2(10, 0);
+                incText.text = "生产加速calc".Translate();
+                incText.color = accModeTextColor;
+                incToggleObj.transform.Find("inc-switch").GetComponent<Image>().color = accModeImageColor;
+            }
+            incToggleObj.SetActive(true);
+
+            // 增产剂切换图标
+            proliferatorSelectionObj = new GameObject();
+            proliferatorSelectionObj.name = "proliferator-select";
+            proliferatorSelectionObj.transform.SetParent(panelParent, false);
+            proliferatorSelectionObj.transform.localPosition = new Vector3(82, 270, 0);
+            //先创建一个禁用增产剂的图标
+            int proliferatorItemId0 = 0;
+            int incLevel0 = 0;
+            GameObject pBtnObj0 = GameObject.Instantiate(UICalcWindow.imageButtonObj, proliferatorSelectionObj.transform);
+            pBtnObj0.GetComponent<Image>().sprite = buttonBackgroundSprite;
+            Image icon0 = pBtnObj0.transform.Find("icon").GetComponent<Image>();
+            icon0.sprite = bannedSprite;
+            icon0.color = Color.red; // 默认白色看不清
+            pBtnObj0.transform.localPosition = new Vector3(0, 0);
+            pBtnObj0.GetComponent<Button>().onClick.AddListener(() => { SetGlobalIncLevel(incLevel0); });
+            // pBtnObj0.GetComponent<UIButton>().transitions[0].highlightColorOverride = iconButtonHighLightColor;
+            proliferatorUsedButtons[incLevel0] = pBtnObj0.GetComponent<UIButton>();
+            proliferatorUsedButtons[incLevel0].tips.itemId = proliferatorItemId0;
+
+            for (int p = 0; p < CalcDB.proliferatorItemIds.Count; p++)
+            {
+                int proliferatorItemId = CalcDB.proliferatorItemIds[p];
+                int incLevel = CalcDB.proliferatorAbilities[p];
+                GameObject pBtnObj = GameObject.Instantiate(imageButtonObj, proliferatorSelectionObj.transform);
+                pBtnObj.GetComponent<Image>().sprite = buttonBackgroundSprite;
+                Image icon = pBtnObj.transform.Find("icon").GetComponent<Image>();
+                icon.sprite = LDB.items.Select(proliferatorItemId).iconSprite;
+                pBtnObj.transform.localPosition = new Vector3((p + 1) * 35, 0);
+                pBtnObj.GetComponent<Button>().onClick.AddListener(() => { SetGlobalIncLevel(incLevel); });
+                // pBtnObj.GetComponent<UIButton>().transitions[0].highlightColorOverride = iconButtonHighLightColor;
+                proliferatorUsedButtons[incLevel] = pBtnObj.GetComponent<UIButton>();
+                proliferatorUsedButtons[incLevel].tips.itemId = proliferatorItemId;
+            }
+
+            // 工厂选择图标
+            assemblerSelectionObj = new GameObject();
+            assemblerSelectionObj.name = "assembler-select";
+            assemblerSelectionObj.transform.SetParent(panelParent, false);
+            assemblerSelectionObj.transform.localPosition = new Vector3(-358, 270, 0);
+            if(CompatManager.GB)
+                assemblerSelectionObj.transform.localPosition = new Vector3(-358, 260, 0);
+            Dictionary <int, int> alreadyAddedAssembler= new Dictionary<int, int>(); // 用于储存已经加入过的工厂，就不再实例化按钮了
+            int btnCount = 0; // 工厂数
+            int typeCount = 0; // 类别数
+            int rowCount = 0; // 行数
+            foreach (var rType in CalcDB.assemblerListByType)
+            {
+                if(btnCount * 35 + typeCount * 10 > 9 * 35)
+                {
+                    rowCount++;
+                    btnCount = 0;
+                    typeCount = 0;
+                }
+                int typeInt = rType.Key;
+                if(!assemblerUsedButtons.ContainsKey(typeInt))
+                {
+                    assemblerUsedButtons[typeInt] = new Dictionary<int, UIButton>();
+                }
+                List<AssemblerData> assemblerList = rType.Value;
+                if (assemblerList.Count > 1) // 有可变选项才有提供按钮允许更换的意义
+                {
+                    for (int j = 0; j < assemblerList.Count; j++)
+                    {
+                        AssemblerData ad = assemblerList[j];
+                        int assemblerItemId = ad.ID;
+                        alreadyAddedAssembler[assemblerItemId] = 1;
+
+                        GameObject aBtnObj = GameObject.Instantiate(UICalcWindow.imageButtonObj, assemblerSelectionObj.transform);
+                        aBtnObj.GetComponent<Image>().sprite = UICalcWindow.buttonBackgroundSprite;
+                        Image icon = aBtnObj.transform.Find("icon").GetComponent<Image>();
+                        icon.sprite = ad.iconSprite;
+                        aBtnObj.transform.localPosition = new Vector3((btnCount) * 35 + typeCount * 10, rowCount * 35);
+                        aBtnObj.GetComponent<Button>().onClick.AddListener(() => { SetGlobalAssemblerPreference(typeInt * TYPE_FILTER + assemblerItemId); });
+                        // aBtnObj.GetComponent<UIButton>().transitions[0].highlightColorOverride = iconButtonHighLightColor;
+                        aBtnObj.GetComponent<UIButton>().highlighted = false; // 永远不会高亮
+                        aBtnObj.GetComponent<UIButton>().tips.itemId = assemblerItemId;
+                        aBtnObj.GetComponent<UIButton>().tips.corner = 3;
+                        aBtnObj.GetComponent<UIButton>().tips.delay = 0.1f;
+                        assemblerUsedButtons[typeInt][assemblerItemId] = aBtnObj.GetComponent<UIButton>();
+                        btnCount ++;
+                    }
+                    typeCount++;
+                }
+            }
+
+            // 右侧最终文本信息
+            GameObject finalInfoTextObj = GameObject.Instantiate(TextObj, sidePanel);
+            finalInfoTextObj.transform.localPosition = new Vector3(20, -25, 0);
+            finalInfoText = finalInfoTextObj.GetComponent<Text>();
+            finalInfoText.fontSize = 16;
+            finalInfoText.alignment = TextAnchor.UpperLeft;
+
+            // 右侧最终工厂信息
+            assemblersDemandsGroupObj = new GameObject();
+            assemblersDemandsGroupObj.name = "assember-demands";
+            assemblersDemandsGroupObj.transform.SetParent(sidePanel);
+            assemblersDemandsGroupObj.transform.localScale = Vector3.one;
+            assemblersDemandsGroupObj.transform.localPosition = new Vector3(18, -110, 0);
+            // 实际创建工厂信息由RefreshAssemblerDemands()完成
+
+            // 还原所有配置按钮
+            GameObject resetUserPreferenceButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
+            resetUserPreferenceButtonObj.name = "reset-all";
+            resetUserPreferenceButtonObj.transform.SetParent(panelParent, false);
+            resetUserPreferenceButtonObj.transform.localScale = Vector3.one;
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(1, 1);
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(1, 1);
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().pivot = new Vector2(1, 1);
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(-75, -15, 0);
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(18, 18);
+            resetUserPreferenceButtonObj.GetComponent<Image>().sprite = UICalcWindow.resetSprite;
+            resetUserPreferenceButtonObj.GetComponent<Button>().onClick.AddListener(() => { ClearAllUserPreference(); });
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipTitle = "还原默认配置标题".Translate();
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipText = "还原默认配置说明".Translate();
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.corner = 3;
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.width = 200;
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0, 0, 1);
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.6f, 0, 0, 1);
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.9f, 0.2f, 0.2f, 1);
+
+            // 右侧可调整元驱动等配置信息                         
+            GameObject checkBoxGroupObj = new GameObject();
+            checkBoxGroupObj.name = "checkbox-group";
+            checkBoxGroupObj.transform.SetParent(sidePanel);
+            checkBoxGroupObj.transform.localScale = Vector3.one;
+            checkBoxGroupObj.transform.localPosition = new Vector3(180, -28, 0);
+
+            if(CompatManager.TCFV)
+            {
+                GameObject bluebuffCbObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
+                bluebuffCbObj.name = "checkbox-bluebuff";
+                cbBluebuff = bluebuffCbObj.GetComponent<Image>();
+                txtBluebuff = bluebuffCbObj.transform.Find("text").GetComponent<Text>();
+                bluebuffCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, 0, 0);
+                bluebuffCbObj.GetComponent<Button>().onClick.AddListener(OnBluebuffClick);
+
+                GameObject energyBurstCbObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
+                energyBurstCbObj.name = "checkbox-energyburst";
+                cbEnergyBurst = energyBurstCbObj.GetComponent<Image>();
+                txtEnergyBurst = energyBurstCbObj.transform.Find("text").GetComponent<Text>();
+                energyBurstCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, -20, 0);
+                energyBurstCbObj.GetComponent<Button>().onClick.AddListener(OnEnergyBurstClick);
+
+                GameObject diracCbObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
+                diracCbObj.name = "checkbox-dirac";
+                cbDirac = diracCbObj.GetComponent<Image>();
+                txtDirac = diracCbObj.transform.Find("text").GetComponent<Text>();
+                diracCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, -40, 0);
+                diracCbObj.GetComponent<Button>().onClick.AddListener(OnDiracClick);
+
+                GameObject inferiorCbObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
+                inferiorCbObj.name = "checkbox-inferior";
+                cbInferior = inferiorCbObj.GetComponent<Image>();
+                txtInferior = inferiorCbObj.transform.Find("text").GetComponent<Text>();
+                inferiorCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, 0, 0);
+                inferiorCbObj.GetComponent<Button>().onClick.AddListener(OnInferiorClick);
+            }
+
+            RefreshFinalInfoText();
+            RefreshCheckBoxes();
+            RefreshAssemblerButtonDisplay();
+            RefreshProliferatorButtonDisplay();
         }
 
 
@@ -231,11 +481,11 @@ namespace DSPCalculator.UI
                 iconObj_NoTip = recipeObj.transform.Find("icon").gameObject;
 
                 // 手动创建一个带有UIButton的icon---------------------------------------------------------------------
-                iconButtonObj = GameObject.Instantiate(iconObj_NoTip);
-                iconButtonObj.GetComponent<Image>().raycastTarget = true; // 一定要设置这个，否则无法互动或者显示tip
-                iconButtonObj.transform.Find("count").gameObject.SetActive(false); // 隐藏右下角小数字
-                UIButton iconUIBtn = iconButtonObj.AddComponent<UIButton>();
-                Button iconBtn = iconButtonObj.AddComponent<Button>();
+                iconObj_ButtonTip = GameObject.Instantiate(iconObj_NoTip);
+                iconObj_ButtonTip.GetComponent<Image>().raycastTarget = true; // 一定要设置这个，否则无法互动或者显示tip
+                iconObj_ButtonTip.transform.Find("count").gameObject.SetActive(false); // 隐藏右下角小数字
+                UIButton iconUIBtn = iconObj_ButtonTip.AddComponent<UIButton>();
+                Button iconBtn = iconObj_ButtonTip.AddComponent<Button>();
                 iconUIBtn.button = iconBtn;
                 iconUIBtn.audios = new UIButton.AudioSettings();
                 iconUIBtn.audios.enterName = "ui-hover-0";
@@ -245,7 +495,7 @@ namespace DSPCalculator.UI
                 UIButton.Transition transition = new UIButton.Transition();
                 iconUIBtn.transitions[0] = transition;
 
-                transition.target = iconButtonObj.GetComponent<Image>();
+                transition.target = iconObj_ButtonTip.GetComponent<Image>();
                 transition.damp = 0.3f;
                 transition.mouseoverSize = 1f;
                 transition.pressedSize = 1f;
@@ -255,7 +505,7 @@ namespace DSPCalculator.UI
                 transition.disabledColor = itemIconDisabledColor;
                 // alphaonly 属性和 highligh相关属性暂时不需要设置
                 // 下面设置anchor和pivot方便后面处理位置
-                RectTransform rect = iconButtonObj.GetComponent<RectTransform>();
+                RectTransform rect = iconObj_ButtonTip.GetComponent<RectTransform>();
                 rect.anchorMax = new Vector2(0, 0.5f);
                 rect.anchorMin = new Vector2(0, 0.5f);
                 rect.pivot = new Vector2(0, 0.5f);
@@ -311,15 +561,36 @@ namespace DSPCalculator.UI
                 icon.transform.localScale = Vector3.one;
 
                 // 增产切换按钮
-                incToggleObj = GameObject.Instantiate(GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Assembler Window/produce/inc-info"));
-                incToggleObj.transform.Find("inc-switch").GetComponent<Button>().onClick.RemoveAllListeners();
-                GameObject.DestroyImmediate(incToggleObj.transform.Find("inc-label").gameObject);
-                GameObject.DestroyImmediate(incToggleObj.transform.Find("inc-effect-value-text").gameObject);
-                GameObject.DestroyImmediate(incToggleObj.transform.Find("inc-effect-value-text-2").gameObject);
-                GameObject.DestroyImmediate(incToggleObj.transform.Find("inc-effect-type-text-2").gameObject);
+                incTogglePrefabObj = GameObject.Instantiate(GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Assembler Window/produce/inc-info"));
+                incTogglePrefabObj.transform.Find("inc-switch").GetComponent<Button>().onClick.RemoveAllListeners();
+                GameObject.DestroyImmediate(incTogglePrefabObj.transform.Find("inc-label").gameObject);
+                GameObject.DestroyImmediate(incTogglePrefabObj.transform.Find("inc-effect-value-text").gameObject);
+                GameObject.DestroyImmediate(incTogglePrefabObj.transform.Find("inc-effect-value-text-2").gameObject);
+                GameObject.DestroyImmediate(incTogglePrefabObj.transform.Find("inc-effect-type-text-2").gameObject);
+                incTogglePrefabObj.transform.Find("inc-effect-type-text").GetComponent<RectTransform>().anchoredPosition3D = new Vector3(138, 0, 0);
+                incTogglePrefabObj.transform.Find("inc-effect-type-text").GetComponent<Text>().alignment = TextAnchor.MiddleRight;
+
+                // checkbox
+                checkBoxObj = GameObject.Instantiate(GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Dyson Sphere Editor/Dyson Editor Control Panel/hierarchy/layers/display-group/display-toggle-3/checkbox-back-structures"));
+                checkBoxObj.name = "check-box";
+                checkBoxObj.GetComponent<Button>().onClick.RemoveAllListeners();
+                checkBoxObj.transform.Find("text").GetComponent<Text>().color = Color.white;
+
 
                 leftTriangleSprite = Resources.Load<Sprite>("ui/textures/sprites/test/last-icon");
                 rightTriangleSprite = Resources.Load<Sprite>("ui/textures/sprites/test/next-icon");
+                backgroundSprite = Resources.Load<Sprite>("ui/textures/sprites/sci-fi/window-content-3");
+                buttonBackgroundSprite = Resources.Load<Sprite>("ui/textures/sprites/sci-fi/window-content-3");
+                gearSprite = Resources.Load<Sprite>("icons/signal/signal-405");
+                filterSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/filter-icon");
+                biaxialArrowSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/biaxial-arrow");
+                oreSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/vein-icon-56");
+                crossSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/delete-icon");
+                bannedSprite = Resources.Load<Sprite>("icons/signal/signal-509");
+                todoListSprite = Resources.Load<Sprite>("ui/textures/sprites/test/test-list-alt");
+                resetSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/refresh-32-icon");
+                checkboxOnSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/checkbox-on");
+                checkboxOffSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/checkbox-off");
             }
         }
 
@@ -353,16 +624,18 @@ namespace DSPCalculator.UI
                 if (viewGroupWidth > largeWindowViewGroupWidth) // 但是不能超过原始最大大小
                     viewGroupWidth = largeWindowViewGroupWidth;
                 windowObj.GetComponent<RectTransform>().sizeDelta = new Vector2(curWidth, height);
-                viewGroupObj.GetComponent<RectTransform>().sizeDelta = new Vector2(viewGroupWidth, viewGroupHeight);
+                float mainContentHeight = (curWidth - smallWindowWidth) / (largeWindowWidth - smallWindowWidth) * (largeWindowViewGroupHeight - smallWindowViewGroupHeight) + smallWindowViewGroupHeight;
+                viewGroupObj.GetComponent<RectTransform>().sizeDelta = new Vector2(viewGroupWidth, mainContentHeight);
 
-                // 顶部选择配方的也需要在小窗口状态下稍微低一点，防止和标题太近
-                float fixedPosY = (curWidth - smallWindowWidth) / (largeWindowWidth - smallWindowWidth) * 10 + -60;
+                // 顶部选择配方的需要在小窗口状态下改变
+                float fixedPosY = (curWidth - smallWindowWidth) / (largeWindowWidth - smallWindowWidth) * (targetIconAnchoredPosYLargeWindow - targetIconAnchoredPosYSmallWindow) + targetIconAnchoredPosYSmallWindow;
                 float oriX = targetProductIconObj.GetComponent<RectTransform>().anchoredPosition.x;
                 targetProductIconObj.GetComponent<RectTransform>().anchoredPosition = new Vector2 (oriX, fixedPosY);
                 oriX = speedInputObj.GetComponent<RectTransform>().anchoredPosition.x;
                 speedInputObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
                 oriX = perMinTextObj.GetComponent<RectTransform>().anchoredPosition.x;
                 perMinTextObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
+
             }
             else if(curWidth > targetWindowWidth && curWidth - targetWindowWidth > 0.01f)
             {
@@ -375,25 +648,21 @@ namespace DSPCalculator.UI
                 if (viewGroupWidth > largeWindowViewGroupWidth) // 但是不能超过原始最大大小
                     viewGroupWidth = largeWindowViewGroupWidth;
                 windowObj.GetComponent<RectTransform>().sizeDelta = new Vector2(curWidth, height);
-                viewGroupObj.GetComponent<RectTransform>().sizeDelta = new Vector2(viewGroupWidth, viewGroupHeight);
+                float mainContentHeight = (curWidth - smallWindowWidth) / (largeWindowWidth - smallWindowWidth) * (largeWindowViewGroupHeight - smallWindowViewGroupHeight) + smallWindowViewGroupHeight;
+                viewGroupObj.GetComponent<RectTransform>().sizeDelta = new Vector2(viewGroupWidth, mainContentHeight);
 
-                // 顶部选择配方的也需要在小窗口状态下稍微低一点，防止和标题太近
-                float fixedPosY = (curWidth - smallWindowWidth) / (largeWindowWidth - smallWindowWidth) * 10 + -60;
+                // 顶部选择配方的需要在小窗口状态下改变
+                float fixedPosY = (curWidth - smallWindowWidth) / (largeWindowWidth - smallWindowWidth) * (targetIconAnchoredPosYLargeWindow-targetIconAnchoredPosYSmallWindow) + targetIconAnchoredPosYSmallWindow;
                 float oriX = targetProductIconObj.GetComponent<RectTransform>().anchoredPosition.x;
                 targetProductIconObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
                 oriX = speedInputObj.GetComponent<RectTransform>().anchoredPosition.x;
                 speedInputObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
                 oriX = perMinTextObj.GetComponent<RectTransform>().anchoredPosition.x;
                 perMinTextObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
+
             }
-            if (oriWidth >= 0.5f * largeWindowWidth && curWidth < 0.5f * largeWindowWidth )
-            {
-                switchSizeButtonObj.GetComponent<Image>().sprite = rightTriangleSprite;
-            }
-            else if (oriWidth <= 0.5f * largeWindowWidth && curWidth > 0.5f * largeWindowWidth)
-            {
-                switchSizeButtonObj.GetComponent<Image>().sprite = leftTriangleSprite;
-            }
+
+            ShowHideChildrenWhenWindowSizeChanged(oriWidth, curWidth);
             if (nextFrameRecalc)
             {
                 nextFrameRecalc = false;
@@ -402,6 +671,12 @@ namespace DSPCalculator.UI
             }
 
             if (!isTopAndActive) return;
+            // 下面的只有Topwindow可以响应
+            if(Input.GetKeyDown(DSPCalculatorPlugin.SwitchWindowSizeHotKey.Value))
+            {
+                SwitchWindowSize();
+            }
+
         }
 
 
@@ -483,10 +758,42 @@ namespace DSPCalculator.UI
             }
         }
 
+        public void ShowHideChildrenWhenWindowSizeChanged(float oriWidth, float curWidth)
+        {
+            if (oriWidth >= 0.5f * largeWindowWidth && curWidth < 0.5f * largeWindowWidth)
+            {
+                incToggleObj.SetActive(false);
+                proliferatorSelectionObj.SetActive(false);
+                targetProductTextObj.SetActive(false);
+                switchSizeButtonObj.GetComponent<Image>().sprite = rightTriangleSprite;
+            }
+            else if (oriWidth <= 0.5f * largeWindowWidth && curWidth > 0.5f * largeWindowWidth)
+            {
+                incToggleObj.SetActive(true);
+                proliferatorSelectionObj.SetActive(true);
+                targetProductTextObj.SetActive(true);
+                switchSizeButtonObj.GetComponent<Image>().sprite = leftTriangleSprite;
+            }
+            if (oriWidth >= 0.9f * largeWindowWidth && curWidth < 0.9f * largeWindowWidth)
+            {
+                assemblerSelectionObj.SetActive(false);
+            }
+            else if (oriWidth <= 0.9f * largeWindowWidth && curWidth > 0.9f * largeWindowWidth)
+            {
+                assemblerSelectionObj.SetActive(true);
+            }
+        }
+
         public void RefreshAll()
         {
             RefreshProductContent();
             RefreshResourceNeedAndByProductContent();
+            RefreshFinalInfoText();
+            RefreshAssemblerDemandsDisplay();
+            RefreshAssemblerButtonDisplay();
+            RefreshIncToggle();
+            RefreshProliferatorButtonDisplay();
+            RefreshCheckBoxes();
         }
 
         /// <summary>
@@ -540,6 +847,11 @@ namespace DSPCalculator.UI
             }
             uiSideItemNodes.Clear();
 
+            if (solution.itemNodes.Count == 0)
+            {
+                return;
+            }
+
             // 首先显示原矿需求
             UIItemNodeSimple label1 = new UIItemNodeSimple("原矿需求".Translate(), this);
             uiSideItemNodes.Add(label1);
@@ -558,6 +870,19 @@ namespace DSPCalculator.UI
                     count++;
                 }
             }
+            // 增产剂需求额外增加
+            foreach (var p in solution.proliferatorCount)
+            {
+                if(p.Key > 0 && p.Value > 0)
+                {
+                    ItemNode node = new ItemNode(p.Key,0,solution);
+                    node.satisfiedSpeed = p.Value;
+                    UIItemNodeSimple uiResourceNode = new UIItemNodeSimple(node, false, this, true);
+                    uiSideItemNodes.Add(uiResourceNode);
+                    count++;
+                }
+            }
+
             if(count % sideCellCountPerRow != 0) // 不足一行的用空填满
             {
                 int unfilled = sideCellCountPerRow - count % sideCellCountPerRow;
@@ -603,6 +928,247 @@ namespace DSPCalculator.UI
                     uiSideItemNodes.Add(emptyEnd);
                 }
             }
+        }
+
+        public void RefreshFinalInfoText()
+        {
+            double totalEnergyConsumption = 0;
+            foreach (var recipeInfoData in solution.recipeInfos)
+            {
+                totalEnergyConsumption += recipeInfoData.Value.GetTotalEnergyConsumption();
+            }
+            finalInfoText.text = "预估电量".Translate() + "\n" + Utils.KMG(totalEnergyConsumption) + "W" + "\n\n" + "工厂需求".Translate();
+        }
+
+        public void RefreshAssemblerDemandsDisplay()
+        {
+            foreach (var item in assemblersDemandObjs)
+            {
+                GameObject.DestroyImmediate(item);
+            }
+            assemblersDemandObjs.Clear();
+
+            // 计算每种工厂数量
+            Dictionary<int, int> counts = new Dictionary<int, int>();
+            foreach (var data in solution.recipeInfos)
+            {
+                RecipeInfo recipeInfo = data.Value;
+                int assemblerItemId = recipeInfo.assemblerItemId;
+                int ceilingCount =(int) Math.Ceiling(recipeInfo.assemblerCount);
+                if (!counts.ContainsKey(assemblerItemId))
+                    counts[assemblerItemId] = ceilingCount;
+                else
+                    counts[assemblerItemId] += ceilingCount;
+            }
+
+            // 创建图标和数量文本
+            int i = 0;
+            float eachWidth = sidePanelWidth / assemblerDemandCountPerRow;
+            foreach (var pair in counts) 
+            {
+                int assemblerItemId = pair.Key;
+                int count = pair.Value;
+                GameObject assemblerObj = GameObject.Instantiate(iconObj_ButtonTip, assemblersDemandsGroupObj.transform);
+                assemblerObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(i % assemblerDemandCountPerRow * eachWidth, -(i / assemblerDemandCountPerRow * 35), 0);
+                assemblerObj.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 30);
+                assemblerObj.GetComponent<Image>().sprite = LDB.items.Select(assemblerItemId).iconSprite;
+                assemblerObj.GetComponent<UIButton>().tips.itemId = assemblerItemId;
+                assemblerObj.GetComponent<UIButton>().tips.corner = 3;
+                assemblerObj.GetComponent<UIButton>().tips.delay = 0.2f;
+
+                GameObject assemblerCountTextObj = GameObject.Instantiate(UICalcWindow.TextWithUITip, assemblersDemandsGroupObj.transform);
+                assemblerCountTextObj.name = "assembler-count";
+                assemblerCountTextObj.transform.localScale = Vector3.one;
+                assemblerCountTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(i % assemblerDemandCountPerRow * eachWidth + 35, -(i / assemblerDemandCountPerRow * 35), 0);
+                Text assemblerCountText = assemblerCountTextObj.GetComponent<Text>();
+                assemblerCountText.text = "× " + Utils.KMG(count);
+                assemblerCountText.fontSize = 16;
+
+                // 加入列表
+                assemblersDemandObjs.Add(assemblerObj);
+                assemblersDemandObjs.Add(assemblerCountTextObj);
+
+                i++;
+            }
+        }
+
+        public void OnGlobalIncToggleClick()
+        {
+            bool target = !solution.userPreference.globalIsInc;
+            solution.userPreference.globalIsInc = target;
+            foreach (var config in solution.userPreference.recipeConfigs)
+            {
+                if (config.Value.forceIncMode >= 0)
+                {
+                    config.Value.forceIncMode = target ? 1 : 0;
+                }
+            }
+            RefreshIncToggle();
+            nextFrameRecalc = true;
+        }
+
+        public void RefreshIncToggle()
+        {
+            GameObject incToggleThumb = incToggleObj.transform.Find("inc-switch/switch-thumb").gameObject;
+            bool isInc = solution.userPreference.globalIsInc;
+            if (isInc)
+            {
+                incToggleThumb.GetComponent<RectTransform>().anchoredPosition = new Vector2(-10, 0);
+                incText.text = "额外产出calc".Translate();
+                incText.color = incModeTextColor;
+                incToggleObj.transform.Find("inc-switch").GetComponent<Image>().color = incModeImageColor;
+            }
+            else
+            {
+                incToggleThumb.GetComponent<RectTransform>().anchoredPosition = new Vector2(10, 0);
+                incText.text = "生产加速calc".Translate();
+                incText.color = accModeTextColor;
+                incToggleObj.transform.Find("inc-switch").GetComponent<Image>().color = accModeImageColor;
+            }
+        }
+
+        public void SetGlobalIncLevel(int level)
+        {
+            solution.userPreference.globalIncLevel = level; 
+            foreach (var config in solution.userPreference.recipeConfigs)
+            {
+                config.Value.incLevel = level;
+            }
+            RefreshProliferatorButtonDisplay();
+            nextFrameRecalc = true;
+        }
+
+        public void RefreshProliferatorButtonDisplay()
+        {
+            foreach (var btn in proliferatorUsedButtons)
+            {
+                if (btn.Key == solution.userPreference.globalIncLevel)
+                    btn.Value.highlighted = true;
+                else
+                    btn.Value.highlighted = false;
+            }
+        }
+
+        public void SetGlobalAssemblerPreference(int assemblerFullCode)
+        {
+            int typeInt = assemblerFullCode / TYPE_FILTER;
+            int assemblerItemId = assemblerFullCode % TYPE_FILTER;
+
+            solution.userPreference.globalAssemblerIdByType[typeInt] = assemblerItemId;
+
+            // 然后对每个独立的recipeConfig进行更改
+            foreach (var recipeConfigData in solution.userPreference.recipeConfigs)
+            {
+                int configType = CalcDB.recipeDict[recipeConfigData.Value.ID].type;
+                if(configType == typeInt)
+                {
+                    solution.userPreference.recipeConfigs[recipeConfigData.Key].assemblerItemId = assemblerItemId; 
+                }
+            }
+
+            foreach (var uiNodeData in uiItemNodes)
+            {
+                uiNodeData.RefreshAssemblerDisplay(false);
+            }
+            RefreshAssemblerButtonDisplay();
+            RefreshAssemblerDemandsDisplay();
+            RefreshFinalInfoText();
+        }
+
+        public void RefreshAssemblerButtonDisplay()
+        {
+            foreach (var typeData in assemblerUsedButtons)
+            {
+                int type = typeData.Key;
+                int assemblerId = -1;
+                if(CalcDB.assemblerListByType.ContainsKey(type))
+                    assemblerId = CalcDB.assemblerListByType[type][0].ID;
+                if (solution.userPreference.globalAssemblerIdByType.ContainsKey(type))
+                    assemblerId = solution.userPreference.globalAssemblerIdByType[type];
+
+                foreach (var aData in typeData.Value)
+                {
+                    if(aData.Key == assemblerId)
+                    {
+                        aData.Value.highlighted = true;
+                    }
+                    else
+                    {
+                        aData.Value.highlighted = false;
+                    }
+                }
+            }
+        }
+
+        public void ClearAllUserPreference()
+        {
+            solution.userPreference = new UserPreference();
+            solution.ReSolve();
+            RefreshAll();
+        }
+
+        public void RefreshCheckBoxes()
+        {
+            if(cbBluebuff != null)
+            {
+                if (solution.userPreference.bluebuff)
+                    cbBluebuff.sprite = checkboxOnSprite;
+                else
+                    cbBluebuff.sprite = checkboxOffSprite;
+                txtBluebuff.text = "遗物名称0-1".Translate().Split('\n')[0];
+            }
+            if (cbEnergyBurst != null)
+            {
+                if (solution.userPreference.energyBurst)
+                    cbEnergyBurst.sprite = checkboxOnSprite;
+                else
+                    cbEnergyBurst.sprite = checkboxOffSprite;
+                txtEnergyBurst.text = "遗物名称1-6".Translate().Split('\n')[0];
+            }
+            if (cbDirac != null)
+            {
+                if (solution.userPreference.dirac)
+                    cbDirac.sprite = checkboxOnSprite;
+                else
+                    cbDirac.sprite = checkboxOffSprite;
+                txtDirac.text = "遗物名称2-8".Translate().Split('\n')[0];
+            }
+            if(cbInferior != null)
+            {
+                if (solution.userPreference.inferior)
+                    cbInferior.sprite = checkboxOnSprite;
+                else
+                    cbInferior.sprite = checkboxOffSprite;
+                txtInferior.text = "遗物名称3-0".Translate().Split('\n')[0];
+            }
+        }
+
+        public void OnBluebuffClick()
+        {
+            solution.userPreference.bluebuff = !solution.userPreference.bluebuff;
+            RefreshCheckBoxes();
+            nextFrameRecalc = true;
+        }
+
+        public void OnEnergyBurstClick()
+        {
+            solution.userPreference.energyBurst = !solution.userPreference.energyBurst;
+            RefreshCheckBoxes();
+            nextFrameRecalc = true;
+        }
+
+        public void OnDiracClick()
+        {
+            solution.userPreference.dirac = !solution.userPreference.dirac;
+            RefreshCheckBoxes();
+            nextFrameRecalc = true;
+        }
+
+        public void OnInferiorClick()
+        {
+            solution.userPreference.inferior = !solution.userPreference.inferior;
+            RefreshCheckBoxes();
+            nextFrameRecalc = true;
         }
     }
 }

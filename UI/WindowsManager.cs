@@ -14,6 +14,7 @@ namespace DSPCalculator.UI
         public static UICalcWindow lastClosedWindow;
 
         public static GameObject calcWindowGroupObj;
+        public static bool hasOpenedWindow;
 
         /// <summary>
         /// mod加载时初始化
@@ -29,31 +30,29 @@ namespace DSPCalculator.UI
             calcWindowGroupObj.transform.SetParent(parentWindowObj.transform, false);
             calcWindowGroupObj.transform.localScale = Vector3.one;
             calcWindowGroupObj.transform.localPosition = Vector3.zero;
+            hasOpenedWindow = false;
         }
 
         public static void OnUpdate()
         {
+            hasOpenedWindow = false;
             if (windows != null)
             {
                 for (int i = 0; i < windows.Count; i++)
                 {
                     windows[i].OnUpdate();
+                    hasOpenedWindow = hasOpenedWindow || windows[i].windowObj.activeSelf;
                 }
             }
 
-            if (Input.GetKeyDown(KeyCode.F1))
+            if (Input.GetKeyDown(DSPCalculatorPlugin.OpenWindowHotKey.Value))
             {
                 OpenOne();
             }
-            if (Input.GetKeyDown(KeyCode.L))
-            {
-                OpenOne();
-            }
-
-            if (Input.GetKeyDown(KeyCode.Escape))
-            {
-
-            }
+            //if (Input.GetKeyDown(KeyCode.L))
+            //{
+            //    OpenOne();
+            //}
         }
 
         public static void HideAll()
@@ -75,7 +74,17 @@ namespace DSPCalculator.UI
 
         public static void CloseTopWindow()
         {
-
+            if (windows != null)
+            {
+                for (int i = 0; i < windows.Count; i++)
+                {
+                    if (windows[i].isTopAndActive)
+                    {
+                        windows[i].CloseWindow();
+                        return;
+                    }
+                }
+            }
         }
     }
 }

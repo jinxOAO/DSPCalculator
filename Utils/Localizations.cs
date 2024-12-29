@@ -11,6 +11,8 @@ namespace DSPCalculator
     {
         public static void AddLocalizations()
         {
+            LocalizationModule.RegisterTranslation("设置目标产物", "Target Product", "设置目标产物", "Target Product");
+
             LocalizationModule.RegisterTranslation("来自calc", "- From ", "- 来自", "- From ");
             LocalizationModule.RegisterTranslation("实际需求calc", "- Actual demand  ", "- 实际需求  ", "- Actual demand  ");
             LocalizationModule.RegisterTranslation("溢出calc", "- Excessive output  ", "- 产出过量  ", "- Excessive output  ");
@@ -29,8 +31,19 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("不再视为原矿标题", "Remove From Raw Ore", "不再视为原矿", "Remove From Raw Ore");
             LocalizationModule.RegisterTranslation("不再视为原矿说明", "No longer treat this item as directly obtainable raw material.", "不再将该物品视为可直接获得的原矿。", "No longer treat this item as directly obtainable raw material.");
 
+            LocalizationModule.RegisterTranslation("还原默认配置标题", "Reset All Configuration", "还原默认配置", "Reset All Configuration");
+            LocalizationModule.RegisterTranslation("还原默认配置说明", "All preferred production buildings, proliferator settings, raw ore settings, etc. will be restored to default configurations.", "所有首选生产建筑、增产、原矿等设置将被还原为默认配置。", "All preferred production buildings, proliferator settings, raw ore settings, etc. will be restored to default configurations.");
+
+            LocalizationModule.RegisterTranslation("预估电量", "Power Consumption Est.", "预估电量需求", "Power Consumption Est.");
+            LocalizationModule.RegisterTranslation("工厂需求", "Production Facilities", "生产设施", "Production Facilities");
             LocalizationModule.RegisterTranslation("原矿需求", "Raw Resources Demands", "原材料需求", "Raw Resources Demands");
             LocalizationModule.RegisterTranslation("副产物和溢出产物", "By-product / Excessive product", "副产物 / 过量产物", "By-product / Excessive product");
+
+
+            LocalizationModule.RegisterTranslation("收起/展开", "Fold / Unfold (F2)", "收起/展开窗口 (F2)", "Fold / Unfold (F2)");
+            LocalizationModule.RegisterTranslation("生产加速calc", "Production Speedup", "生产加速", "Production Speedup");
+            LocalizationModule.RegisterTranslation("额外产出calc", "Extra products", "额外产出", "Extra products");
+
 
         }
     }

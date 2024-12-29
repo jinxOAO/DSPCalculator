@@ -64,5 +64,18 @@ namespace DSPCalculator
                 return string.Format("{0:N0} {1}", num, tail);
             }
         }
+
+        public static string KMG(int num)
+        {
+            if (num < 1000)
+            {
+                return num.ToString();
+            }
+            else
+            {
+                return KMG((double)num);
+            }
+            
+        }
     }
 }

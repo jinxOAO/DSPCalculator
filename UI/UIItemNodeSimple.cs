@@ -55,7 +55,7 @@ namespace DSPCalculator.UI
         public GameObject incToggleObj;
         public Text incText;
 
-        public UIItemNodeSimple(ItemNode node, bool isResources ,UICalcWindow calcWindow)
+        public UIItemNodeSimple(ItemNode node, bool isResources ,UICalcWindow calcWindow, bool isProliferatorDemand = false)
         {
             // 如果公共资源尚未被初始化，则初始化
             if (backgroundSprite == null)
@@ -91,7 +91,7 @@ namespace DSPCalculator.UI
             backObj.GetComponent<RectTransform>().sizeDelta = new Vector2(UICalcWindow.sideCellWidth - UICalcWindow.cellDistance, UICalcWindow.sideCellHeight - UICalcWindow.cellDistance / 2);
 
             // 设置图标
-            GameObject iconObj = GameObject.Instantiate(UICalcWindow.iconButtonObj);
+            GameObject iconObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
             iconObj.name = "icon";
             iconObj.transform.SetParent(obj.transform, false);
             iconObj.transform.localScale = Vector3.one;
@@ -118,17 +118,27 @@ namespace DSPCalculator.UI
                 iconObj.GetComponent<UIButton>().tips.delay = 0.1f;
 
                 string finalSpeedStr = Utils.KMG(itemNode.satisfiedSpeed);
-                if(!isResources) // 说明是为了显示副产物或者溢出量
+                if(!isResources && !isProliferatorDemand) // 说明是为了显示副产物或者溢出量
                     finalSpeedStr = Utils.KMG(itemNode.satisfiedSpeed - itemNode.needSpeed);
                 outputText.text = finalSpeedStr;
+                if(isProliferatorDemand) // 如果是专门用于显示额外增产剂需求的
+                {
+                    outputText.fontSize = 16;
+                    int maxAbility = 0;
+                    for (int i = 0; i < CalcDB.proliferatorAbilities.Count; i++)
+                    {
+                        if (CalcDB.proliferatorAbilities[i] > maxAbility && CalcDB.proliferatorAbilities[i] < Cargo.incTableMilli.Length)
+                            maxAbility = CalcDB.proliferatorAbilities[i];
+                    }
+                    outputText.text += $"\n({Utils.KMG(itemNode.satisfiedSpeed / (1.0 + Cargo.incTableMilli[maxAbility]))})";
+                }
 
                 string speedDetails = "";
 
-                // 调整按钮、机器图标、机器数量、配方显示
-                // 只有在主配方激活时才允许调整
-                if (CalcDB.itemDict[itemId].recipes.Count > 0 && isResources) // 说明可以不视为原矿
+                // 如果有生产他的配方，说明可以不设为原矿，则增加取消作为原矿的按钮
+                if (CalcDB.itemDict[itemId].recipes.Count > 0 && isResources)
                 {
-                    GameObject clearRecipePreferenceButtonObj = GameObject.Instantiate(UICalcWindow.iconButtonObj);
+                    GameObject clearRecipePreferenceButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
                     clearRecipePreferenceButtonObj.name = "cancel-ore";
                     clearRecipePreferenceButtonObj.transform.SetParent(obj.transform, false);
                     clearRecipePreferenceButtonObj.transform.localScale = Vector3.one;

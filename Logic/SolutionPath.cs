@@ -26,6 +26,8 @@ namespace DSPCalculator.Logic
         public Dictionary<int, RecipeInfo> recipeInfos; // 用于储存配方信息，相同id的配方在这里共享同一个recipeInfo，在量化计算阶段存储着该配方的所有需求倍率总和
 
         public List<ItemNode> nodeStack; // 用于解决过程中存储暂存节点
+
+        public Dictionary<int, double> proliferatorCount; // 用于存储所有增产剂的使用量（但目前不会链式求解增产剂）
         public bool unsolved { get { return nodeStack.Count > 0; } }
 
 
@@ -35,6 +37,7 @@ namespace DSPCalculator.Logic
             itemNodes = new Dictionary<int, ItemNode>();
             recipeInfos = new Dictionary<int, RecipeInfo>();
             nodeStack = new List<ItemNode>();
+            proliferatorCount = new Dictionary<int, double>();
             userPreference = new UserPreference();
             targetSpeed = 3600;
             displaySpeedRatio = 1;
@@ -44,6 +47,8 @@ namespace DSPCalculator.Logic
         {
             itemNodes.Clear();
             recipeInfos.Clear();
+            nodeStack.Clear();
+            proliferatorCount.Clear();
         }
 
         public void ClearUserPreference()
@@ -84,6 +89,7 @@ namespace DSPCalculator.Logic
                     //TestLog();
                     CalcAll();
                     RemoveOverflow();
+                    CalcProliferator();
                     return true;
                 }
                 //TestLog2();
@@ -492,6 +498,24 @@ namespace DSPCalculator.Logic
                             }
                         }
                     }
+                }
+            }
+        }
+
+
+        public void CalcProliferator()
+        {
+            foreach (var data in recipeInfos)
+            {
+                int id;
+                double count;
+                data.Value.GetProliferatorUsed(out id, out count);
+                if(id > 0)
+                {
+                    if (!proliferatorCount.ContainsKey(id))
+                        proliferatorCount[id] = count;
+                    else
+                        proliferatorCount[id] += count;
                 }
             }
         }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DSPCalculator.Compatibility;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,7 @@ namespace DSPCalculator.Logic
         public static Dictionary<int, AssemblerData> assemblerDict; // key为assembler的itemId
         public static List<int> proliferatorItemIds;
         public static List<int> proliferatorAbilities;
+        public static Dictionary<int, int> proliferatorAbilityToId; // 增产剂效果转化为Id
 
         public static int energyNexusID = 2209;
         public static int emptyBatteryID = 2206;
@@ -27,6 +29,8 @@ namespace DSPCalculator.Logic
         public static int assemblerSpeedNormalized = 10000; // 在prefabDesc中，1.0x倍速的assemblerSpeed值
         public static int researchSpeedNormalized = 10000; // 默认游戏中，与assembler的1.0倍速的基数是相同的
 
+        public static int[] defaultAsOreArray = new int[] { 1000, 1003, 1117, 1120, 6201, 6206, 6220, 6234, 7002, 7019 };// 一些即使有生产配方，也会被默认视为原矿的物品（用户可以更改偏好使其不作为原矿）
+        public static bool alreadyHaveOneFracRecipe; // 为了避免分馏mod可能的大量成环危险，只会加载第一个分馏配方，其他的均不放入recipe
 
         public static void TryInit()
         {
@@ -40,6 +44,8 @@ namespace DSPCalculator.Logic
                 assemblerDict = new Dictionary<int, AssemblerData>();
                 proliferatorItemIds = new List<int> { 1141, 1142, 1143 };
                 proliferatorAbilities = new List<int>();
+                proliferatorAbilityToId = new Dictionary<int, int>();
+                alreadyHaveOneFracRecipe = false;
 
                 // 加载配方
                 int recipeLen = LDB.recipes.Length;
@@ -48,8 +54,17 @@ namespace DSPCalculator.Logic
                     RecipeProto recipe = LDB.recipes.dataArray[i];
                     if(recipe != null && recipe.Items!= null && recipe.Results != null)
                     {
-                        NormalizedRecipe normalizedRecipe = new NormalizedRecipe(recipe);
-                        recipeDict[recipe.ID] = normalizedRecipe;
+                        if (recipe.Type != ERecipeType.Fractionate)
+                        {
+                            NormalizedRecipe normalizedRecipe = new NormalizedRecipe(recipe);
+                            recipeDict[recipe.ID] = normalizedRecipe;
+                        }
+                        else if (!alreadyHaveOneFracRecipe)
+                        {
+                            alreadyHaveOneFracRecipe = true;
+                            NormalizedRecipe normalizedRecipe = new NormalizedRecipe(recipe);
+                            recipeDict[recipe.ID] = normalizedRecipe;
+                        }
                     }
                 }
 
@@ -146,6 +161,8 @@ namespace DSPCalculator.Logic
                             proliferatorAbilities.Add(proto.Ability);
                         else
                             proliferatorAbilities.Add(0);
+
+                        proliferatorAbilityToId[proto.Ability] = proto.ID;
                     }
                     else
                     {
@@ -153,8 +170,71 @@ namespace DSPCalculator.Logic
                     }
                 }
 
+                // 处理所有物品被默认视为原矿，即使有配方可以生产
+                for (int i = 0; i < defaultAsOreArray.Length; i++)
+                {
+                    if (itemDict.ContainsKey(defaultAsOreArray[i]))
+                    {
+                        itemDict[defaultAsOreArray[i]].defaultAsOre = true;
+                    }
+                }
+
                 inited = true;
+
+                GBInit();
             }
+        }
+
+        public static void GBInit()
+        {
+            if (!CompatManager.GB)
+            {
+                return;
+            }
+
+            if (assemblerDict.ContainsKey(6257))
+            {
+                if (assemblerListByType.ContainsKey((int)ERecipeType.Assemble))
+                    assemblerListByType[(int)ERecipeType.Assemble].Add(assemblerDict[6257]); // 自己已经在18
+                if (assemblerListByType.ContainsKey(9))
+                    assemblerListByType[9].Add(assemblerDict[6257]);
+            }
+
+
+            if (assemblerDict.ContainsKey(6258))
+            {
+                if (assemblerListByType.ContainsKey((int)ERecipeType.Smelt))
+                    assemblerListByType[(int)ERecipeType.Smelt].Add(assemblerDict[6258]); // 自己已经在19
+                if (assemblerListByType.ContainsKey(11))
+                    assemblerListByType[11].Add(assemblerDict[6258]);
+            }
+
+
+            if (assemblerDict.ContainsKey(6259))
+            {
+                if (assemblerListByType.ContainsKey((int)ERecipeType.Chemical))
+                    assemblerListByType[(int)ERecipeType.Chemical].Add(assemblerDict[6259]); // 自己已经在17
+                if (assemblerListByType.ContainsKey((int)ERecipeType.Refine))
+                    assemblerListByType[(int)ERecipeType.Refine].Add(assemblerDict[6259]);
+                if (assemblerListByType.ContainsKey(16))
+                    assemblerListByType[16].Add(assemblerDict[6259]);
+            }
+
+
+            if (assemblerDict.ContainsKey(2318))
+            {
+                if (assemblerListByType.ContainsKey((int)ERecipeType.Assemble))
+                    assemblerListByType[(int)ERecipeType.Assemble].Add(assemblerDict[2318]); // 黑雾台自己已经在12
+                if (assemblerListByType.ContainsKey(9))
+                    assemblerListByType[9].Add(assemblerDict[2318]);
+                if (assemblerListByType.ContainsKey((int)ERecipeType.Chemical))
+                    assemblerListByType[(int)ERecipeType.Chemical].Add(assemblerDict[2318]);
+                if (assemblerListByType.ContainsKey((int)ERecipeType.Refine))
+                    assemblerListByType[(int)ERecipeType.Refine].Add(assemblerDict[2318]);
+                if (assemblerListByType.ContainsKey(16))
+                    assemblerListByType[16].Add(assemblerDict[2318]);
+            }
+
         }
     }
 
@@ -303,13 +383,16 @@ namespace DSPCalculator.Logic
         public int ID;
         public Sprite iconSprite;
         public float speed;
-        public float workEnergyKW; // 以KW为单位的每个工厂的能量需求
+        public double workEnergyW; // 以W为单位的每个工厂的能量需求
+        public double idleEnergyW; 
 
         public AssemblerData(ItemProto item, PrefabDesc desc)
         {
             ID = item.ID;
             iconSprite = item.iconSprite;
-            workEnergyKW = (1.0f * desc.workEnergyPerTick * 60 / 1000);
+            workEnergyW = (1.0f * desc.workEnergyPerTick * 60);
+            idleEnergyW = (1.0f * desc.idleEnergyPerTick * 60);
+
             if (desc.isLab)
             {
                 speed = 1.0f * desc.labAssembleSpeed / CalcDB.researchSpeedNormalized;
