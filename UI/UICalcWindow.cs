@@ -107,10 +107,16 @@ namespace DSPCalculator.UI
         public Image cbEnergyBurst;
         public Image cbDirac;
         public Image cbInferior;
+        public Image cbIncMilli;
+        public Image cbAccMilli;
         public Text txtBluebuff;
         public Text txtEnergyBurst;
         public Text txtDirac;
         public Text txtInferior;
+        public Text txtIncMilli;
+        public Text txtAccMilli;
+        public InputField incInput;
+        public InputField accInput;
 
         public SolutionTree solution; // 该窗口对应的量化计算路径
 
@@ -161,7 +167,7 @@ namespace DSPCalculator.UI
             switchSizeButtonObj.name = "-";
             switchSizeButtonObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(-43, -13); // 原本的x是-13, -13
             switchSizeButtonObj.GetComponent<Image>().sprite = leftTriangleSprite;
-            switchSizeButtonObj.GetComponent<UIButton>().tips.tipTitle = "收起/展开".Translate();
+            switchSizeButtonObj.GetComponent<UIButton>().tips.tipTitle = "收起/展开".Translate() + UIHotkeySettingPatcher.GetFoldHotkeyString();
             switchSizeButtonObj.GetComponent<UIButton>().tips.corner = 3;
             switchSizeButtonObj.GetComponent<UIButton>().tips.delay = 0.3f;
             Button switchSizeButton = switchSizeButtonObj.GetComponent<Button>();
@@ -392,7 +398,7 @@ namespace DSPCalculator.UI
 
             // 右侧最终文本信息
             GameObject finalInfoTextObj = GameObject.Instantiate(TextObj, sidePanel);
-            finalInfoTextObj.transform.localPosition = new Vector3(20, -25, 0);
+            finalInfoTextObj.transform.localPosition = new Vector3(15, -20, 0);
             finalInfoText = finalInfoTextObj.GetComponent<Text>();
             finalInfoText.fontSize = 16;
             finalInfoText.alignment = TextAnchor.UpperLeft;
@@ -402,7 +408,7 @@ namespace DSPCalculator.UI
             assemblersDemandsGroupObj.name = "assember-demands";
             assemblersDemandsGroupObj.transform.SetParent(sidePanel);
             assemblersDemandsGroupObj.transform.localScale = Vector3.one;
-            assemblersDemandsGroupObj.transform.localPosition = new Vector3(18, -110, 0);
+            assemblersDemandsGroupObj.transform.localPosition = new Vector3(13, -110, 0);
             // 实际创建工厂信息由RefreshAssemblerDemands()完成
 
             // 还原所有配置按钮
@@ -430,7 +436,7 @@ namespace DSPCalculator.UI
             checkBoxGroupObj.name = "checkbox-group";
             checkBoxGroupObj.transform.SetParent(sidePanel);
             checkBoxGroupObj.transform.localScale = Vector3.one;
-            checkBoxGroupObj.transform.localPosition = new Vector3(180, -28, 0);
+            checkBoxGroupObj.transform.localPosition = new Vector3(155, -28, 0);
 
             if(CompatManager.TCFV)
             {
@@ -462,6 +468,70 @@ namespace DSPCalculator.UI
                 inferiorCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, 0, 0);
                 inferiorCbObj.GetComponent<Button>().onClick.AddListener(OnInferiorClick);
             }
+
+            // 用户可以自定义增产效果，来覆盖游戏的增产效果
+            GameObject customIncMilliCbObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
+            customIncMilliCbObj.name = "checkbox-custom-inc";
+            cbIncMilli = customIncMilliCbObj.GetComponent<Image>();
+            txtIncMilli = customIncMilliCbObj.transform.Find("text").GetComponent<Text>();
+            customIncMilliCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -20, 0);
+            customIncMilliCbObj.GetComponent<Button>().onClick.AddListener(OnCustomIncMilliClick);
+            customIncMilliCbObj.GetComponent<UIButton>().tips.tipTitle = "强制增产效能标题".Translate();
+            customIncMilliCbObj.GetComponent<UIButton>().tips.tipText = "强制增产效能说明".Translate();
+            customIncMilliCbObj.GetComponent<UIButton>().tips.corner = 1;
+            customIncMilliCbObj.GetComponent<UIButton>().tips.delay = 0.1f;
+            customIncMilliCbObj.GetComponent<UIButton>().tips.width = 400;
+            GameObject customIncInput = GameObject.Instantiate(oriInputFieldObj,checkBoxGroupObj.transform);
+            customIncInput.name = "inputfield-inc";
+            customIncInput.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 20);
+            customIncInput.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
+            customIncInput.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(212, -20, 0);
+            incInput = customIncInput.GetComponent<InputField>();
+            customIncInput.GetComponent<InputField>().text = "25";
+            customIncInput.GetComponent<InputField>().contentType = InputField.ContentType.IntegerNumber;
+            customIncInput.GetComponent<InputField>().characterLimit = 3;
+            customIncInput.GetComponent<InputField>().transition = Selectable.Transition.None; // 要不然鼠标不在上面时颜色会很浅，刚打开容易找不到，不够明显
+            customIncInput.GetComponent<InputField>().onEndEdit.RemoveAllListeners();
+            customIncInput.GetComponent<InputField>().onEndEdit.AddListener((x) => OnEndEditIncMilli(x));
+            customIncInput.GetComponent<Image>().color = new Color(0, 0, 0, 0.5f);
+            customIncInput.transform.Find("value-text").GetComponent<Text>().color = Color.white;
+            customIncInput.transform.Find("value-text").GetComponent<Text>().fontSize = 12;
+            customIncInput.GetComponent<UIButton>().tips.tipTitle = "";
+            customIncInput.GetComponent<UIButton>().tips.tipText = "";
+            customIncInput.SetActive(false);
+            customIncInput.SetActive(true);
+
+            GameObject customAccMilliCbObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
+            customAccMilliCbObj.name = "checkbox-custom-acc";
+            cbAccMilli = customAccMilliCbObj.GetComponent<Image>();
+            txtAccMilli = customAccMilliCbObj.transform.Find("text").GetComponent<Text>();
+            customAccMilliCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -40, 0);
+            customAccMilliCbObj.GetComponent<Button>().onClick.AddListener(OnCustomAccMilliClick);
+            customAccMilliCbObj.GetComponent<UIButton>().tips.tipTitle = "强制加速效能标题".Translate();
+            customAccMilliCbObj.GetComponent<UIButton>().tips.tipText = "强制加速效能说明".Translate();
+            customAccMilliCbObj.GetComponent<UIButton>().tips.corner = 1;
+            customAccMilliCbObj.GetComponent<UIButton>().tips.delay = 0.1f;
+            customAccMilliCbObj.GetComponent<UIButton>().tips.width = 400;
+            GameObject customAccInput = GameObject.Instantiate(oriInputFieldObj, checkBoxGroupObj.transform);
+            customAccInput.name = "inputfield-acc";
+            customAccInput.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 20);
+            customAccInput.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
+            customAccInput.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(212, -40, 0);
+            accInput = customAccInput.GetComponent<InputField>();
+            customAccInput.GetComponent<InputField>().text = "100";
+            customAccInput.GetComponent<InputField>().contentType = InputField.ContentType.IntegerNumber;
+            customAccInput.GetComponent<InputField>().characterLimit = 3;
+            customAccInput.GetComponent<InputField>().transition = Selectable.Transition.None; // 要不然鼠标不在上面时颜色会很浅，刚打开容易找不到，不够明显
+            customAccInput.GetComponent<InputField>().onEndEdit.RemoveAllListeners();
+            customAccInput.GetComponent<InputField>().onEndEdit.AddListener((x) => OnEndEditAccMilli(x));
+            customAccInput.GetComponent<Image>().color = new Color(0, 0, 0, 0.5f);
+            customAccInput.transform.Find("value-text").GetComponent<Text>().color = Color.white;
+            customAccInput.transform.Find("value-text").GetComponent<Text>().fontSize = 12;
+            customAccInput.GetComponent<UIButton>().tips.tipTitle = "";
+            customAccInput.GetComponent<UIButton>().tips.tipText = "";
+            customAccInput.SetActive(false);
+            customAccInput.SetActive(true);
+
 
             RefreshFinalInfoText();
             RefreshCheckBoxes();
@@ -672,7 +742,7 @@ namespace DSPCalculator.UI
 
             if (!isTopAndActive) return;
             // 下面的只有Topwindow可以响应
-            if(Input.GetKeyDown(DSPCalculatorPlugin.SwitchWindowSizeHotKey.Value))
+            if(Input.GetKeyDown(DSPCalculatorPlugin.SwitchWindowSizeHotKey.Value) && UIHotkeySettingPatcher.CheckModifier(2, WindowsManager.ShiftDown,WindowsManager.CtrlDown, WindowsManager.AltDown))
             {
                 SwitchWindowSize();
             }
@@ -724,15 +794,18 @@ namespace DSPCalculator.UI
             windowObj.transform.SetAsLastSibling();
             windowObj.SetActive(true);
             titleText.text = "量化计算器".Translate();
+            RefreshCheckBoxes();
         }
 
         public void OnTargetProductIconClick()
         {
+            UIItemPicker.showAll = true;
             UIItemPicker.Popup(windowObj.GetComponent<RectTransform>().anchoredPosition + new Vector2(300f, -200f), OnTargetProductChange);
         }
 
         public void OnTargetProductChange(ItemProto item)
         {
+            UIItemPicker.showAll = false;
             if (item != null)
             {
                 targetProductIcon.sprite = item.iconSprite;
@@ -1102,7 +1175,7 @@ namespace DSPCalculator.UI
 
         public void ClearAllUserPreference()
         {
-            solution.userPreference = new UserPreference();
+            solution.ClearUserPreference();
             solution.ReSolve();
             RefreshAll();
         }
@@ -1141,6 +1214,24 @@ namespace DSPCalculator.UI
                     cbInferior.sprite = checkboxOffSprite;
                 txtInferior.text = "遗物名称3-0".Translate().Split('\n')[0];
             }
+            if(cbIncMilli != null)
+            {
+                if (solution.userPreference.customizeIncMilli)
+                    cbIncMilli.sprite = checkboxOnSprite;
+                else
+                    cbIncMilli.sprite = checkboxOffSprite;
+                txtIncMilli.text = "强制增产效能".Translate();
+
+            }
+            if(cbAccMilli != null)
+            {
+
+                if (solution.userPreference.customizeAccMilli)
+                    cbAccMilli.sprite = checkboxOnSprite;
+                else
+                    cbAccMilli.sprite = checkboxOffSprite;
+                txtAccMilli.text = "强制加速效能".Translate();
+            }
         }
 
         public void OnBluebuffClick()
@@ -1170,5 +1261,56 @@ namespace DSPCalculator.UI
             RefreshCheckBoxes();
             nextFrameRecalc = true;
         }
+
+        public void OnCustomIncMilliClick()
+        {
+            solution.userPreference.customizeIncMilli = !solution.userPreference.customizeIncMilli;
+            RefreshCheckBoxes();
+            nextFrameRecalc = true;
+        }
+
+        public void OnCustomAccMilliClick()
+        {
+            solution.userPreference.customizeAccMilli = !solution.userPreference.customizeAccMilli;
+            RefreshCheckBoxes();
+            nextFrameRecalc = true;
+        }
+
+        public void OnEndEditIncMilli(string input)
+        {
+            int incOverride = 25;
+            try
+            {
+                incOverride = Convert.ToInt32(input);
+                if (incOverride < 0)
+                    incOverride = 0;
+            }
+            catch (Exception)
+            {
+                incOverride = 25;
+            }
+            incInput.text = incOverride.ToString();
+            solution.userPreference.incMilliOverride = 1.0 * incOverride / 100;
+            nextFrameRecalc = true;
+        }
+
+        public void OnEndEditAccMilli(string input)
+        {
+            int accOverride = 100;
+            try
+            {
+                accOverride = Convert.ToInt32(input);
+                if (accOverride < 0)
+                    accOverride = 0;
+            }
+            catch (Exception)
+            {
+                accOverride = 100;
+            }
+            accInput.text = accOverride.ToString();
+            solution.userPreference.accMilliOverride = 1.0 * accOverride / 100;
+            nextFrameRecalc = true;
+        }
+
     }
 }

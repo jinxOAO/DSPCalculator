@@ -16,6 +16,11 @@ namespace DSPCalculator.UI
         public static GameObject calcWindowGroupObj;
         public static bool hasOpenedWindow;
 
+        public static bool ShiftDown;
+        public static bool CtrlDown;
+        public static bool AltDown;
+
+
         /// <summary>
         /// mod加载时初始化
         /// </summary>
@@ -45,9 +50,34 @@ namespace DSPCalculator.UI
                 }
             }
 
-            if (Input.GetKeyDown(DSPCalculatorPlugin.OpenWindowHotKey.Value))
+            if (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift))
+                ShiftDown = true;
+            if (Input.GetKeyUp(KeyCode.LeftShift) || Input.GetKeyUp(KeyCode.RightShift))
+                ShiftDown = false;
+            if (Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.RightControl))
+                CtrlDown = true;
+            if (Input.GetKeyUp(KeyCode.LeftControl) || Input.GetKeyUp(KeyCode.RightControl))
+                CtrlDown = false;
+            if (Input.GetKeyDown(KeyCode.LeftAlt) || Input.GetKeyDown(KeyCode.RightAlt))
+                AltDown = true;
+            if (Input.GetKeyUp(KeyCode.LeftAlt) || Input.GetKeyUp(KeyCode.RightAlt))
+                AltDown = false;
+
+            if (Input.GetKeyDown(DSPCalculatorPlugin.OpenWindowHotKey.Value) && UIHotkeySettingPatcher.CheckModifier(1, ShiftDown, CtrlDown, AltDown))
             {
                 OpenOne();
+            }
+
+            if (UIPauseBarPatcher.pauseBarObj != null)
+            {
+                if (hasOpenedWindow)
+                    UIPauseBarPatcher.pauseBarObj.SetActive(true);
+                else
+                {
+                    UIPauseBarPatcher.pauseBarObj.SetActive(false);
+                    if(GameMain.instance != null)
+                        GameMain.instance._fullscreenPaused = false;
+                }
             }
             //if (Input.GetKeyDown(KeyCode.L))
             //{
@@ -62,6 +92,8 @@ namespace DSPCalculator.UI
 
         public static void OpenOne()
         {
+            UIPauseBarPatcher.Init();
+
             if(lastClosedWindow != null)
             {
                 lastClosedWindow.OpenWindow();

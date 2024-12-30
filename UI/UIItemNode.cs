@@ -260,13 +260,24 @@ namespace DSPCalculator.UI
                     // recipeGroupObj.transform.localPosition = new Vector3(-120, 20, 0); // 无UITip的位置设置
                     recipeGroupObj.transform.localPosition = new Vector3(-120, 0, 0); // 有UITip的位置设置
                     RecipeProto recipeProto = itemNode.mainRecipe.recipeNorm.oriProto;
+
+
                     int posX = 0;
                     int posXDelta = 40;
+                    int iconSize = 40;
+                    int totalCount = recipeProto.Results.Length + recipeProto.Items.Length;
+                    if(totalCount >= 7) // 过长配方，图表变小
+                    {
+                        posXDelta = 32;
+                        iconSize = 32;
+                    }
+
                     for (int i = 0; i < recipeProto.Results.Length; i++)
                     {
                         // GameObject recipeItem = GameObject.Instantiate(UICalcWindow.iconObj_NoTip, recipeGroupObj.transform); // 使用无Tip版本则用这个，但是要注意下面的Tip设置也要删除
                         GameObject recipeItem = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip, recipeGroupObj.transform); // 使用有tip版本
                         recipeItem.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(posX, 0, 0);
+                        recipeItem.GetComponent<RectTransform>().sizeDelta = new Vector2(iconSize, iconSize);
                         recipeItem.GetComponent<Image>().sprite = LDB.items.Select(recipeProto.Results[i]).iconSprite;
                         recipeItem.transform.Find("count").GetComponent<Text>().text = recipeProto.ResultCounts[i].ToString();
                         recipeItem.transform.Find("count").gameObject.SetActive(true); // 有tip的图标才需要，因为之前隐藏这个了
@@ -291,6 +302,7 @@ namespace DSPCalculator.UI
                         // GameObject recipeItem = GameObject.Instantiate(UICalcWindow.iconObj_NoTip, recipeGroupObj.transform); // 使用无Tip版本则用这个，但是要注意下面的Tip设置也要删除
                         GameObject recipeItem = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip, recipeGroupObj.transform); // 使用有tip版本
                         recipeItem.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(posX, 0, 0);
+                        recipeItem.GetComponent<RectTransform>().sizeDelta = new Vector2(iconSize, iconSize);
                         recipeItem.GetComponent<Image>().sprite = LDB.items.Select(recipeProto.Items[i]).iconSprite;
                         recipeItem.transform.Find("count").GetComponent<Text>().text = recipeProto.ItemCounts[i].ToString();
                         recipeItem.transform.Find("count").gameObject.SetActive(true); // 有tip的图标才需要，因为之前隐藏这个了
@@ -418,7 +430,7 @@ namespace DSPCalculator.UI
                 double finalCount = recipeInfo.count / assemblerData.speed / 60; // 除以60是因为计算都是以每s计算的，最终转换成工厂数量等都要按min，所以都是60分之一。
                 if(!itemNode.mainRecipe.isInc && itemNode.mainRecipe.incLevel >=0 && itemNode.mainRecipe.incLevel< Cargo.accTableMilli.Length)
                 {
-                    finalCount = finalCount / (1.0 + Cargo.accTableMilli[itemNode.mainRecipe.incLevel]);
+                    finalCount = finalCount / (1.0 +  Utils.GetAccMilli(itemNode.mainRecipe.incLevel, parentCalcWindow.solution.userPreference));
                 }
                 assemblerCountText.text = "× " + Utils.KMG(finalCount);
             }
@@ -590,7 +602,8 @@ namespace DSPCalculator.UI
             int oriIncLevel = preference.globalIncLevel;
             if (preference.recipeConfigs.ContainsKey(recipeId))
             {
-                oriIncLevel = preference.recipeConfigs[recipeId].incLevel;
+                if(preference.recipeConfigs[recipeId].incLevel >= 0)
+                    oriIncLevel = preference.recipeConfigs[recipeId].incLevel;
             }
             foreach (var item in proliferatorUsedButtons)
             {

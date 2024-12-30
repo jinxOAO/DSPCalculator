@@ -1,4 +1,5 @@
-﻿using DSPCalculator.Compatibility;
+﻿using CommonAPI;
+using DSPCalculator.Compatibility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,6 +32,10 @@ namespace DSPCalculator.Logic
 
         public static int[] defaultAsOreArray = new int[] { 1000, 1003, 1117, 1120, 6201, 6206, 6220, 6234, 7002, 7019 };// 一些即使有生产配方，也会被默认视为原矿的物品（用户可以更改偏好使其不作为原矿）
         public static bool alreadyHaveOneFracRecipe; // 为了避免分馏mod可能的大量成环危险，只会加载第一个分馏配方，其他的均不放入recipe
+
+        public const int beltSpeedToPerSecFactor = 6; // prefabDesc.beltSpeed = 1，则为6每秒。正常三级传送带为beltSpeed = 5，实际30/s
+        public static double maxBeltItemSpeedPreSec = 0; // 用于统计所有游戏物品的传送带里的最大带速（正常游戏为30），用于计算分馏建筑需求的
+        public static double maxStackSize = 4; // 最大堆叠倍率，由于分馏的生产设施的生产速度只由带速决定，所以这个值影响分馏的默认速度计算
 
         public static void TryInit()
         {
@@ -68,7 +73,7 @@ namespace DSPCalculator.Logic
                     }
                 }
 
-                // 处理所有物品
+                // 处理所有物品、生产设施
                 int itemLen = LDB.items.Length;
                 for (int i = 0; i < itemLen; i++) // 注意，dataArray的地址i和ID完全不对等
                 {
@@ -100,7 +105,7 @@ namespace DSPCalculator.Logic
                                 }
                                 assemblerDict[item.ID] = assemblerData;
                             }
-                            else if (model.prefabDesc.isAssembler)
+                            else if (model.prefabDesc.isAssembler || model.prefabDesc.isFractionator)
                             {
                                 AssemblerData assemblerData = new AssemblerData(item, model.prefabDesc);
                                 int type = (int)model.prefabDesc.assemblerRecipeType;
@@ -114,8 +119,19 @@ namespace DSPCalculator.Logic
                                 }
                                 assemblerDict[item.ID] = assemblerData;
                             }
+
+                            if(model.prefabDesc.isBelt)
+                            {
+                                maxBeltItemSpeedPreSec = Math.Max(maxBeltItemSpeedPreSec, model.prefabDesc.beltSpeed * beltSpeedToPerSecFactor);
+                            }
                         }
                     }
+                }
+
+                // 根据最大带速，初始化分馏设施的生产速度倍率
+                foreach (var assemblerData in assemblerListByType[(int)ERecipeType.Fractionate])
+                {
+                    assemblerData.speed = maxBeltItemSpeedPreSec * maxStackSize;
                 }
 
                 // 特殊地 加入一个特别的，电池充电的配方
@@ -145,9 +161,16 @@ namespace DSPCalculator.Logic
                         }
                     }
                     recipeDict[-1] = chargeNormed;
+
+                    // 也要将充电的工厂加入字典
+                    AssemblerData exchangerData = new AssemblerData(LDB.items.Select(energyNexusID), nexusModel.prefabDesc);
+                    exchangerData.workEnergyW = nexusModel.prefabDesc.exchangeEnergyPerTick * 60;
+                    exchangerData.idleEnergyW = 0;
+                    exchangerData.speed = 1;
+                    assemblerListByType[energyNexusID] = new List<AssemblerData> { exchangerData };
+                    assemblerDict[energyNexusID] = exchangerData;
                 }
 
-                // 处理所有工厂
 
                 // 处理增产剂
                 for (int i = 0; i < proliferatorItemIds.Count; i++)
@@ -308,6 +331,8 @@ namespace DSPCalculator.Logic
                 {
                     resourceCounts[i] = 1;
                 }
+                time = 1.0 * recipe.ItemCounts[0] / recipe.ResultCounts[0];
+                productive = false; // 这里虽然游戏的原始配方是true，但是其逻辑是增加分馏概率，也就是加速。为了计算器逻辑清晰，故改成false
             }
 
             Init();
@@ -382,7 +407,7 @@ namespace DSPCalculator.Logic
     {
         public int ID;
         public Sprite iconSprite;
-        public float speed;
+        public double speed;
         public double workEnergyW; // 以W为单位的每个工厂的能量需求
         public double idleEnergyW; 
 
@@ -400,6 +425,10 @@ namespace DSPCalculator.Logic
             else if (desc.isAssembler)
             {
                 speed = 1.0f * desc.assemblerSpeed / CalcDB.assemblerSpeedNormalized;
+            }
+            else if (desc.isFractionator) // 分馏的速度根据最大带速来计算，和建筑本身无关
+            {
+                // 不做处理，而是在所有物品加载完成后最后处理
             }
             else
             {

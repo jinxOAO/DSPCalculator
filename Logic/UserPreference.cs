@@ -22,6 +22,10 @@ namespace DSPCalculator.Logic
         public bool energyBurst;
         public bool dirac;
         public bool inferior;
+        public bool customizeIncMilli;
+        public bool customizeAccMilli;
+        public double incMilliOverride;
+        public double accMilliOverride;
 
         public UserPreference()
         {
@@ -33,17 +37,29 @@ namespace DSPCalculator.Logic
             energyBurst = false;
             dirac = false;
             inferior = false;
+            customizeIncMilli = false;
+            customizeAccMilli = false;
+            incMilliOverride = 0;
+            accMilliOverride = 0;
             globalAssemblerIdByType = new Dictionary<int, int>();
         }
 
-        public void Clear()
-        {
-            recipeConfigs.Clear();
-            itemConfigs.Clear();
-            globalIncLevel = 0;
-            globalIsInc = true;
-            globalAssemblerIdByType.Clear();
-        }
+        //public void Clear()
+        //{
+        //    recipeConfigs.Clear();
+        //    itemConfigs.Clear();
+        //    globalIncLevel = 0;
+        //    globalIsInc = true;
+        //    bluebuff = false;
+        //    energyBurst = false;
+        //    dirac = false;
+        //    inferior = false;
+        //    customizeIncMilli = false;
+        //    customizeAccMilli = false;
+        //    incMilliOverride = 0;
+        //    accMilliOverride = 0;
+        //    globalAssemblerIdByType.Clear();
+        //}
     }
 
     public class RecipeConfig

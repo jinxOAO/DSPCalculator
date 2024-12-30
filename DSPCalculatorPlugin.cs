@@ -28,31 +28,38 @@ namespace DSPCalculator
         public const string VERSION = "0.1.0";
 
         // ---------------------------------------------------------------------------
-        public static bool developerMode = true; //           发布前修改             |
+        public static bool developerMode = false; //           发布前修改             |
         // ---------------------------------------------------------------------------
 
         public static ConfigEntry<KeyCode> OpenWindowHotKey;
         public static ConfigEntry<KeyCode> SwitchWindowSizeHotKey;
+        public static ConfigEntry<int> OpenWindowModifier;
+        public static ConfigEntry<int> SwitchWindowModifier;
 
         public void Awake()
         {
-            OpenWindowHotKey = Config.Bind<KeyCode>("config", "OpenWindowHotKey", KeyCode.F1, "打开计算器窗口的快捷键。HotKey to open calculator window.");
-            SwitchWindowSizeHotKey = Config.Bind<KeyCode>("config", "SwitchWindowSizeHotKey", KeyCode.F2, "将计算器窗口展开或缩小的快捷键。HotKey to fold or unfold calculator window.");
+            OpenWindowHotKey = Config.Bind<KeyCode>("config", "OpenWindowHotKey", KeyCode.Q, "打开计算器窗口的快捷键。HotKey to open calculator window.");
+            SwitchWindowSizeHotKey = Config.Bind<KeyCode>("config", "SwitchWindowSizeHotKey", KeyCode.Tab, "将计算器窗口展开或缩小的快捷键。HotKey to fold or unfold calculator window.");
+            OpenWindowModifier = Config.Bind<int>("config", "OpenWindowHKModifier", 0, "byte shift = 1, ctrl =2, alt = 4");
+            SwitchWindowModifier = Config.Bind<int>("config", "SwitchWindowHKModifier", 0, "byte shift = 1, ctrl =2, alt = 4");
 
             Harmony.CreateAndPatchAll(typeof(DSPCalculatorPlugin));
             Harmony.CreateAndPatchAll(typeof(RecipePickerPatcher));
+            Harmony.CreateAndPatchAll(typeof(UIHotkeySettingPatcher));
             Localizations.AddLocalizations();
         }
 
         public void Start()
         {
-
+            UIHotkeySettingPatcher.Init();
             WindowsManager.OnStart();
         }
 
         public void Update()
         {
+            UIHotkeySettingPatcher.OnUpdate();
             WindowsManager.OnUpdate();
+            UIPauseBarPatcher.OnUpdate();
         }
 
 
@@ -71,7 +78,7 @@ namespace DSPCalculator
             if(WindowsManager.hasOpenedWindow)
             {
                 bool flag = !VFInput._godModeMechaMove;
-                bool flag2 = VFInput.rtsCancel.onDown || VFInput.escKey.onDown || VFInput.escape || VFInput.delayedEscape;
+                bool flag2 = VFInput.escKey.onDown || VFInput.escape || VFInput.delayedEscape; // 没有捕获 VFInput.rtsCancel.onDown
                 if (flag && flag2)
                 {
                     VFInput.UseEscape();
@@ -81,5 +88,7 @@ namespace DSPCalculator
             }
             return true;
         }
+
+        
     }
 }

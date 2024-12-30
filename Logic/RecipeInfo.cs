@@ -77,7 +77,7 @@ namespace DSPCalculator.Logic
                 AssemblerData assemblerData = CalcDB.assemblerDict[assemblerItemId];
                 double countD = count / assemblerData.speed / 60;
                 if (!isInc && incLevel >= 0 && incLevel < Cargo.accTableMilli.Length)
-                    countD = countD / (1.0 + Cargo.accTableMilli[incLevel]);
+                    countD = countD / (1.0 + Utils.GetAccMilli(incLevel, userPreference));
                 return countD;
             }
         }
@@ -151,7 +151,7 @@ namespace DSPCalculator.Logic
 
                 if (isInc && incLevel >= 0 && incLevel < Cargo.incTableMilli.Length) // 增产效果计算
                 {
-                    return addedCount / (1.0 + Cargo.incTableMilli[incLevel] + CalcOutputDiracInc(itemId));
+                    return addedCount / (1.0 + Utils.GetIncMilli(incLevel, userPreference) + CalcOutputDiracInc(itemId));
                 }
                 else
                 {
@@ -175,7 +175,7 @@ namespace DSPCalculator.Logic
 
                 int index = productIndices[itemId];
                 if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
-                    return factor * changedCount * recipeNorm.productCounts[index] / recipeNorm.time * (1.0 + Cargo.incTableMilli[incLevel] + CalcOutputDiracInc(itemId));
+                    return factor * changedCount * recipeNorm.productCounts[index] / recipeNorm.time * (1.0 + Utils.GetIncMilli(incLevel, userPreference) + CalcOutputDiracInc(itemId));
                 else
                     return factor * changedCount * recipeNorm.productCounts[index] / recipeNorm.time * (1.0 + CalcOutputDiracInc(itemId));
             }
@@ -207,7 +207,7 @@ namespace DSPCalculator.Logic
                 double output = 0;
                 // 这里不能用getoutput方法，因为也许有的第一产物不是直接的净产物，所以显然下面用的recipe也要是oriProto而不是norm里面的
                 if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
-                    output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time * (1.0 + Cargo.incTableMilli[incLevel]);
+                    output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time * (1.0 + Utils.GetIncMilli(incLevel, userPreference));
                 else
                     output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time;
                 result -= output;
@@ -228,7 +228,7 @@ namespace DSPCalculator.Logic
                     double output = 0;
                     // 这里不能用getoutput方法，因为也许有的第一产物不是直接的净产物，所以显然下面用的recipe也要是oriProto而不是norm里面的
                     if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
-                        output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time * (1.0 + Cargo.incTableMilli[incLevel]);
+                        output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time * (1.0 + Utils.GetIncMilli(incLevel, userPreference));
                     else
                         output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time;
                     result -= 2 * output;
@@ -249,7 +249,7 @@ namespace DSPCalculator.Logic
             double ratio = 1.0;
             if(incLevel >= 0 && incLevel < Cargo.powerTableRatio.Length)
             {
-                ratio = Cargo.powerTableRatio[incLevel];
+                ratio = Utils.GetPowerRatio(incLevel,userPreference);
             }
             int fullyWork = (int)assemblerCount;
             double partIdle = assemblerCount - fullyWork;
@@ -290,7 +290,7 @@ namespace DSPCalculator.Logic
             {
                 // 这里不能用getoutput方法，因为也许有的第一产物不是直接的净产物，所以显然下面用的recipe也要是oriProto而不是norm里面的
                 if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
-                    shrinkByRelic += recipeNorm.oriProto.ResultCounts[0] * (1.0 + Cargo.incTableMilli[incLevel]);
+                    shrinkByRelic += recipeNorm.oriProto.ResultCounts[0] * (1.0 + Utils.GetIncMilli(incLevel, userPreference));
                 else
                     shrinkByRelic += recipeNorm.oriProto.ResultCounts[0];
             }
@@ -310,7 +310,7 @@ namespace DSPCalculator.Logic
                     double output = 0;
                     // 这里不能用getoutput方法，因为也许有的第一产物不是直接的净产物，所以显然下面用的recipe也要是oriProto而不是norm里面的
                     if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
-                        shrinkByRelic += Math.Min(2 * recipeNorm.oriProto.ResultCounts[0], recipeNorm.oriProto.ItemCounts[returnIndex]) * (1.0 + Cargo.incTableMilli[incLevel]); // 返还不能超过用量
+                        shrinkByRelic += Math.Min(2 * recipeNorm.oriProto.ResultCounts[0], recipeNorm.oriProto.ItemCounts[returnIndex]) * (1.0 + Utils.GetIncMilli(incLevel, userPreference)); // 返还不能超过用量
                     else
                         shrinkByRelic += Math.Min(2 * recipeNorm.oriProto.ResultCounts[0], recipeNorm.oriProto.ItemCounts[returnIndex]);
                 }

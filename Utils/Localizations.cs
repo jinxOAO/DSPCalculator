@@ -11,6 +11,7 @@ namespace DSPCalculator
     {
         public static void AddLocalizations()
         {
+            LocalizationModule.RegisterTranslation("量化计算器", "Calculator", "量化计算器", "Calculator");
             LocalizationModule.RegisterTranslation("设置目标产物", "Target Product", "设置目标产物", "Target Product");
 
             LocalizationModule.RegisterTranslation("来自calc", "- From ", "- 来自", "- From ");
@@ -20,6 +21,7 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("产出过量标签", "Excessive", "产出过量", "Excessive");
             LocalizationModule.RegisterTranslation("溢出或副产物", "Overflow / By-product", "溢出/副产物", "Overflow / By-product");
             LocalizationModule.RegisterTranslation("产出calc", "Total Output", "总产出", "Total Output");
+            LocalizationModule.RegisterTranslation("存在环路警告", "There is a no solution loop in the recipe solving process! \nThe changes will not take effect, please try reset all configurations.", "配方求解过程出现环路！\n更改将不会生效，请尝试还原默认配置。", "There is a no solution loop in the recipe solving process! \nThe changes will not take effect, please try reset all configurations.");
 
             LocalizationModule.RegisterTranslation("更改配方标题", "Change Recipe", "更改配方", "Change Recipe");
             LocalizationModule.RegisterTranslation("更改配方说明", "Click to specify the recipe for producing this item. This setting will remain in effect for this item until the rule is cleared.", "点击以指定生产此物品的配方。在清除规则前，该设定将一直对此物品生效。", "Click to specify the recipe for producing this item. This setting will remain in effect for this item until the rule is cleared.");
@@ -38,12 +40,22 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("工厂需求", "Production Facilities", "生产设施", "Production Facilities");
             LocalizationModule.RegisterTranslation("原矿需求", "Raw Resources Demands", "原材料需求", "Raw Resources Demands");
             LocalizationModule.RegisterTranslation("副产物和溢出产物", "By-product / Excessive product", "副产物 / 过量产物", "By-product / Excessive product");
+            LocalizationModule.RegisterTranslation("强制增产效能", "Proliferator Extra              %", "强制增产效能              %", "Proliferator Extra              %");
+            LocalizationModule.RegisterTranslation("强制加速效能", "Proliferator Spd+              %", "强制加速效能              %", "Proliferator Spd+              %");
 
+            LocalizationModule.RegisterTranslation("强制增产效能标题", "Specifying the Proliferator Extra Product Efficiency", "强制指定增产剂增产效能", "Specifying the Proliferator Extra Product Efficiency");
+            LocalizationModule.RegisterTranslation("强制增产效能说明", "If checked, each item in the calculator will be calculated using the player's input extra product efficiency, ignoring the game's original proliferator properties, regardless of which proliferator is selected. (Unless you've chosen NOT USE PROLIFERATOR button)", "勾选此项后，计算器的每一项都将使用玩家输入的增产/加速效能来进行计算，而无视游戏原本的增产/加速比例设定，无论选择了何种增产剂。（除非你选择了“不使用增产剂”按钮）", "If checked, each item in the calculator will be calculated using the player's input extra product efficiency, ignoring the game's original proliferator properties, regardless of which proliferator is selected. (Unless you've chosen NOT USE PROLIFERATOR button)");
+            LocalizationModule.RegisterTranslation("强制加速效能标题", "Specifying the Proliferator Production Speedup Efficiency", "强制指定增产剂加速效能", "Specifying the Proliferator Production Speedup Efficiency");
+            LocalizationModule.RegisterTranslation("强制加速效能说明", "If checked, each item in the calculator will be calculated using the player's input production speedup efficiency, ignoring the game's original proliferator properties, regardless of which proliferator is selected. (Unless you've chosen NOT USE PROLIFERATOR button)", "勾选此项后，计算器的每一项都将使用玩家输入的增产/加速效能来进行计算，而无视游戏原本的增产/加速比例设定，无论选择了何种增产剂。（除非你选择了“不使用增产剂”按钮）", "If checked, each item in the calculator will be calculated using the player's input production speedup efficiency, ignoring the game's original proliferator properties, regardless of which proliferator is selected. (Unless you've chosen NOT USE PROLIFERATOR button)");
 
-            LocalizationModule.RegisterTranslation("收起/展开", "Fold / Unfold (F2)", "收起/展开窗口 (F2)", "Fold / Unfold (F2)");
+            LocalizationModule.RegisterTranslation("收起/展开", "Fold / Unfold", "收起/展开窗口", "Fold / Unfold");
             LocalizationModule.RegisterTranslation("生产加速calc", "Production Speedup", "生产加速", "Production Speedup");
             LocalizationModule.RegisterTranslation("额外产出calc", "Extra products", "额外产出", "Extra products");
 
+
+            LocalizationModule.RegisterTranslation("打开量化计算器窗口", "Open the Quantitative Calculator Window", "打开量化计算器窗口", "Open the Quantitative Calculator Window");
+
+            LocalizationModule.RegisterTranslation("切换计算器窗口大小", "Fold/Unfold Calculator Window", "切换计算器窗口大小", "Fold/Unfold Calculator Window");
 
         }
     }

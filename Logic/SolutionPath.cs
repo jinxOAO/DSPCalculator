@@ -53,7 +53,7 @@ namespace DSPCalculator.Logic
 
         public void ClearUserPreference()
         {
-            userPreference.Clear();
+            userPreference = new UserPreference();
         }
 
         public bool SetTargetItemAndBeginSolve(int targetItem)
@@ -219,7 +219,7 @@ namespace DSPCalculator.Logic
                         }
                         else // 说明一路到了顶，到了最初的需求产物，都没能找到不成环的路线，这时要提示玩家，存在环路（并不一定不可解，但是环路接起来好麻烦？），是否清除用户配置
                         {
-                            UIRealtimeTip.Popup("存在环路！请清除用户配置".Translate());
+                            UIRealtimeTip.Popup("存在环路警告".Translate());
                             return false;
                         }
                     }

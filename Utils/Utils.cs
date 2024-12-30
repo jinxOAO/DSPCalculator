@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DSPCalculator.Logic;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -76,6 +77,27 @@ namespace DSPCalculator
                 return KMG((double)num);
             }
             
+        }
+
+        public static double GetIncMilli(int index, UserPreference preference)
+        {
+            if (preference.customizeIncMilli && index > 0)
+                return preference.incMilliOverride;
+            else
+                return Cargo.incTableMilli[index];
+        }
+
+        public static double GetAccMilli(int index, UserPreference preference)
+        {
+            if(preference.customizeAccMilli && index > 0)
+                return preference.accMilliOverride;
+            else
+                return Cargo.accTableMilli[index];
+        }
+
+        public static double GetPowerRatio(int index, UserPreference preference)
+        {
+            return Cargo.powerTableRatio[index];
         }
     }
 }

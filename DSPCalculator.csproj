@@ -96,8 +96,10 @@
     <Compile Include="Logic\UserPreference.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UI\UICalcWindow.cs" />
+    <Compile Include="UI\UIHotkeySettingPatcher.cs" />
     <Compile Include="UI\UIItemNode.cs" />
     <Compile Include="UI\UIItemNodeSimple.cs" />
+    <Compile Include="UI\UIPauseBarPatcher.cs" />
     <Compile Include="UI\WindowsManager.cs" />
     <Compile Include="Utils\Localizations.cs" />
     <Compile Include="Utils\Utils.cs" />

@@ -130,7 +130,7 @@ namespace DSPCalculator.UI
                         if (CalcDB.proliferatorAbilities[i] > maxAbility && CalcDB.proliferatorAbilities[i] < Cargo.incTableMilli.Length)
                             maxAbility = CalcDB.proliferatorAbilities[i];
                     }
-                    outputText.text += $"\n({Utils.KMG(itemNode.satisfiedSpeed / (1.0 + Cargo.incTableMilli[maxAbility]))})";
+                    outputText.text += $"\n({Utils.KMG(itemNode.satisfiedSpeed / (1.0 + Utils.GetIncMilli(maxAbility, parentCalcWindow.solution.userPreference)))})";
                 }
 
                 string speedDetails = "";
