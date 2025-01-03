@@ -1,4 +1,5 @@
 ﻿using CommonAPI;
+using DSPCalculator.Compatibility;
 using DSPCalculator.Logic;
 using System;
 using System.Collections.Generic;
@@ -443,12 +444,12 @@ namespace DSPCalculator.UI
 
         public void SetAssemblerPreference(int assemblerId)
         {
-            if(itemNode != null && itemNode.mainRecipe != null)
+            if (itemNode != null && itemNode.mainRecipe != null)
             {
                 RecipeInfo recipeInfo = itemNode.mainRecipe;
                 int recipeId = recipeInfo.ID;
                 UserPreference preference = parentCalcWindow.solution.userPreference;
-                if(preference.recipeConfigs.ContainsKey(recipeId))
+                if (preference.recipeConfigs.ContainsKey(recipeId))
                 {
                     preference.recipeConfigs[recipeId].assemblerItemId = assemblerId;
                 }
@@ -458,7 +459,14 @@ namespace DSPCalculator.UI
                     preference.recipeConfigs[recipeId].assemblerItemId = assemblerId;
                 }
 
-                RefreshAssemblerDisplay();
+                if (CompatManager.GB)
+                {
+                    parentCalcWindow.nextFrameRecalc = true;
+                }
+                else
+                {
+                    RefreshAssemblerDisplay();
+                }
             }
 
         }

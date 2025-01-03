@@ -63,9 +63,14 @@ namespace DSPCalculator.Logic
                 {
                     return userPreference.globalAssemblerIdByType[recipeNorm.type];
                 }
-                else
+                else if (CalcDB.assemblerListByType.ContainsKey(recipeNorm.type) && CalcDB.assemblerListByType[recipeNorm.type].Count > 0)
                 {
                     return CalcDB.assemblerListByType[recipeNorm.type][0].ID;
+                }
+                else
+                {
+                    Debug.LogError("DSPCalculator get assemblerId Error. no such aseembler that could match the recipe.");
+                    return -1;
                 }
             }
         }
@@ -79,6 +84,20 @@ namespace DSPCalculator.Logic
                 if (!isInc && incLevel >= 0 && incLevel < Cargo.accTableMilli.Length)
                     countD = countD / (1.0 + Utils.GetAccMilli(incLevel, userPreference));
                 return countD;
+            }
+        }
+
+        /// <summary>
+        /// 黑雾台会有双倍产出（虽然是以增产的形式提供，但是25%增产会产出2.5倍产物，而非2.25，所以二者实际叠乘而非叠加）
+        /// </summary>
+        public double bonusFactor
+        {
+            get
+            {
+                if (assemblerItemId == CalcDB.dfSmelterId && CompatManager.GB)
+                    return 2.0;
+                else
+                    return 1.0;
             }
         }
 
@@ -137,6 +156,12 @@ namespace DSPCalculator.Logic
             return 0;
         }
 
+        /// <summary>
+        /// 根据物品id和需要的输出速度，计算出需要多少倍的配方才能达到
+        /// </summary>
+        /// <param name="itemId"></param>
+        /// <param name="speed"></param>
+        /// <returns></returns>
         public double CalcCountByOutputSpeed(int itemId, double speed)
         {
             if (productIndices.ContainsKey(itemId))
@@ -151,11 +176,11 @@ namespace DSPCalculator.Logic
 
                 if (isInc && incLevel >= 0 && incLevel < Cargo.incTableMilli.Length) // 增产效果计算
                 {
-                    return addedCount / (1.0 + Utils.GetIncMilli(incLevel, userPreference) + CalcOutputDiracInc(itemId));
+                    return addedCount / (1.0 + Utils.GetIncMilli(incLevel, userPreference) + CalcOutputDiracInc(itemId)) / bonusFactor;
                 }
                 else
                 {
-                    return addedCount / (1.0 + CalcOutputDiracInc(itemId));
+                    return addedCount / (1.0 + CalcOutputDiracInc(itemId)) / bonusFactor;
                 }
             }
             else
@@ -168,10 +193,10 @@ namespace DSPCalculator.Logic
         {
             if (productIndices.ContainsKey(itemId))
             {
-                double factor = 1.0;
+                double factor = 1.0 * bonusFactor;
                 // 劣质加工
                 if (userPreference.inferior && itemId == 1501 && recipeNorm.products[0] == 1501)
-                    factor = factor + 1.0;
+                    factor = factor * 2.0;
 
                 int index = productIndices[itemId];
                 if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)

@@ -25,7 +25,7 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.1.0";
+        public const string VERSION = "0.1.1";
 
         // ---------------------------------------------------------------------------
         public static bool developerMode = false; //           发布前修改             |
@@ -40,8 +40,8 @@ namespace DSPCalculator
         {
             OpenWindowHotKey = Config.Bind<KeyCode>("config", "OpenWindowHotKey", KeyCode.Q, "打开计算器窗口的快捷键。HotKey to open calculator window.");
             SwitchWindowSizeHotKey = Config.Bind<KeyCode>("config", "SwitchWindowSizeHotKey", KeyCode.Tab, "将计算器窗口展开或缩小的快捷键。HotKey to fold or unfold calculator window.");
-            OpenWindowModifier = Config.Bind<int>("config", "OpenWindowHKModifier", 0, "byte shift = 1, ctrl =2, alt = 4");
-            SwitchWindowModifier = Config.Bind<int>("config", "SwitchWindowHKModifier", 0, "byte shift = 1, ctrl =2, alt = 4");
+            OpenWindowModifier = Config.Bind<int>("config", "OpenWindowHKModifier", 0, "byte shift = 1, ctrl = 2, alt = 4");
+            SwitchWindowModifier = Config.Bind<int>("config", "SwitchWindowHKModifier", 0, "byte shift = 1, ctrl = 2, alt = 4");
 
             Harmony.CreateAndPatchAll(typeof(DSPCalculatorPlugin));
             Harmony.CreateAndPatchAll(typeof(RecipePickerPatcher));

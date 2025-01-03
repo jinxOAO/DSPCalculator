@@ -1143,9 +1143,16 @@ namespace DSPCalculator.UI
             {
                 uiNodeData.RefreshAssemblerDisplay(false);
             }
-            RefreshAssemblerButtonDisplay();
-            RefreshAssemblerDemandsDisplay();
-            RefreshFinalInfoText();
+            if (CompatManager.GB)
+            {
+                nextFrameRecalc = true;
+            }
+            else
+            {
+                RefreshAssemblerButtonDisplay();
+                RefreshAssemblerDemandsDisplay();
+                RefreshFinalInfoText();
+            }
         }
 
         public void RefreshAssemblerButtonDisplay()
@@ -1154,7 +1161,7 @@ namespace DSPCalculator.UI
             {
                 int type = typeData.Key;
                 int assemblerId = -1;
-                if(CalcDB.assemblerListByType.ContainsKey(type))
+                if(CalcDB.assemblerListByType.ContainsKey(type) && CalcDB.assemblerListByType[type].Count > 0)
                     assemblerId = CalcDB.assemblerListByType[type][0].ID;
                 if (solution.userPreference.globalAssemblerIdByType.ContainsKey(type))
                     assemblerId = solution.userPreference.globalAssemblerIdByType[type];
