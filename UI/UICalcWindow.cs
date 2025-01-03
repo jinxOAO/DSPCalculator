@@ -349,16 +349,21 @@ namespace DSPCalculator.UI
             assemblerSelectionObj = new GameObject();
             assemblerSelectionObj.name = "assembler-select";
             assemblerSelectionObj.transform.SetParent(panelParent, false);
-            assemblerSelectionObj.transform.localPosition = new Vector3(-358, 270, 0);
-            if(CompatManager.GB)
-                assemblerSelectionObj.transform.localPosition = new Vector3(-358, 260, 0);
+            float posXDelta = 0;
+            float posYDelta = 0;
+            if (CompatManager.GB)
+            {
+                posXDelta = -45;
+                posYDelta = -10;
+            }
+            assemblerSelectionObj.transform.localPosition = new Vector3(-358 + posXDelta, 270 + posYDelta, 0);
             Dictionary <int, int> alreadyAddedAssembler= new Dictionary<int, int>(); // 用于储存已经加入过的工厂，就不再实例化按钮了
             int btnCount = 0; // 工厂数
             int typeCount = 0; // 类别数
             int rowCount = 0; // 行数
             foreach (var rType in CalcDB.assemblerListByType)
             {
-                if(btnCount * 35 + typeCount * 10 > 9 * 35)
+                if(btnCount * 35 + typeCount * 10 + posXDelta > 9 * 35)
                 {
                     rowCount++;
                     btnCount = 0;

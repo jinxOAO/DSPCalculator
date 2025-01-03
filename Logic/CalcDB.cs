@@ -227,6 +227,14 @@ namespace DSPCalculator.Logic
                 return;
             }
 
+            if (assemblerDict.ContainsKey(dfSmelterId)) // 黑雾炉子 dfSmelterId
+            {
+                if (assemblerListByType.ContainsKey((int)ERecipeType.Smelt))
+                    assemblerListByType[(int)ERecipeType.Smelt].Add(assemblerDict[dfSmelterId]); // 自己已经在19
+                if (assemblerListByType.ContainsKey(11))
+                    assemblerListByType[11].Add(assemblerDict[dfSmelterId]);
+            }
+
             if (assemblerDict.ContainsKey(6257))
             {
                 if (assemblerListByType.ContainsKey((int)ERecipeType.Assemble))
@@ -255,8 +263,7 @@ namespace DSPCalculator.Logic
                     assemblerListByType[16].Add(assemblerDict[6259]);
             }
 
-
-            if (assemblerDict.ContainsKey(2318))
+            if (assemblerDict.ContainsKey(2318)) // 黑雾制造台什么都能做
             {
                 if (assemblerListByType.ContainsKey((int)ERecipeType.Assemble))
                     assemblerListByType[(int)ERecipeType.Assemble].Add(assemblerDict[2318]); // 黑雾台自己已经在12
@@ -268,17 +275,13 @@ namespace DSPCalculator.Logic
                     assemblerListByType[(int)ERecipeType.Refine].Add(assemblerDict[2318]);
                 if (assemblerListByType.ContainsKey(16))
                     assemblerListByType[16].Add(assemblerDict[2318]);
+                if (assemblerListByType.ContainsKey((int)ERecipeType.Particle))
+                    assemblerListByType[(int)ERecipeType.Particle].Add(assemblerDict[2318]);
+                if (assemblerListByType.ContainsKey((int)ERecipeType.Research))
+                    assemblerListByType[(int)ERecipeType.Research].Add(assemblerDict[2318]);
+                if (assemblerListByType.ContainsKey(10))
+                    assemblerListByType[10].Add(assemblerDict[2318]);
             }
-
-            if (assemblerDict.ContainsKey(dfSmelterId)) // 黑雾台 deSmelterId
-            {
-                if (assemblerListByType.ContainsKey((int)ERecipeType.Smelt))
-                    assemblerListByType[(int)ERecipeType.Smelt].Add(assemblerDict[dfSmelterId]); // 自己已经在19
-                if (assemblerListByType.ContainsKey(11))
-                    assemblerListByType[11].Add(assemblerDict[dfSmelterId]);
-            }
-
-
         }
     }
 
