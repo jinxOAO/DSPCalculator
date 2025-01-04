@@ -157,6 +157,12 @@ namespace DSPCalculator.UI
             GameObject.Destroy(windowObj.transform.Find("inspector-group").gameObject);
             GameObject.Destroy(windowObj.transform.Find("folder-info-group").gameObject);
             GameObject.Destroy(windowObj.transform.Find("title-group").gameObject);
+            // 移除所有子蓝图图标
+            GameObject contentObj = windowObj.transform.Find("view-group/Scroll View/Viewport/Content").gameObject;
+            while (contentObj.transform.childCount > 0)
+            {
+                GameObject.DestroyImmediate(contentObj.transform.GetChild(contentObj.transform.childCount - 1).gameObject);
+            }
 
             titleText = windowObj.transform.Find("panel-bg/title-text").GetComponent<Text>();
 
@@ -807,6 +813,30 @@ namespace DSPCalculator.UI
             windowObj.transform.SetAsFirstSibling(); // 将其不再占用最top的UI，防止其占用其他窗口的isTopAndActive
             windowObj.SetActive(false);
             WindowsManager.lastClosedWindow = this;
+
+            if (UIPauseBarPatcher.pauseBarObj != null)
+            {
+                bool hasOpenedWindow = false;
+                if (WindowsManager.windows != null)
+                {
+                    for (int i = 0; i < WindowsManager.windows.Count; i++)
+                    {
+                        if(WindowsManager.windows[i].windowObj.activeSelf)
+                        {
+                            hasOpenedWindow = true;
+                            break;
+                        }
+                    }
+                }
+
+                if(!hasOpenedWindow)
+                {
+                    UIPauseBarPatcher.pauseBarObj.SetActive(false);
+                    if (GameMain.instance != null)
+                        GameMain.instance._fullscreenPaused = false;
+                }
+            }
+
         }
 
         public void SwitchWindowSize()

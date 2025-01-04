@@ -75,8 +75,6 @@ namespace DSPCalculator.UI
                 else
                 {
                     UIPauseBarPatcher.pauseBarObj.SetActive(false);
-                    if(GameMain.instance != null)
-                        GameMain.instance._fullscreenPaused = false;
                 }
             }
             //if (Input.GetKeyDown(KeyCode.L))
