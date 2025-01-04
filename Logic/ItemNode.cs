@@ -107,5 +107,15 @@ namespace DSPCalculator.Logic
             }
             return isOre;
         }
+
+        /// <summary>
+        /// 混带计算专用，用于返回每秒产出份数，目前每份对应1/s，60/min
+        /// </summary>
+        /// <returns></returns>
+        public int GetInserterRatio()
+        {
+            double perSec = satisfiedSpeed / 60;
+            return (int)Math.Ceiling(perSec);
+        }
     }
 }

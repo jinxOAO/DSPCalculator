@@ -38,6 +38,9 @@ namespace DSPCalculator.Logic
         public static double maxStackSize = 4; // 最大堆叠倍率，由于分馏的生产设施的生产速度只由带速决定，所以这个值影响分馏的默认速度计算
         public static int dfSmelterId = 2319;
 
+        public static List<BeltData> beltsDescending; // 传送带数据，以速度降序排列
+        // public static List<InserterData> insertersDescending; // 分拣器数据，以速度降序排列
+
         public static void TryInit()
         {
             // 为什么不是只init一次呢？因为这个patch会在LDBTool加入mod的proto之前进行，所以每次读取游戏都要执行一次，防止只在开启游戏时加载，而导致读取不到mod后加入的proto
@@ -51,6 +54,8 @@ namespace DSPCalculator.Logic
                 proliferatorItemIds = new List<int> { 1141, 1142, 1143 };
                 proliferatorAbilities = new List<int>();
                 proliferatorAbilityToId = new Dictionary<int, int>();
+                beltsDescending = new List<BeltData>();
+                //insertersDescending = new List<InserterData>();
                 alreadyHaveOneFracRecipe = false;
 
                 // 加载配方，并初始化assemblerListByType
@@ -128,10 +133,13 @@ namespace DSPCalculator.Logic
                             if(model.prefabDesc.isBelt)
                             {
                                 maxBeltItemSpeedPreSec = Math.Max(maxBeltItemSpeedPreSec, model.prefabDesc.beltSpeed * beltSpeedToPerSecFactor);
+                                beltsDescending.Add(new BeltData(item.ID, model.prefabDesc));
                             }
                         }
                     }
                 }
+                beltsDescending = beltsDescending.OrderByDescending(x => x.speed).ToList();
+                // InitInserter(); // 暂时不需要读取该数据
 
                 // 根据最大带速，初始化分馏设施的生产速度倍率
                 if (assemblerListByType.ContainsKey((int)ERecipeType.Fractionate))
@@ -283,6 +291,16 @@ namespace DSPCalculator.Logic
                     assemblerListByType[10].Add(assemblerDict[2318]);
             }
         }
+
+        //public static void InitInserter()
+        //{
+        //    insertersDescending.Add(new InserterData(2011, 6));
+        //    insertersDescending.Add(new InserterData(2012, 12));
+        //    insertersDescending.Add(new InserterData(2013, 24));
+        //    insertersDescending.Add(new InserterData(2014, 120, false));
+
+        //    insertersDescending.OrderByDescending(x => x.speedByDistance[0]);
+        //}
     }
 
     /// <summary>
@@ -460,5 +478,30 @@ namespace DSPCalculator.Logic
             }
         }
 
+    }
+
+    public class InserterData
+    {
+        public int ID;
+        public double[] speedByDistance; // 每秒运力，以4堆叠计
+        public InserterData(int ID, int basicSpeed, bool ignoreDistance = false)
+        {
+            this.ID = ID;
+            speedByDistance = new double[3];
+            speedByDistance[0] = basicSpeed;
+            speedByDistance[1] = ignoreDistance ? basicSpeed : basicSpeed / 2;
+            speedByDistance[2] = ignoreDistance ? basicSpeed : basicSpeed / 3;
+        }
+    }
+
+    public class BeltData
+    {
+        public int ID;
+        public double speed; // 每秒运力，以4堆叠计
+        public BeltData (int ID, PrefabDesc prefabDesc)
+        {
+            this.ID = ID;
+            speed = prefabDesc.beltSpeed * CalcDB.beltSpeedToPerSecFactor * 4;
+        }
     }
 }

@@ -36,6 +36,8 @@ namespace DSPCalculator
         public static ConfigEntry<int> OpenWindowModifier;
         public static ConfigEntry<int> SwitchWindowModifier;
 
+        public static bool showMixBeltCheckbox = false;
+
         public void Awake()
         {
             OpenWindowHotKey = Config.Bind<KeyCode>("config", "OpenWindowHotKey", KeyCode.Q, "打开计算器窗口的快捷键。HotKey to open calculator window.");

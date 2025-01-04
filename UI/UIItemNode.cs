@@ -316,6 +316,18 @@ namespace DSPCalculator.UI
                         posX += posXDelta;
                     }
 
+                    // 混带的分拣器信息
+                    if(parentCalcWindow.solution.userPreference.showMixBeltInfo)
+                    {
+                        recipeGroupObj.SetActive(false);
+                        GameObject insertersObj = new GameObject();
+                        insertersObj.name = "inserter-group";
+                        insertersObj.transform.SetParent(obj.transform, false);
+                        insertersObj.transform.localPosition = new Vector3(-120, 0, 0); // 有UITip的位置设置
+                        int inserterRatio = itemNode.GetInserterRatio();
+
+                    }
+
                     // 切换增产按钮
                     incToggleObj = GameObject.Instantiate(UICalcWindow.incTogglePrefabObj, obj.transform);
                     incToggleObj.name = "inc-setting";

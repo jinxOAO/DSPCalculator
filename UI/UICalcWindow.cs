@@ -100,6 +100,7 @@ namespace DSPCalculator.UI
         public Dictionary<int, UIButton> proliferatorUsedButtons; // 增产剂选择按钮列表
         public Dictionary<int, Dictionary<int, UIButton>> assemblerUsedButtons; // 工厂选择按钮列表
         public Text finalInfoText;
+        public Text assemblerDemandsTitleText;
         public GameObject assemblersDemandsGroupObj; // 显示所有工厂数量的group
         public List<GameObject> assemblersDemandObjs; // 所有工厂需求数量的obj列表
 
@@ -109,12 +110,14 @@ namespace DSPCalculator.UI
         public Image cbInferior;
         public Image cbIncMilli;
         public Image cbAccMilli;
+        public Image cbMixbelt;
         public Text txtBluebuff;
         public Text txtEnergyBurst;
         public Text txtDirac;
         public Text txtInferior;
         public Text txtIncMilli;
         public Text txtAccMilli;
+        public Text txtMixbelt;
         public InputField incInput;
         public InputField accInput;
 
@@ -403,10 +406,18 @@ namespace DSPCalculator.UI
 
             // 右侧最终文本信息
             GameObject finalInfoTextObj = GameObject.Instantiate(TextObj, sidePanel);
+            finalInfoTextObj.name = "final-info";
             finalInfoTextObj.transform.localPosition = new Vector3(15, -20, 0);
             finalInfoText = finalInfoTextObj.GetComponent<Text>();
             finalInfoText.fontSize = 16;
             finalInfoText.alignment = TextAnchor.UpperLeft;
+
+            GameObject assemblerDemandsTitleObj = GameObject.Instantiate(TextObj, sidePanel);
+            assemblerDemandsTitleObj.transform.localPosition = new Vector3(15, -82, 0);
+            assemblerDemandsTitleText = assemblerDemandsTitleObj.GetComponent<Text>();
+            assemblerDemandsTitleText.fontSize = 16;
+            assemblerDemandsTitleText.alignment = TextAnchor.UpperLeft;
+            assemblerDemandsTitleText.text= "工厂需求".Translate();
 
             // 右侧最终工厂信息
             assemblersDemandsGroupObj = new GameObject();
@@ -441,7 +452,7 @@ namespace DSPCalculator.UI
             checkBoxGroupObj.name = "checkbox-group";
             checkBoxGroupObj.transform.SetParent(sidePanel);
             checkBoxGroupObj.transform.localScale = Vector3.one;
-            checkBoxGroupObj.transform.localPosition = new Vector3(155, -28, 0);
+            checkBoxGroupObj.transform.localPosition = new Vector3(155, -20, 0); // ori -28
 
             if(CompatManager.TCFV)
             {
@@ -470,7 +481,8 @@ namespace DSPCalculator.UI
                 inferiorCbObj.name = "checkbox-inferior";
                 cbInferior = inferiorCbObj.GetComponent<Image>();
                 txtInferior = inferiorCbObj.transform.Find("text").GetComponent<Text>();
-                inferiorCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, 0, 0);
+                //inferiorCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, 0, 0);
+                inferiorCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, -60, 0);
                 inferiorCbObj.GetComponent<Button>().onClick.AddListener(OnInferiorClick);
             }
 
@@ -479,7 +491,7 @@ namespace DSPCalculator.UI
             customIncMilliCbObj.name = "checkbox-custom-inc";
             cbIncMilli = customIncMilliCbObj.GetComponent<Image>();
             txtIncMilli = customIncMilliCbObj.transform.Find("text").GetComponent<Text>();
-            customIncMilliCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -20, 0);
+            customIncMilliCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, 0, 0);
             customIncMilliCbObj.GetComponent<Button>().onClick.AddListener(OnCustomIncMilliClick);
             customIncMilliCbObj.GetComponent<UIButton>().tips.tipTitle = "强制增产效能标题".Translate();
             customIncMilliCbObj.GetComponent<UIButton>().tips.tipText = "强制增产效能说明".Translate();
@@ -490,7 +502,7 @@ namespace DSPCalculator.UI
             customIncInput.name = "inputfield-inc";
             customIncInput.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 20);
             customIncInput.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-            customIncInput.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(212, -20, 0);
+            customIncInput.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(212, 0, 0);
             incInput = customIncInput.GetComponent<InputField>();
             customIncInput.GetComponent<InputField>().text = "25";
             customIncInput.GetComponent<InputField>().contentType = InputField.ContentType.IntegerNumber;
@@ -510,7 +522,7 @@ namespace DSPCalculator.UI
             customAccMilliCbObj.name = "checkbox-custom-acc";
             cbAccMilli = customAccMilliCbObj.GetComponent<Image>();
             txtAccMilli = customAccMilliCbObj.transform.Find("text").GetComponent<Text>();
-            customAccMilliCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -40, 0);
+            customAccMilliCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -20, 0);
             customAccMilliCbObj.GetComponent<Button>().onClick.AddListener(OnCustomAccMilliClick);
             customAccMilliCbObj.GetComponent<UIButton>().tips.tipTitle = "强制加速效能标题".Translate();
             customAccMilliCbObj.GetComponent<UIButton>().tips.tipText = "强制加速效能说明".Translate();
@@ -521,7 +533,7 @@ namespace DSPCalculator.UI
             customAccInput.name = "inputfield-acc";
             customAccInput.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 20);
             customAccInput.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-            customAccInput.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(212, -40, 0);
+            customAccInput.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(212, -20, 0);
             accInput = customAccInput.GetComponent<InputField>();
             customAccInput.GetComponent<InputField>().text = "100";
             customAccInput.GetComponent<InputField>().contentType = InputField.ContentType.IntegerNumber;
@@ -537,6 +549,17 @@ namespace DSPCalculator.UI
             customAccInput.SetActive(false);
             customAccInput.SetActive(true);
 
+            GameObject showHideMixBeltInfoObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
+            showHideMixBeltInfoObj.name = "checkbox-mixbelt";
+            cbMixbelt = showHideMixBeltInfoObj.GetComponent<Image>();
+            txtMixbelt = showHideMixBeltInfoObj.transform.Find("text").GetComponent<Text>();
+            showHideMixBeltInfoObj.GetComponent<UIButton>().tips.tipTitle = "混带显示标题".Translate();
+            showHideMixBeltInfoObj.GetComponent<UIButton>().tips.tipText = "混带显示说明".Translate();
+            showHideMixBeltInfoObj.GetComponent<UIButton>().tips.corner = 1;
+            showHideMixBeltInfoObj.GetComponent<UIButton>().tips.delay = 0.1f;
+            showHideMixBeltInfoObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -40, 0);
+            showHideMixBeltInfoObj.GetComponent<Button>().onClick.AddListener(OnMixbeltInfoCbClick);
+            showHideMixBeltInfoObj.SetActive(DSPCalculatorPlugin.showMixBeltCheckbox);
 
             RefreshFinalInfoText();
             RefreshCheckBoxes();
@@ -1015,7 +1038,7 @@ namespace DSPCalculator.UI
             {
                 totalEnergyConsumption += recipeInfoData.Value.GetTotalEnergyConsumption();
             }
-            finalInfoText.text = "预估电量".Translate() + "\n" + Utils.KMG(totalEnergyConsumption) + "W" + "\n\n" + "工厂需求".Translate();
+            finalInfoText.text = "预估电量".Translate() + "\n" + Utils.KMG(totalEnergyConsumption) + "W";
         }
 
         public void RefreshAssemblerDemandsDisplay()
@@ -1027,12 +1050,12 @@ namespace DSPCalculator.UI
             assemblersDemandObjs.Clear();
 
             // 计算每种工厂数量
-            Dictionary<int, int> counts = new Dictionary<int, int>();
+            Dictionary<int, long> counts = new Dictionary<int, long>();
             foreach (var data in solution.recipeInfos)
             {
                 RecipeInfo recipeInfo = data.Value;
                 int assemblerItemId = recipeInfo.assemblerItemId;
-                int ceilingCount =(int) Math.Ceiling(recipeInfo.assemblerCount);
+                long ceilingCount =(long) Math.Ceiling(recipeInfo.assemblerCount);
                 if (!counts.ContainsKey(assemblerItemId))
                     counts[assemblerItemId] = ceilingCount;
                 else
@@ -1045,7 +1068,7 @@ namespace DSPCalculator.UI
             foreach (var pair in counts) 
             {
                 int assemblerItemId = pair.Key;
-                int count = pair.Value;
+                long count = pair.Value;
                 GameObject assemblerObj = GameObject.Instantiate(iconObj_ButtonTip, assemblersDemandsGroupObj.transform);
                 assemblerObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(i % assemblerDemandCountPerRow * eachWidth, -(i / assemblerDemandCountPerRow * 35), 0);
                 assemblerObj.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 30);
@@ -1244,6 +1267,15 @@ namespace DSPCalculator.UI
                     cbAccMilli.sprite = checkboxOffSprite;
                 txtAccMilli.text = "强制加速效能".Translate();
             }
+            if (cbMixbelt != null)
+            {
+
+                if (solution.userPreference.showMixBeltInfo)
+                    cbMixbelt.sprite = checkboxOnSprite;
+                else
+                    cbMixbelt.sprite = checkboxOffSprite;
+                txtMixbelt.text = "显示混带信息".Translate();
+            }
         }
 
         public void OnBluebuffClick()
@@ -1324,5 +1356,12 @@ namespace DSPCalculator.UI
             nextFrameRecalc = true;
         }
 
+
+        public void OnMixbeltInfoCbClick()
+        {
+            solution.userPreference.showMixBeltInfo = !solution.userPreference.showMixBeltInfo;
+            cbMixbelt.sprite = solution.userPreference.showMixBeltInfo ? checkboxOnSprite : checkboxOffSprite;
+            nextFrameRecalc = true;
+        }
     }
 }

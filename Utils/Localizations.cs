@@ -57,6 +57,10 @@ namespace DSPCalculator
 
             LocalizationModule.RegisterTranslation("切换计算器窗口大小", "Fold/Unfold Calculator Window", "切换计算器窗口大小", "Fold/Unfold Calculator Window");
 
+            LocalizationModule.RegisterTranslation("显示混带信息", "Show Mix-belt Scheme", "显示混带信息", "Show Mix-belt Scheme");
+            LocalizationModule.RegisterTranslation("混带显示标题", "Show Mix-belt Scheme", "显示混带信息", "Show Mix-belt Scheme");
+            LocalizationModule.RegisterTranslation("混带显示说明", "Calculated with 4 default stacks, the step size of product for calculation is 30/min. \nThis feature is still in the testing stage and cannot guarantee the operation of mixed belts.", "以4默认堆叠计算，产量计算的步长为30/min。\n该功能尚在测试阶段，并不能确保混带的运行。", "Calculated with 4 default stacks, the step size of product for calculation is 30/min. \nThis feature is still in the testing stage and cannot guarantee the operation of mixed belts.");
+
         }
     }
 }

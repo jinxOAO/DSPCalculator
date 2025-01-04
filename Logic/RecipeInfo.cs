@@ -288,7 +288,7 @@ namespace DSPCalculator.Logic
             return ((fullyWork + partIdle) * assemblerData.workEnergyW * ratio) + additionalIdle * assemblerData.idleEnergyW;
         }
 
-        // 增产剂消耗只考虑蓝buff，其余的能量迸发等均不考虑
+        // 增产剂消耗
         public void GetProliferatorUsed(out int proliferatorId, out double proliferatorCount)
         {
             if(incLevel == 0 || !CalcDB.proliferatorAbilityToId.ContainsKey(incLevel))

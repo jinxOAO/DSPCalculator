@@ -27,6 +27,8 @@ namespace DSPCalculator.Logic
         public double incMilliOverride;
         public double accMilliOverride;
 
+        public bool showMixBeltInfo; // 是否显示混带数据
+
         public UserPreference()
         {
             recipeConfigs = new Dictionary<int, RecipeConfig>();
@@ -39,6 +41,7 @@ namespace DSPCalculator.Logic
             inferior = false;
             customizeIncMilli = false;
             customizeAccMilli = false;
+            showMixBeltInfo = false;
             incMilliOverride = 0;
             accMilliOverride = 0;
             globalAssemblerIdByType = new Dictionary<int, int>();
@@ -56,6 +59,7 @@ namespace DSPCalculator.Logic
         //    inferior = false;
         //    customizeIncMilli = false;
         //    customizeAccMilli = false;
+        //    showMixBeltInfo = false;
         //    incMilliOverride = 0;
         //    accMilliOverride = 0;
         //    globalAssemblerIdByType.Clear();
