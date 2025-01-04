@@ -55,7 +55,7 @@ namespace DSPCalculator.UI
         public GameObject incToggleObj;
         public Text incText;
 
-        public UIItemNodeSimple(ItemNode node, bool isResources ,UICalcWindow calcWindow, bool isProliferatorDemand = false)
+        public UIItemNodeSimple(ItemNode node, bool isResources ,UICalcWindow calcWindow, bool isProliferatorDemand = false, bool isMixBeltInfo = false)
         {
             // 如果公共资源尚未被初始化，则初始化
             if (backgroundSprite == null)
@@ -121,6 +121,8 @@ namespace DSPCalculator.UI
                 if(!isResources && !isProliferatorDemand) // 说明是为了显示副产物或者溢出量
                     finalSpeedStr = Utils.KMG(itemNode.satisfiedSpeed - itemNode.needSpeed);
                 outputText.text = finalSpeedStr;
+                if(isMixBeltInfo)
+                    outputText.text = itemNode.satisfiedSpeed.ToString() + " " + "条calc".Translate();
                 if(isProliferatorDemand) // 如果是专门用于显示额外增产剂需求的
                 {
                     outputText.fontSize = 16;

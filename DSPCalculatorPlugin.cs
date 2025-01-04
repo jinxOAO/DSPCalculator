@@ -36,7 +36,7 @@ namespace DSPCalculator
         public static ConfigEntry<int> OpenWindowModifier;
         public static ConfigEntry<int> SwitchWindowModifier;
 
-        public static bool showMixBeltCheckbox = false;
+        public static bool showMixBeltCheckbox = true;
 
         public void Awake()
         {

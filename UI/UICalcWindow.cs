@@ -958,6 +958,11 @@ namespace DSPCalculator.UI
                             UIItemNode uiNode = new UIItemNode(curNode, this);
                             uiItemNodes.Add(uiNode);
                         }
+                        else if (solution.userPreference.showMixBeltInfo) // 如果是混带信息，则原矿也要展示
+                        {
+                            UIItemNode uiNode = new UIItemNode(curNode, this);
+                            uiItemNodes.Add(uiNode);
+                        }
                     }
                     stack.RemoveAt(stack.Count - 1);
 
@@ -970,6 +975,9 @@ namespace DSPCalculator.UI
             }
         }
 
+        /// <summary>
+        /// 刷新所有副屏的原材料需求和溢出产物内容
+        /// </summary>
         public void RefreshResourceNeedAndByProductContent()
         {
             for (int i = 0; i < uiSideItemNodes.Count; i++)
@@ -1057,6 +1065,61 @@ namespace DSPCalculator.UI
                 {
                     UIItemNodeSimple emptyEnd = new UIItemNodeSimple("", this); 
                     uiSideItemNodes.Add(emptyEnd);
+                }
+            }
+
+            // 然后如果显示混带内容，显示混带
+            if(solution.userPreference.showMixBeltInfo)
+            {
+                count = 0;
+                int totalUnit = 0;
+                foreach (var item in solution.itemNodes)
+                {
+                    totalUnit += item.Value.GetInserterRatio();
+                }
+
+                UIItemNodeSimple label3 = new UIItemNodeSimple($"{"混带需求".Translate()} : {totalUnit * 1.0 /2} {"份calc".Translate()}", this);
+                uiSideItemNodes.Add(label3);
+                for (int i = 1; i < sideCellCountPerRow; i++)
+                {
+                    UIItemNodeSimple empty1 = new UIItemNodeSimple("", this); // 是因为一行有多个元素，所以需要空来占位
+                    uiSideItemNodes.Add(empty1);
+                }
+
+                int[] beltInfos = new int[CalcDB.beltsDescending.Count]; // 初始化是0
+
+                for (int i = 1; i < CalcDB.beltsDescending.Count && totalUnit > 0; i++)
+                {
+                    if(totalUnit > CalcDB.beltsDescending[i].speed)
+                    {
+                        int need = (int)(totalUnit / CalcDB.beltsDescending[i - 1].speed);
+                        totalUnit -= (int)(need * CalcDB.beltsDescending[i - 1].speed);
+                        beltInfos[i - 1] = need;
+                    }
+                }
+                if(totalUnit > 0)
+                    beltInfos[beltInfos.Length - 1] += 1;
+
+                for (int i = 0; i < beltInfos.Length; i++)
+                {
+                    if (beltInfos[i] > 0)
+                    {
+                        ItemNode node = new ItemNode(CalcDB.beltsDescending[i].ID, 0, solution);
+                        node.satisfiedSpeed = beltInfos[i];
+                        UIItemNodeSimple uiBeltNode = new UIItemNodeSimple(node, false, this, false, true);
+                        uiSideItemNodes.Add(uiBeltNode);
+                        count++;
+                    }
+                }
+
+                if (count % sideCellCountPerRow != 0) // 不足一行的用空填满
+                {
+                    int unfilled = sideCellCountPerRow - count % sideCellCountPerRow;
+                    for (int i = 0; i < unfilled; i++)
+                    {
+                        UIItemNodeSimple emptyEnd = new UIItemNodeSimple("", this);
+                        uiSideItemNodes.Add(emptyEnd);
+                    }
                 }
             }
         }

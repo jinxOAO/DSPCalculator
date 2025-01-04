@@ -37,6 +37,9 @@ namespace DSPCalculator.Logic
         public static double maxBeltItemSpeedPreSec = 0; // 用于统计所有游戏物品的传送带里的最大带速（正常游戏为30），用于计算分馏建筑需求的
         public static double maxStackSize = 4; // 最大堆叠倍率，由于分馏的生产设施的生产速度只由带速决定，所以这个值影响分馏的默认速度计算
         public static int dfSmelterId = 2319;
+        public static int inserterMk3Id = 2013;
+        public static int inserterMk2Id = 2012;
+        public static int inserterMk1Id = 2011;
 
         public static List<BeltData> beltsDescending; // 传送带数据，以速度降序排列
         // public static List<InserterData> insertersDescending; // 分拣器数据，以速度降序排列
@@ -497,7 +500,7 @@ namespace DSPCalculator.Logic
     public class BeltData
     {
         public int ID;
-        public double speed; // 每秒运力，以4堆叠计
+        public double speed; // 每秒运力，以4堆叠计。也就是相当于60/min的运力的倍数
         public BeltData (int ID, PrefabDesc prefabDesc)
         {
             this.ID = ID;

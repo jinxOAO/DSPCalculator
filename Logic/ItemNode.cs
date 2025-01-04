@@ -117,5 +117,37 @@ namespace DSPCalculator.Logic
             double perSec = satisfiedSpeed / 60;
             return (int)Math.Ceiling(perSec);
         }
+
+        public void CalcInserterNeeds(out int[] mk3, out int[] mk2, out int[] mk1)
+        {
+            int total = GetInserterRatio();
+            int[] abilities = new int[] { 24, 12, 8, 6, 4, 3, 2 };
+            int[] ids = new int[] { CalcDB.inserterMk3Id, CalcDB.inserterMk2Id, CalcDB.inserterMk3Id, CalcDB.inserterMk1Id, CalcDB.inserterMk2Id, CalcDB.inserterMk1Id, CalcDB.inserterMk1Id };
+            int[] distance = new int[] { 0, 0, 2, 0, 2, 1, 2 };
+
+            mk3 = new int[] { 0, 0, 0 };
+            mk2 = new int[] { 0, 0, 0 };
+            mk1 = new int[] { 0, 0, 0 };
+
+            int count = abilities.Length;
+            for (int i = 0; i < count && total > 0; i++)
+            {
+                if(total >= abilities[i])
+                {
+                    int curCount = total / abilities[i];
+                    if (ids[i] == CalcDB.inserterMk3Id)
+                        mk3[distance[i]] += curCount;
+                    else if (ids[i] == CalcDB.inserterMk2Id)
+                        mk2[distance[i]] += curCount;
+                    else
+                        mk1[distance[i]] += curCount;
+
+                    total -= curCount * abilities[i];
+                }
+            }
+
+            if (total > 0)
+                mk1[2] += 1;
+        }
     }
 }

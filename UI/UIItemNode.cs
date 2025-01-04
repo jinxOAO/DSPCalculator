@@ -17,6 +17,7 @@ namespace DSPCalculator.UI
         // 一些公共资源
         public static Color backgroundImageColor = new Color(0f, 0.811f, 1f, 0.072f);
         public static Color iconButtonHighLightColor = new Color(0.737f, 0.802f,1f, 0.362f);
+        // public static Color inserterOrangeColor = new Color(0.9906f, 0.5897f, 0.3691f, 1f);
         public static int buttonCountPerRow = 3; // 一行几个带图标的按钮
         public static Vector3 recipeGroupLocalPosition = new Vector3(0, 20, 0);
 
@@ -316,18 +317,6 @@ namespace DSPCalculator.UI
                         posX += posXDelta;
                     }
 
-                    // 混带的分拣器信息
-                    if(parentCalcWindow.solution.userPreference.showMixBeltInfo)
-                    {
-                        recipeGroupObj.SetActive(false);
-                        GameObject insertersObj = new GameObject();
-                        insertersObj.name = "inserter-group";
-                        insertersObj.transform.SetParent(obj.transform, false);
-                        insertersObj.transform.localPosition = new Vector3(-120, 0, 0); // 有UITip的位置设置
-                        int inserterRatio = itemNode.GetInserterRatio();
-
-                    }
-
                     // 切换增产按钮
                     incToggleObj = GameObject.Instantiate(UICalcWindow.incTogglePrefabObj, obj.transform);
                     incToggleObj.name = "inc-setting";
@@ -394,6 +383,71 @@ namespace DSPCalculator.UI
                         proliferatorUsedButtons[incLevel] = pBtnObj.GetComponent<UIButton>();
                         proliferatorUsedButtons[incLevel].tips.itemId = proliferatorItemId;
                     }
+                }
+
+                // 混带的分拣器信息
+                if (parentCalcWindow.solution.userPreference.showMixBeltInfo)
+                {
+                    if (recipeGroupObj != null)
+                        recipeGroupObj.SetActive(false);
+                    GameObject insertersObj = new GameObject();
+                    insertersObj.name = "inserter-group";
+                    insertersObj.transform.SetParent(obj.transform, false);
+                    insertersObj.transform.localPosition = new Vector3(-120, 0, 0); // 有UITip的位置设置
+                    int[] mk3;
+                    int[] mk2;
+                    int[] mk1;
+                    itemNode.CalcInserterNeeds(out mk3, out mk2, out mk1);
+
+                    GameObject totalCountTextObj = GameObject.Instantiate(UICalcWindow.TextWithUITip);
+                    totalCountTextObj.name = "inserter-basic-count";
+                    totalCountTextObj.transform.SetParent(insertersObj.transform, false);
+                    totalCountTextObj.transform.localScale = Vector3.one;
+                    totalCountTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, 0, 0);
+                    Text totalCountText = totalCountTextObj.GetComponent<Text>();
+                    totalCountText.fontSize = 18;
+                    totalCountText.text = (itemNode.GetInserterRatio() * 1.0 / 2).ToString() + " " + "份calc".Translate() + " = ";
+                    totalCountTextObj.GetComponent<UIButton>().tips.tipTitle = "份数标题".Translate();
+                    totalCountTextObj.GetComponent<UIButton>().tips.tipText = "份数说明".Translate();
+                    totalCountTextObj.GetComponent<UIButton>().tips.corner = 3;
+                    totalCountTextObj.GetComponent<UIButton>().tips.delay = 0.2f;
+                    totalCountTextObj.GetComponent<Text>().raycastTarget = true; // 鼠标悬停显示Tip必须要
+
+                    GameObject mk3IconObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip, insertersObj.transform); // 使用有tip版本
+                    mk3IconObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(70, 0, 0);
+                    mk3IconObj.GetComponent<RectTransform>().sizeDelta = new Vector2(40, 40);
+                    mk3IconObj.GetComponent<Image>().sprite = LDB.items.Select(CalcDB.inserterMk3Id).iconSprite;
+                    mk3IconObj.transform.Find("count").GetComponent<Text>().verticalOverflow = VerticalWrapMode.Overflow;
+                    mk3IconObj.transform.Find("count").GetComponent<Text>().alignment = TextAnchor.UpperCenter;
+                    mk3IconObj.transform.Find("count").GetComponent<Text>().text = $"\n{mk3[0]}/{mk3[1]}/{mk3[2]}";
+                    mk3IconObj.transform.Find("count").gameObject.SetActive(true); // 有tip的图标才需要，因为之前隐藏这个了
+                    mk3IconObj.GetComponent<UIButton>().tips.itemId = CalcDB.inserterMk3Id; // 有tip的图标才能写
+                    mk3IconObj.GetComponent<UIButton>().tips.corner = 3; // 有tip的图标才能写
+                    mk3IconObj.GetComponent<UIButton>().tips.delay = 0.3f; // 有tip的图标才能写
+
+                    GameObject mk2IconObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip, insertersObj.transform); // 使用有tip版本
+                    mk2IconObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
+                    mk2IconObj.GetComponent<RectTransform>().sizeDelta = new Vector2(40, 40);
+                    mk2IconObj.GetComponent<Image>().sprite = LDB.items.Select(CalcDB.inserterMk2Id).iconSprite;
+                    mk2IconObj.transform.Find("count").GetComponent<Text>().verticalOverflow = VerticalWrapMode.Overflow;
+                    mk2IconObj.transform.Find("count").GetComponent<Text>().alignment = TextAnchor.UpperCenter;
+                    mk2IconObj.transform.Find("count").GetComponent<Text>().text = $"\n{mk2[0]}/{mk2[1]}/{mk2[2]}";
+                    mk2IconObj.transform.Find("count").gameObject.SetActive(true); // 有tip的图标才需要，因为之前隐藏这个了
+                    mk2IconObj.GetComponent<UIButton>().tips.itemId = CalcDB.inserterMk2Id; // 有tip的图标才能写
+                    mk2IconObj.GetComponent<UIButton>().tips.corner = 3; // 有tip的图标才能写
+                    mk2IconObj.GetComponent<UIButton>().tips.delay = 0.3f; // 有tip的图标才能写
+
+                    GameObject mk1IconObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip, insertersObj.transform); // 使用有tip版本
+                    mk1IconObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(170, 0, 0);
+                    mk1IconObj.GetComponent<RectTransform>().sizeDelta = new Vector2(40, 40);
+                    mk1IconObj.GetComponent<Image>().sprite = LDB.items.Select(CalcDB.inserterMk1Id).iconSprite;
+                    mk1IconObj.transform.Find("count").GetComponent<Text>().verticalOverflow = VerticalWrapMode.Overflow;
+                    mk1IconObj.transform.Find("count").GetComponent<Text>().alignment = TextAnchor.UpperCenter;
+                    mk1IconObj.transform.Find("count").GetComponent<Text>().text = $"\n{mk1[0]}/{mk1[1]}/{mk1[2]}";
+                    mk1IconObj.transform.Find("count").gameObject.SetActive(true); // 有tip的图标才需要，因为之前隐藏这个了
+                    mk1IconObj.GetComponent<UIButton>().tips.itemId = CalcDB.inserterMk1Id; // 有tip的图标才能写
+                    mk1IconObj.GetComponent<UIButton>().tips.corner = 3; // 有tip的图标才能写
+                    mk1IconObj.GetComponent<UIButton>().tips.delay = 0.3f; // 有tip的图标才能写
                 }
             }
 
@@ -576,61 +630,67 @@ namespace DSPCalculator.UI
 
         public void SetIncLevel(int incLevel)
         {
-            int recipeId = itemNode.mainRecipe.ID;
-            UserPreference preference = parentCalcWindow.solution.userPreference;
-            int oriIncLevel = preference.globalIncLevel;
-            if(preference.recipeConfigs.ContainsKey(recipeId))
+            if (itemNode.mainRecipe != null)
             {
-                oriIncLevel = preference.recipeConfigs[recipeId].incLevel;
-            }
-            if (oriIncLevel != incLevel)
-            {
-                if (!preference.recipeConfigs.ContainsKey(recipeId))
+                int recipeId = itemNode.mainRecipe.ID;
+                UserPreference preference = parentCalcWindow.solution.userPreference;
+                int oriIncLevel = preference.globalIncLevel;
+                if (preference.recipeConfigs.ContainsKey(recipeId))
                 {
-                    preference.recipeConfigs[recipeId] = new RecipeConfig(itemNode.mainRecipe);
-                    preference.recipeConfigs[recipeId].incLevel = incLevel;
+                    oriIncLevel = preference.recipeConfigs[recipeId].incLevel;
                 }
-                else
+                if (oriIncLevel != incLevel)
                 {
-                    preference.recipeConfigs[recipeId].incLevel = incLevel;
-                }
-
-                bool isInc = preference.globalIsInc;
-                if (preference.recipeConfigs[recipeId].forceIncMode >= 0)
-                    isInc = preference.recipeConfigs[recipeId].forceIncMode == 1;
-                RefreshIncLevelDisplay();
-                if (!isInc) // 如果当前配方不是增产，不需要重新计算路径
-                {
-                    parentCalcWindow.RefreshAssemblerDemandsDisplay();
-                    parentCalcWindow.RefreshFinalInfoText();
-                    foreach (var uiNodeData in parentCalcWindow.uiItemNodes)
+                    if (!preference.recipeConfigs.ContainsKey(recipeId))
                     {
-                        uiNodeData.RefreshAssemblerDisplay(false); // 刷新每个节点的assembler显示即可
+                        preference.recipeConfigs[recipeId] = new RecipeConfig(itemNode.mainRecipe);
+                        preference.recipeConfigs[recipeId].incLevel = incLevel;
                     }
-                }
-                else // 如果是增产，需要重新解决
-                {
-                    parentCalcWindow.nextFrameRecalc = true;
+                    else
+                    {
+                        preference.recipeConfigs[recipeId].incLevel = incLevel;
+                    }
+
+                    bool isInc = preference.globalIsInc;
+                    if (preference.recipeConfigs[recipeId].forceIncMode >= 0)
+                        isInc = preference.recipeConfigs[recipeId].forceIncMode == 1;
+                    RefreshIncLevelDisplay();
+                    if (!isInc) // 如果当前配方不是增产，不需要重新计算路径
+                    {
+                        parentCalcWindow.RefreshAssemblerDemandsDisplay();
+                        parentCalcWindow.RefreshFinalInfoText();
+                        foreach (var uiNodeData in parentCalcWindow.uiItemNodes)
+                        {
+                            uiNodeData.RefreshAssemblerDisplay(false); // 刷新每个节点的assembler显示即可
+                        }
+                    }
+                    else // 如果是增产，需要重新解决
+                    {
+                        parentCalcWindow.nextFrameRecalc = true;
+                    }
                 }
             }
         }
         
         public void RefreshIncLevelDisplay()
         {
-            int recipeId = itemNode.mainRecipe.ID;
-            UserPreference preference = parentCalcWindow.solution.userPreference;
-            int oriIncLevel = preference.globalIncLevel;
-            if (preference.recipeConfigs.ContainsKey(recipeId))
+            if (itemNode.mainRecipe != null)
             {
-                if(preference.recipeConfigs[recipeId].incLevel >= 0)
-                    oriIncLevel = preference.recipeConfigs[recipeId].incLevel;
-            }
-            foreach (var item in proliferatorUsedButtons)
-            {
-                if (item.Key == oriIncLevel)
-                    item.Value.highlighted = true;
-                else
-                    item.Value.highlighted = false;
+                int recipeId = itemNode.mainRecipe.ID;
+                UserPreference preference = parentCalcWindow.solution.userPreference;
+                int oriIncLevel = preference.globalIncLevel;
+                if (preference.recipeConfigs.ContainsKey(recipeId))
+                {
+                    if (preference.recipeConfigs[recipeId].incLevel >= 0)
+                        oriIncLevel = preference.recipeConfigs[recipeId].incLevel;
+                }
+                foreach (var item in proliferatorUsedButtons)
+                {
+                    if (item.Key == oriIncLevel)
+                        item.Value.highlighted = true;
+                    else
+                        item.Value.highlighted = false;
+                }
             }
         }
     }

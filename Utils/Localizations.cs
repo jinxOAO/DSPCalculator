@@ -59,7 +59,15 @@ namespace DSPCalculator
 
             LocalizationModule.RegisterTranslation("显示混带信息", "Show Mix-belt Scheme", "显示混带信息", "Show Mix-belt Scheme");
             LocalizationModule.RegisterTranslation("混带显示标题", "Show Mix-belt Scheme", "显示混带信息", "Show Mix-belt Scheme");
-            LocalizationModule.RegisterTranslation("混带显示说明", "Calculated with 4 default stacks, the step size of product for calculation is 30/min. \nThis feature is still in the testing stage and cannot guarantee the operation of mixed belts.", "以4默认堆叠计算，产量计算的步长为30/min。\n该功能尚在测试阶段，并不能确保混带的运行。", "Calculated with 4 default stacks, the step size of product for calculation is 30/min. \nThis feature is still in the testing stage and cannot guarantee the operation of mixed belts.");
+            LocalizationModule.RegisterTranslation("混带显示说明", "Calculated with 4 default stacks, the step size of product for calculation is 60/min. \nThis feature is still in the testing stage and cannot guarantee the operation of mixed belts.\nAnd this mode is not suitable for computing large-scale production lines", "以4默认堆叠计算，产量计算的步长为60/min。\n该功能尚在测试阶段，并不能确保混带的运行，\n且该模式不适用于计算大规模生产线。", "Calculated with 4 default stacks, the step size of product for calculation is 60/min. \nThis feature is still in the testing stage and cannot guarantee the operation of mixed belts.\nAnd this mode is not suitable for computing large-scale production lines");
+
+            LocalizationModule.RegisterTranslation("份calc", "units", "份", "units");
+            LocalizationModule.RegisterTranslation("份数标题", "Unit", "份", "Unit");
+            LocalizationModule.RegisterTranslation("份数说明", "Each unit represents 120/min, which is equivalent to the capacity of the sorter at a distance of 3 grids.\nSorter value: represents the required quantity of sorters at 1/2/3 grid distances.", "每1份为120/min，相当于分拣器在3格距离的运力。\n分拣器数值：代表1/2/3格距离的分拣器的所需数量。", "Each unit represents 120/min, which is equivalent to the capacity of the sorter at a distance of 3 grids.\nSorter value: represents the required quantity of sorters at 1/2/3 grid distances.");
+
+
+            LocalizationModule.RegisterTranslation("混带需求", "Mix-Belt Demands", "混带需求", "Mix-Belt Demands");
+            LocalizationModule.RegisterTranslation("条calc", "lines", "条", "lines");
 
         }
     }
