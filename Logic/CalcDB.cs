@@ -20,7 +20,8 @@ namespace DSPCalculator.Logic
         public static Dictionary<int, List<AssemblerData>> assemblerListByType; // key为可以处理的recipeType，将符合的工厂建筑全部放入list里面
         public static Dictionary<int, AssemblerData> assemblerDict; // key为assembler的itemId
         public static List<int> proliferatorItemIds;
-        public static List<int> proliferatorAbilities;
+        //public static List<int> proliferatorAbilities;
+        public static Dictionary<int, int> proliferatorAbilitiesMap;
         public static Dictionary<int, int> proliferatorAbilityToId; // 增产剂效果转化为Id
 
         public static int energyNexusID = 2209;
@@ -55,7 +56,12 @@ namespace DSPCalculator.Logic
                 assemblerListByType = new Dictionary<int, List<AssemblerData>>();
                 assemblerDict = new Dictionary<int, AssemblerData>();
                 proliferatorItemIds = new List<int> { 1141, 1142, 1143 };
-                proliferatorAbilities = new List<int>();
+                //proliferatorAbilities = new List<int>();
+                proliferatorAbilitiesMap = new Dictionary<int, int>();
+                for (int i = 0; i < proliferatorItemIds.Count; i++)
+                {
+                    proliferatorAbilitiesMap[proliferatorItemIds[i]] = 0;
+                }
                 proliferatorAbilityToId = new Dictionary<int, int>();
                 beltsDescending = new List<BeltData>();
                 //insertersDescending = new List<InserterData>();
@@ -199,22 +205,17 @@ namespace DSPCalculator.Logic
                 for (int i = 0; i < proliferatorItemIds.Count; i++)
                 {
                     ItemProto proto = LDB.items.Select(proliferatorItemIds[i]);
-                    if(proto!= null)
+                    if (proto != null)
                     {
                         if (proto.Ability > 10)
-                            proliferatorAbilities.Add(10);
+                            proliferatorAbilitiesMap[proliferatorItemIds[i]] = 10;
                         else if (proto.Ability >= 0)
-                            proliferatorAbilities.Add(proto.Ability);
-                        else
-                            proliferatorAbilities.Add(0);
+                            proliferatorAbilitiesMap[proliferatorItemIds[i]] = proto.Ability;
 
                         proliferatorAbilityToId[proto.Ability] = proto.ID;
                     }
-                    else
-                    {
-                        proliferatorAbilities.Add(0);
-                    }
                 }
+
 
                 // 处理所有物品被默认视为原矿，即使有配方可以生产
                 for (int i = 0; i < defaultAsOreArray.Length; i++)

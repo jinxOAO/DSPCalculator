@@ -13,12 +13,14 @@ namespace DSPCalculator.UI
         public static List<UICalcWindow> windows;
         public static UICalcWindow lastClosedWindow;
 
-        public static GameObject calcWindowGroupObj;
+        //public static GameObject calcWindowGroupObj;
         public static bool hasOpenedWindow;
 
         public static bool ShiftDown;
         public static bool CtrlDown;
         public static bool AltDown;
+
+        public static Transform inGameWindows;
 
 
         /// <summary>
@@ -29,17 +31,33 @@ namespace DSPCalculator.UI
             windows = new List<UICalcWindow>();
 
             // 创建所有window的父级obj
-            GameObject parentWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows");
-            calcWindowGroupObj = new GameObject();
-            calcWindowGroupObj.name = "Calc Window Group";
-            calcWindowGroupObj.transform.SetParent(parentWindowObj.transform, false);
-            calcWindowGroupObj.transform.localScale = Vector3.one;
-            calcWindowGroupObj.transform.localPosition = Vector3.zero;
+            //GameObject parentWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows");
+            //calcWindowGroupObj = new GameObject();
+            //calcWindowGroupObj.name = "Calc Window Group";
+            //calcWindowGroupObj.transform.SetParent(parentWindowObj.transform, false);
+            //calcWindowGroupObj.transform.localScale = Vector3.one;
+            //calcWindowGroupObj.transform.localPosition = Vector3.zero;
             hasOpenedWindow = false;
+            inGameWindows = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows").transform;
         }
 
         public static void OnUpdate()
         {
+            if(inGameWindows == null)
+                inGameWindows = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows").transform;
+
+            int childCount = inGameWindows.childCount;
+            for (int i = 1; i <childCount; i++)
+            {
+                GameObject childObj = inGameWindows.GetChild(childCount - 1).gameObject;
+                if (!childObj.activeSelf)
+                    childObj.transform.SetAsFirstSibling(); // 如果尾巴不是激活状态的，给他丢到第一位置，防止干扰UICalcWindow判断自己是不是topAndActive
+                else
+                    break; // 尾巴是active的，就break;
+
+                // i的存在保证了循环最多=childCount - 1次
+            }
+
             hasOpenedWindow = false;
             if (windows != null)
             {

@@ -36,6 +36,12 @@ namespace DSPCalculator
         public static ConfigEntry<int> OpenWindowModifier;
         public static ConfigEntry<int> SwitchWindowModifier;
 
+        //public static ConfigEntry<bool> assemblerNumberKMG; // 生产设施是否用使用最大千分位符号
+        //public static ConfigEntry<int> assemblerNumberDecimalPlaces; // 生产设施数量显示的小数位数，-1表示默认3位有效数字，正数表示恒定保留x位小数
+        //public static ConfigEntry<bool> resourceNumberKMG; // 原材料、产物是否用使用最大千分位符号
+        //public static ConfigEntry<int> resourceNumberDecimalPlaces; // 原材料、产物数量显示的小数位数，-1表示默认3位有效数字，正数表示恒定保留x位小数
+
+
         public static bool showMixBeltCheckbox = false;
 
         public void Awake()

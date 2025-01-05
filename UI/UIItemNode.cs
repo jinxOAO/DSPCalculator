@@ -36,6 +36,7 @@ namespace DSPCalculator.UI
         public Text multiRecipeInfoText;
 
         public GameObject assemblerIconObj; // 生产机器图标
+        public GameObject assemblerCountTextObj; // 生产机器数量Obj
         public Text assemblerCountText; // 生产机器数量 
 
         public GameObject recipeGroupObj; // 主要配方的显示
@@ -162,6 +163,9 @@ namespace DSPCalculator.UI
                     outputSpeedTextObj.GetComponent<UIButton>().tips.corner = 3;
                     outputSpeedTextObj.GetComponent<UIButton>().tips.delay = 0.1f;
                     outputSpeedTextObj.GetComponent<Text>().raycastTarget = true; // 必须有这个鼠标悬停才能显示Tip
+                    // 由于其挡住了鼠标交互，所以添加点击事件（以及声音，但是不需要添加经过声音），相当于点击空白处（与其他产物格子体验一致）
+                    outputSpeedTextObj.GetComponent<Button>().onClick.AddListener(OnFinishedMarkCheckboxClick);
+                    outputSpeedTextObj.GetComponent<UIButton>().audios.downName = "ui-click-0";
                 }
 
                 // 调整按钮、机器图标、机器数量、配方显示
@@ -176,13 +180,19 @@ namespace DSPCalculator.UI
                     assemblerIconObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(160, 0, 0);
 
                     // 生产机器数量文本
-                    GameObject assemblerCountTextObj = GameObject.Instantiate(UICalcWindow.TextWithUITip);
+                    assemblerCountTextObj = GameObject.Instantiate(UICalcWindow.TextWithUITip);
                     assemblerCountTextObj.name = "assembler-count";
                     assemblerCountTextObj.transform.SetParent(obj.transform, false);
                     assemblerCountTextObj.transform.localScale = Vector3.one;
                     assemblerCountTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(205, 0, 0);
+                    assemblerCountTextObj.GetComponent<UIButton>().tips.delay = 0.4f;
+                    assemblerCountTextObj.GetComponent<UIButton>().tips.corner = 2;
                     assemblerCountText = assemblerCountTextObj.GetComponent<Text>();
                     assemblerCountText.fontSize = 18;
+                    assemblerCountText.raycastTarget = true; // 为了可以显示Tip
+                    // 由于其挡住了鼠标交互，所以添加点击事件（以及声音，但是不需要添加经过声音），相当于点击空白处（与其他产物格子体验一致）
+                    assemblerCountTextObj.GetComponent<Button>().onClick.AddListener(OnFinishedMarkCheckboxClick);
+                    assemblerCountTextObj.GetComponent<UIButton>().audios.downName = "ui-click-0";
 
                     int type = itemNode.mainRecipe.recipeNorm.type;
                     // 生产机器可调按钮
@@ -380,7 +390,7 @@ namespace DSPCalculator.UI
                     for (int i = 0; i < CalcDB.proliferatorItemIds.Count; i++)
                     {
                         int proliferatorItemId = CalcDB.proliferatorItemIds[i];
-                        int incLevel = CalcDB.proliferatorAbilities[i];
+                        int incLevel = CalcDB.proliferatorAbilitiesMap[proliferatorItemId];
                         GameObject pBtnObj = GameObject.Instantiate(UICalcWindow.imageButtonObj, proliferatorSelectionObj.transform);
                         pBtnObj.GetComponent<Image>().sprite = UICalcWindow.buttonBackgroundSprite;
                         Image icon = pBtnObj.transform.Find("icon").GetComponent<Image>();
@@ -518,7 +528,21 @@ namespace DSPCalculator.UI
                 {
                     finalCount = finalCount / (1.0 +  Utils.GetAccMilli(itemNode.mainRecipe.incLevel, parentCalcWindow.solution.userPreference));
                 }
-                assemblerCountText.text = "× " + Utils.KMG(finalCount);
+                long ceilingCount = (long)Math.Ceiling(finalCount);
+                assemblerCountText.text = "× " + Utils.KMG(ceilingCount);
+                if (ceilingCount != finalCount)
+                {
+                    assemblerCountText.color = UICalcWindow.TextWarningColor;
+                    assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0.##");
+                }
+                else
+                {
+                    assemblerCountText.color = UICalcWindow.TextWhiteColor;
+                    if(finalCount >= 10000)
+                        assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0.##");
+                    else
+                        assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = "";
+                }
             }
             if (refreshGlobal)
             {

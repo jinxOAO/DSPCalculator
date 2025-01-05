@@ -143,7 +143,7 @@ namespace DSPCalculator.UI
             nextFrameRecalc = false;
 
             GameObject oriWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser");
-            GameObject parentWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Calc Window Group");
+            GameObject parentWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows"); // (-----/Calc Window Group");
 
             windowObj = GameObject.Instantiate(oriWindowObj);
             windowObj.name = "calc-window" + " " + idx.ToString();
@@ -342,7 +342,7 @@ namespace DSPCalculator.UI
             for (int p = 0; p < CalcDB.proliferatorItemIds.Count; p++)
             {
                 int proliferatorItemId = CalcDB.proliferatorItemIds[p];
-                int incLevel = CalcDB.proliferatorAbilities[p];
+                int incLevel = CalcDB.proliferatorAbilitiesMap[proliferatorItemId];
                 GameObject pBtnObj = GameObject.Instantiate(imageButtonObj, proliferatorSelectionObj.transform);
                 pBtnObj.GetComponent<Image>().sprite = buttonBackgroundSprite;
                 Image icon = pBtnObj.transform.Find("icon").GetComponent<Image>();
@@ -1174,9 +1174,15 @@ namespace DSPCalculator.UI
                 assemblerCountTextObj.name = "assembler-count";
                 assemblerCountTextObj.transform.localScale = Vector3.one;
                 assemblerCountTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(i % assemblerDemandCountPerRow * eachWidth + 35, -(i / assemblerDemandCountPerRow * 35), 0);
+                assemblerCountTextObj.GetComponent<UIButton>().tips.delay = 0.4f;
+                assemblerCountTextObj.GetComponent<UIButton>().tips.corner = 2;
+
                 Text assemblerCountText = assemblerCountTextObj.GetComponent<Text>();
                 assemblerCountText.text = "× " + Utils.KMG(count);
                 assemblerCountText.fontSize = 16;
+                assemblerCountText.raycastTarget = true;
+                if(count > 9999)
+                    assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = count.ToString("N0"); // 如果被KMG了，要在tip里显示完整数字
 
                 // 加入列表
                 assemblersDemandObjs.Add(assemblerObj);

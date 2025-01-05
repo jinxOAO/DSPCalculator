@@ -126,13 +126,10 @@ namespace DSPCalculator.UI
                 if(isProliferatorDemand) // 如果是专门用于显示额外增产剂需求的
                 {
                     outputText.fontSize = 16;
-                    int maxAbility = 0;
-                    for (int i = 0; i < CalcDB.proliferatorAbilities.Count; i++)
-                    {
-                        if (CalcDB.proliferatorAbilities[i] > maxAbility && CalcDB.proliferatorAbilities[i] < Cargo.incTableMilli.Length)
-                            maxAbility = CalcDB.proliferatorAbilities[i];
-                    }
-                    outputText.text += $"\n({Utils.KMG(itemNode.satisfiedSpeed / (1.0 + Utils.GetIncMilli(maxAbility, parentCalcWindow.solution.userPreference)))})";
+                    int oriCount = LDB.items.Select(itemId).HpMax;
+                    int ability = CalcDB.proliferatorAbilitiesMap[itemId];
+                    int proliferatedCount = (int)(oriCount * (1.0 + Utils.GetIncMilli(ability, parentCalcWindow.solution.userPreference)));
+                    outputText.text += $"\n({Utils.KMG(itemNode.satisfiedSpeed * oriCount / (proliferatedCount - 1))})";
                 }
 
                 string speedDetails = "";

@@ -9,19 +9,23 @@ namespace DSPCalculator
 {
     public static class Utils
     {
-        public static string KMG(double num, int decimalNum = 2)
+        public static string KMG(double num)
         {
             string tail = "";
             if (num < 1000)
             {
-                return string.Format("{0:F2}", num);
+                return num.ToString("0.##");
             }
-            else if (num < 1000000)
+            else if (num < 10000)
+            {
+                return num.ToString("0.#");
+            }
+            else if (num < 10000000)
             {
                 tail = "k";
                 num /= 1000;
             }
-            else if (num < 1000000000)
+            else if (num < 1000000000L)
             {
                 tail = "M";
                 num /= 1000000;
@@ -50,15 +54,15 @@ namespace DSPCalculator
 
             if(num < 9.995)
             {
-                return string.Format("{0:F3} {1}", num, tail);
+                return string.Format("{0:0.###} {1}", num, tail);
             }
             else if (num < 99.95)
             {
-                return string.Format("{0:F2} {1}", num, tail);
+                return string.Format("{0:0.##} {1}", num, tail);
             }
             else if (num < 999.5)
             {
-                return string.Format("{0:F1} {1}", num, tail);
+                return string.Format("{0:0.#} {1}", num, tail);
             }
             else
             {
@@ -66,9 +70,9 @@ namespace DSPCalculator
             }
         }
 
-        public static string KMG(int num)
+        public static string KMG(long num)
         {
-            if (num < 1000)
+            if (num <= 9999)
             {
                 return num.ToString();
             }
