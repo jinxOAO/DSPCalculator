@@ -26,6 +26,7 @@ namespace DSPCalculator.Logic
         public bool customizeAccMilli;
         public double incMilliOverride;
         public double accMilliOverride;
+        public Dictionary<int, int> finishedRecipes; // 用来记录那些已完成的配方。只有在修改目标产物或者速度的时候才会重置，更改增产剂等重新计算时均不会重置
 
         public bool showMixBeltInfo; // 是否显示混带数据
 
@@ -33,6 +34,7 @@ namespace DSPCalculator.Logic
         {
             recipeConfigs = new Dictionary<int, RecipeConfig>();
             itemConfigs = new Dictionary<int, ItemConfig>();
+            finishedRecipes = new Dictionary<int, int>();
             globalIncLevel = 0;
             globalIsInc = true;
             bluebuff = false;
@@ -45,6 +47,11 @@ namespace DSPCalculator.Logic
             incMilliOverride = 0;
             accMilliOverride = 0;
             globalAssemblerIdByType = new Dictionary<int, int>();
+        }
+
+        public void ClearWhenChangeTarget()
+        {
+            finishedRecipes.Clear();
         }
 
         //public void Clear()

@@ -17,12 +17,14 @@ namespace DSPCalculator.UI
         // 一些公共资源
         public static Color backgroundImageColor = new Color(0f, 0.811f, 1f, 0.072f);
         public static Color iconButtonHighLightColor = new Color(0.737f, 0.802f,1f, 0.362f);
+        public static Color backgroundImageFinishedColor = new Color(0.5f, 0.5f, 0.5f, 0.28f);
         // public static Color inserterOrangeColor = new Color(0.9906f, 0.5897f, 0.3691f, 1f);
         public static int buttonCountPerRow = 3; // 一行几个带图标的按钮
         public static Vector3 recipeGroupLocalPosition = new Vector3(0, 20, 0);
 
         // 对象资源
         public GameObject obj;
+        public Image backgroundImg;
 
         public int ID;
         public UICalcWindow parentCalcWindow;
@@ -45,6 +47,8 @@ namespace DSPCalculator.UI
         public GameObject incToggleObj;
         public Text incText;
 
+        public Image cbFinishedMark;
+
         public UIItemNode(ItemNode node, UICalcWindow calcWindow) 
         {
             // 如果公共资源尚未被初始化，则初始化
@@ -64,10 +68,14 @@ namespace DSPCalculator.UI
             GameObject backObj = new GameObject();
             backObj.name = "bg";
             backObj.transform.SetParent(obj.transform);
-            Image background = backObj.AddComponent<Image>();
-            background.sprite = UICalcWindow.backgroundSprite;
-            background.type = Image.Type.Sliced;
-            background.color = backgroundImageColor;
+            backObj.AddComponent<Button>().onClick.AddListener(OnFinishedMarkCheckboxClick);
+            backObj.AddComponent<UIButton>().transitions = new UIButton.Transition[0]; // 否则会UIButton的LateUpdate报错
+            backObj.GetComponent<UIButton>().audios.enterName = "ui-hover-0";
+            backObj.GetComponent<UIButton>().audios.downName = "ui-click-0";
+            backgroundImg = backObj.AddComponent<Image>();
+            backgroundImg.sprite = UICalcWindow.backgroundSprite;
+            backgroundImg.type = Image.Type.Sliced;
+            backgroundImg.color = backgroundImageColor;
             backObj.GetComponent<RectTransform>().sizeDelta = new Vector2(UICalcWindow.cellWidth - UICalcWindow.cellDistance, UICalcWindow.cellHeight - UICalcWindow.cellDistance/2);
             
             // 设置图标
@@ -383,6 +391,16 @@ namespace DSPCalculator.UI
                         proliferatorUsedButtons[incLevel] = pBtnObj.GetComponent<UIButton>();
                         proliferatorUsedButtons[incLevel].tips.itemId = proliferatorItemId;
                     }
+
+                    GameObject finishedMarkObj = GameObject.Instantiate(UICalcWindow.checkBoxObj, obj.transform);
+                    finishedMarkObj.name = "finished-mark";
+                    cbFinishedMark = finishedMarkObj.GetComponent<Image>();
+                    finishedMarkObj.transform.Find("text").gameObject.SetActive(false);
+                    finishedMarkObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(10, 22, 0);
+                    finishedMarkObj.GetComponent<Button>().onClick.AddListener(OnFinishedMarkCheckboxClick);
+                    finishedMarkObj.GetComponent<UIButton>().tips.tipTitle = "标记为已完成".Translate();
+                    finishedMarkObj.GetComponent<UIButton>().tips.delay = 0.3f;
+                    finishedMarkObj.GetComponent<UIButton>().tips.corner = 3;
                 }
 
                 // 混带的分拣器信息
@@ -406,7 +424,7 @@ namespace DSPCalculator.UI
                     totalCountTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, 0, 0);
                     Text totalCountText = totalCountTextObj.GetComponent<Text>();
                     totalCountText.fontSize = 18;
-                    totalCountText.text = (itemNode.GetInserterRatio() * 1.0 / 2).ToString() + " " + "份calc".Translate() + " = ";
+                    totalCountText.text = (itemNode.GetInserterRatio()).ToString() + " " + "份calc".Translate() + " = ";
                     totalCountTextObj.GetComponent<UIButton>().tips.tipTitle = "份数标题".Translate();
                     totalCountTextObj.GetComponent<UIButton>().tips.tipText = "份数说明".Translate();
                     totalCountTextObj.GetComponent<UIButton>().tips.corner = 3;
@@ -462,6 +480,7 @@ namespace DSPCalculator.UI
             }
             RefreshIncLevelDisplay();
             RefreshAssemblerDisplay(false);
+            RefreshFinishedMark();
         }
 
 
@@ -690,6 +709,44 @@ namespace DSPCalculator.UI
                         item.Value.highlighted = true;
                     else
                         item.Value.highlighted = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 将配方标记为已完成或未完成
+        /// </summary>
+        public void OnFinishedMarkCheckboxClick()
+        {
+            if(itemNode.mainRecipe != null)
+            {
+                if (parentCalcWindow.solution.userPreference.finishedRecipes.ContainsKey(itemNode.mainRecipe.ID))
+                    parentCalcWindow.solution.userPreference.finishedRecipes.Remove(itemNode.mainRecipe.ID);
+                else
+                    parentCalcWindow.solution.userPreference.finishedRecipes[itemNode.mainRecipe.ID] = 1;
+            }
+            foreach (var uiNode in parentCalcWindow.uiItemNodes)
+            {
+                uiNode.RefreshFinishedMark();
+            }
+        }
+
+        /// <summary>
+        /// 刷新已完成的标记
+        /// </summary>
+        public void RefreshFinishedMark()
+        {
+            if(itemNode.mainRecipe != null && cbFinishedMark != null)
+            {
+                if (parentCalcWindow.solution.userPreference.finishedRecipes.ContainsKey(itemNode.mainRecipe.ID))
+                {
+                    cbFinishedMark.sprite = UICalcWindow.checkboxOnSprite;
+                    backgroundImg.color = backgroundImageFinishedColor;
+                }
+                else
+                {
+                    cbFinishedMark.sprite = UICalcWindow.checkboxOffSprite;
+                    backgroundImg.color = backgroundImageColor;
                 }
             }
         }

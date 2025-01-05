@@ -60,6 +60,7 @@ namespace DSPCalculator.Logic
         {
             ClearTree();
             this.targetItem = targetItem;
+            userPreference.ClearWhenChangeTarget();
             return Solve();
         }
 
@@ -67,6 +68,7 @@ namespace DSPCalculator.Logic
         {
             this.targetSpeed = targetSpeed;
             ClearTree();
+            userPreference.ClearWhenChangeTarget();
             return Solve();
         }
 

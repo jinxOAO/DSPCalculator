@@ -1078,7 +1078,7 @@ namespace DSPCalculator.UI
                     totalUnit += item.Value.GetInserterRatio();
                 }
 
-                UIItemNodeSimple label3 = new UIItemNodeSimple($"{"混带需求".Translate()} : {totalUnit * 1.0 /2} {"份calc".Translate()}", this);
+                UIItemNodeSimple label3 = new UIItemNodeSimple($"{"混带需求".Translate()} : {totalUnit} {"份calc".Translate()}", this);
                 uiSideItemNodes.Add(label3);
                 for (int i = 1; i < sideCellCountPerRow; i++)
                 {

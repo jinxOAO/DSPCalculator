@@ -25,7 +25,7 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.1.4";
+        public const string VERSION = "0.1.5";
 
         // ---------------------------------------------------------------------------
         public static bool developerMode = false; //           发布前修改             |
@@ -36,7 +36,7 @@ namespace DSPCalculator
         public static ConfigEntry<int> OpenWindowModifier;
         public static ConfigEntry<int> SwitchWindowModifier;
 
-        public static bool showMixBeltCheckbox = true;
+        public static bool showMixBeltCheckbox = false;
 
         public void Awake()
         {
