@@ -81,9 +81,16 @@ namespace DSPCalculator.Logic
                         }
                         else if (!alreadyHaveOneFracRecipe)
                         {
-                            alreadyHaveOneFracRecipe = true;
-                            NormalizedRecipe normalizedRecipe = new NormalizedRecipe(recipe);
-                            recipeDict[recipe.ID] = normalizedRecipe;
+                            if (recipe.Items.Length > 0 && recipe.Results.Length > 0 && recipe.Items[0] == recipe.Results[0])
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                alreadyHaveOneFracRecipe = true;
+                                NormalizedRecipe normalizedRecipe = new NormalizedRecipe(recipe);
+                                recipeDict[recipe.ID] = normalizedRecipe;
+                            }
                         }
                         if(!assemblerListByType.ContainsKey((int)recipe.Type))
                         {

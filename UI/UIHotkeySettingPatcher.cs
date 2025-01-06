@@ -26,9 +26,9 @@ namespace DSPCalculator.UI
 
         public static bool isWaiting1;
         public static bool isWaiting2;
-        public static bool ShiftDown;
-        public static bool CtrlDown;
-        public static bool AltDown;
+        //public static bool ShiftDown;
+        //public static bool CtrlDown;
+        //public static bool AltDown;
 
         public static KeyCode temp1;
         public static int tempModifier1;
@@ -103,27 +103,9 @@ namespace DSPCalculator.UI
 
         public static void OnUpdate()
         {
-            if(isWaiting1 || isWaiting2)
-            {
-                if (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift))
-                    ShiftDown = true;
-                if (Input.GetKeyUp(KeyCode.LeftShift) || Input.GetKeyUp(KeyCode.RightShift))
-                    ShiftDown = false;
-                if (Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.RightControl))
-                    CtrlDown = true;
-                if (Input.GetKeyUp(KeyCode.LeftControl) || Input.GetKeyUp(KeyCode.RightControl))
-                    CtrlDown = false;
-                if (Input.GetKeyDown(KeyCode.LeftAlt) || Input.GetKeyDown(KeyCode.RightAlt))
-                    AltDown = true;
-                if (Input.GetKeyUp(KeyCode.LeftAlt) || Input.GetKeyUp(KeyCode.RightAlt))
-                    AltDown = false;
-            }
-            else
-            {
-                ShiftDown = false;
-                CtrlDown = false;
-                AltDown = false;
-            }
+            bool ShiftDown = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            bool CtrlDown  = Input.GetKey(KeyCode.LeftControl) || Input.GetKey (KeyCode.RightControl);
+            bool AltDown = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
             if(isWaiting1 || isWaiting2)
             {
                 KeyCode key = KeyCode.Q;
@@ -170,9 +152,6 @@ namespace DSPCalculator.UI
 
                     isWaiting1 = false;
                     isWaiting2 = false;
-                    ShiftDown = false;
-                    CtrlDown = false;
-                    AltDown = false;
 
                     RefreshAll();
                 }

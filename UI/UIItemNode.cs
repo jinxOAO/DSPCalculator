@@ -162,6 +162,7 @@ namespace DSPCalculator.UI
                     outputSpeedTextObj.GetComponent<UIButton>().tips.tipText = speedDetails;
                     outputSpeedTextObj.GetComponent<UIButton>().tips.corner = 3;
                     outputSpeedTextObj.GetComponent<UIButton>().tips.delay = 0.1f;
+                    outputSpeedTextObj.GetComponent<Text>().text = outputSpeedTextObj.GetComponent<Text>().text + "*";
                     outputSpeedTextObj.GetComponent<Text>().raycastTarget = true; // 必须有这个鼠标悬停才能显示Tip
                     // 由于其挡住了鼠标交互，所以添加点击事件（以及声音，但是不需要添加经过声音），相当于点击空白处（与其他产物格子体验一致）
                     outputSpeedTextObj.GetComponent<Button>().onClick.AddListener(OnFinishedMarkCheckboxClick);
@@ -530,16 +531,18 @@ namespace DSPCalculator.UI
                 }
                 long ceilingCount = (long)Math.Ceiling(finalCount);
                 assemblerCountText.text = "× " + Utils.KMG(ceilingCount);
-                if (ceilingCount != finalCount)
+                if (ceilingCount != finalCount && ceilingCount - finalCount > 0.005)
                 {
-                    assemblerCountText.color = UICalcWindow.TextWarningColor;
-                    assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0.##");
+                    assemblerCountText.text = assemblerCountText.text + "*"; // 加星号提示玩家有向上取整
+                    if(finalCount >= 1000)
+                        assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0,0.##");
+                    else
+                        assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0.##");
                 }
                 else
                 {
-                    assemblerCountText.color = UICalcWindow.TextWhiteColor;
-                    if(finalCount >= 10000)
-                        assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0.##");
+                    if (finalCount >= 10000)
+                        assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0,0.##");
                     else
                         assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = "";
                 }

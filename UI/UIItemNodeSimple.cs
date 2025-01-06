@@ -129,7 +129,8 @@ namespace DSPCalculator.UI
                     int oriCount = LDB.items.Select(itemId).HpMax;
                     int ability = CalcDB.proliferatorAbilitiesMap[itemId];
                     int proliferatedCount = (int)(oriCount * (1.0 + Utils.GetIncMilli(ability, parentCalcWindow.solution.userPreference)));
-                    outputText.text += $"\n({Utils.KMG(itemNode.satisfiedSpeed * oriCount / (proliferatedCount - 1))})";
+                    if(proliferatedCount - 1 > oriCount)
+                        outputText.text += $"\n({Utils.KMG(itemNode.satisfiedSpeed * oriCount / (proliferatedCount - 1))})";
                 }
 
                 string speedDetails = "";

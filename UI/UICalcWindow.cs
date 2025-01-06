@@ -33,6 +33,7 @@ namespace DSPCalculator.UI
         public static Color itemIconDisabledColor = new Color(0.5f, 0.5f, 0.5f, 1);
         public static Color TextWhiteColor = new Color(0.588f, 0.588f, 0.588f, 1f);
         public static Color TextWarningColor = new Color(0.852f, 0.487f, 0.022f, 1f);
+        public static Color TextBlueColor = new Color(0.282f, 0.845f, 1f, 0.705f);
         public static Color incModeImageColor = new Color(0.287f, 0.824f, 1, 0.266f);
         public static Color accModeImageColor = new Color(0.9906f, 0.5897f, 0.3691f, 0.384f);
         public static Color incModeTextColor = new Color(0.282f, 0.845f, 1, 0.705f);
@@ -152,6 +153,11 @@ namespace DSPCalculator.UI
             windowObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(-670, 357,0);
             windowObj.transform.localScale = Vector3.one;
             windowObj.AddComponent<RectMask2D>();
+            Vector3 centerPos = windowObj.transform.localPosition;
+            int range = 40;
+            float randX = UnityEngine.Random.Range(centerPos.x - range, centerPos.x + range);
+            float randY = UnityEngine.Random.Range(centerPos.y - range, centerPos.y + range);
+            windowObj.transform.localPosition = new Vector3(randX, randY, centerPos.z);
 
             // 移除不必要的obj
             GameObject.Destroy(windowObj.transform.Find("inspector-group").gameObject);
@@ -776,7 +782,11 @@ namespace DSPCalculator.UI
 
             if (!isTopAndActive) return;
             // 下面的只有Topwindow可以响应
-            if(Input.GetKeyDown(DSPCalculatorPlugin.SwitchWindowSizeHotKey.Value) && UIHotkeySettingPatcher.CheckModifier(2, WindowsManager.ShiftDown,WindowsManager.CtrlDown, WindowsManager.AltDown))
+
+            bool ShiftDown = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            bool CtrlDown = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            bool AltDown = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+            if (Input.GetKeyDown(DSPCalculatorPlugin.SwitchWindowSizeHotKey.Value) && UIHotkeySettingPatcher.CheckModifier(2, ShiftDown, CtrlDown, AltDown))
             {
                 SwitchWindowSize();
             }
