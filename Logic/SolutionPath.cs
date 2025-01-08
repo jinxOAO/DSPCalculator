@@ -300,7 +300,8 @@ namespace DSPCalculator.Logic
 
                 if(sharedItemNode.children.Count == 0) // 说明视为原矿
                 {
-                    sharedItemNode.satisfiedSpeed = sharedItemNode.needSpeed;
+                    if(sharedItemNode.satisfiedSpeed < sharedItemNode.needSpeed)
+                        sharedItemNode.satisfiedSpeed = sharedItemNode.needSpeed;
                 }
                 else
                 {
@@ -327,7 +328,6 @@ namespace DSPCalculator.Logic
                                     itemNodes[productId] = new ItemNode(productId, 0, this);
                                 }
                                 itemNodes[productId].satisfiedSpeed += addedSatisfiedSpeed;
-
                                 // 还要记录一下，这个配方会生成该目标产物，到时候计算溢出的时候可能会用到
                                 if (itemNodes[productId].mainRecipe == null || itemNodes[productId].mainRecipe.ID != recipeId)
                                 {
@@ -412,7 +412,8 @@ namespace DSPCalculator.Logic
                     if(oriSignNode.parents.Count > 0)
                         oriSignNode.parents[0].SolveOne();
 
-                    sharedNode.satisfiedSpeed = sharedNode.needSpeed;
+                    if(sharedNode.satisfiedSpeed < sharedNode.needSpeed)
+                        sharedNode.satisfiedSpeed = sharedNode.needSpeed;
                     continue;
                 }
                 else

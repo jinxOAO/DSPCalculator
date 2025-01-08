@@ -81,7 +81,7 @@ namespace DSPCalculator.Logic
                         }
                         else if (!alreadyHaveOneFracRecipe)
                         {
-                            if (recipe.Items.Length > 0 && recipe.Results.Length > 0 && recipe.Items[0] == recipe.Results[0])
+                            if (recipe.ID != 115)
                             {
                                 continue;
                             }

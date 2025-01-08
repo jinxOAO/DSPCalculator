@@ -529,22 +529,30 @@ namespace DSPCalculator.UI
                 {
                     finalCount = finalCount / (1.0 +  Utils.GetAccMilli(itemNode.mainRecipe.incLevel, parentCalcWindow.solution.userPreference));
                 }
-                long ceilingCount = (long)Math.Ceiling(finalCount);
-                assemblerCountText.text = "× " + Utils.KMG(ceilingCount);
-                if (ceilingCount != finalCount && ceilingCount - finalCount > 0.005)
+                if (parentCalcWindow.solution.userPreference.roundUpAssemgblerNum) // 根据生产设施数量是否向上取整的设置进行
                 {
-                    assemblerCountText.text = assemblerCountText.text + "*"; // 加星号提示玩家有向上取整
-                    if(finalCount >= 1000)
-                        assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0,0.##");
+                    long ceilingCount = (long)Math.Ceiling(finalCount);
+                    assemblerCountText.text = "× " + Utils.KMG(ceilingCount);
+                    if (ceilingCount != finalCount && ceilingCount - finalCount > 0.005)
+                    {
+                        assemblerCountText.text = assemblerCountText.text + "*"; // 加星号提示玩家有向上取整
+                        if (finalCount >= 1000)
+                            assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0,0.##");
+                        else
+                            assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0.##");
+                    }
                     else
-                        assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0.##");
+                    {
+                        if (finalCount >= 10000)
+                            assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0,0.##");
+                        else
+                            assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = "";
+                    }
                 }
                 else
                 {
-                    if (finalCount >= 10000)
-                        assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = finalCount.ToString("0,0.##");
-                    else
-                        assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = "";
+                    assemblerCountText.text = "× " + Utils.KMGForceDigi(finalCount);
+                    assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = "";
                 }
             }
             if (refreshGlobal)

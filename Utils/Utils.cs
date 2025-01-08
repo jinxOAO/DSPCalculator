@@ -29,22 +29,22 @@ namespace DSPCalculator
                 tail = "k";
                 num /= 1000;
             }
-            else if (num < 100000000L)
+            else if (num < 1000000000L)
             {
                 tail = "M";
                 num /= 1000000;
             }
-            else if (num < 100000000000L)
+            else if (num < 1000000000000L)
             {
                 tail = "G";
                 num /= 1000000000;
             }
-            else if (num < 100000000000000L)
+            else if (num < 1000000000000000L)
             {
                 tail = "T";
                 num /= 1000000000000L;
             }
-            else if (num < 100000000000000000L)
+            else if (num < 1000000000000000000L)
             {
                 tail = "P";
                 num /= 1000000000000000L;
@@ -85,6 +85,18 @@ namespace DSPCalculator
                 return KMG((double)num);
             }
             
+        }
+
+        public static string KMGForceDigi(double num)
+        {
+            if (num < 10000)
+            {
+                return num.ToString("N2");
+            }
+            else
+            {
+                return KMG(num);
+            }
         }
 
         public static double GetIncMilli(int index, UserPreference preference)

@@ -65,6 +65,7 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("份数标题", "Unit", "份", "Unit");
             LocalizationModule.RegisterTranslation("份数说明", "Each unit represents 60/min, which is equivalent to the capacity of the sorter at a distance of 3 grids.\nSorter value: represents the required quantity of sorters at 1/2/3 grid distances.", "每1份为60/min，相当于分拣器在3格距离的运力。\n分拣器数值：代表1/2/3格距离的分拣器的所需数量。", "Each unit represents 60/min, which is equivalent to the capacity of the sorter at a distance of 3 grids.\nSorter value: represents the required quantity of sorters at 1/2/3 grid distances.");
 
+            LocalizationModule.RegisterTranslation("生产设施数量显示向上取整", "Round up facilitiy number", "生产设施数向上取整", "Round up facilitiy number");
 
             LocalizationModule.RegisterTranslation("混带需求", "Mix-Belt Demands", "混带需求", "Mix-Belt Demands");
             LocalizationModule.RegisterTranslation("条calc", "lines", "条", "lines");

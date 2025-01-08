@@ -82,6 +82,10 @@ namespace DSPCalculator.UI
         public GameObject viewGroupObj;
         public GameObject mainCanvasObj;
         public GameObject switchSizeButtonObj;
+        public GameObject customTitleInputObj;
+        public Image titleInputBG;
+        public InputField titleInput;
+        public UIButton titleInputUIBtn;
         public Text titleText;
         public GameObject targetProductTextObj;
         public Image targetProductIcon;
@@ -111,6 +115,7 @@ namespace DSPCalculator.UI
         public Image cbInferior;
         public Image cbIncMilli;
         public Image cbAccMilli;
+        public Image cbRoundUp;
         public Image cbMixbelt;
         public Text txtBluebuff;
         public Text txtEnergyBurst;
@@ -118,6 +123,7 @@ namespace DSPCalculator.UI
         public Text txtInferior;
         public Text txtIncMilli;
         public Text txtAccMilli;
+        public Text txtRoundUp;
         public Text txtMixbelt;
         public InputField incInput;
         public InputField accInput;
@@ -169,7 +175,7 @@ namespace DSPCalculator.UI
             {
                 GameObject.DestroyImmediate(contentObj.transform.GetChild(contentObj.transform.childCount - 1).gameObject);
             }
-
+            GameObject windowTitleObj = windowObj.transform.Find("panel-bg/title-text").gameObject;
             titleText = windowObj.transform.Find("panel-bg/title-text").GetComponent<Text>();
 
             GameObject closeButtonObj = windowObj.transform.Find("panel-bg/x").gameObject;
@@ -227,7 +233,59 @@ namespace DSPCalculator.UI
 
             Transform panelParent = windowObj.transform.Find("panel-bg");
 
-           
+
+            // 可编辑标题
+            GameObject oriInputFieldObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser/inspector-group/Scroll View/Viewport/Content/group-1/input-short-text");
+            if (oriInputFieldObj == null)
+                oriInputFieldObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser/inspector-group/BP-panel-scroll(Clone)/Viewport/pane/group-1/input-short-text");
+            if (oriInputFieldObj == null)
+                Debug.LogError("Error when init oriInputField because some other mods has changed the Blueprint Browser UI. Please check if you've install the BluePrintTweaks and then contant jinxOAO.");
+            customTitleInputObj = GameObject.Instantiate(oriInputFieldObj, windowObj.transform);
+            customTitleInputObj.name = "inputfield-title";
+            customTitleInputObj.GetComponent<RectTransform>().sizeDelta = new Vector2(200, 30);
+            customTitleInputObj.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 1f);
+            customTitleInputObj.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 1f);
+            customTitleInputObj.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 1f);
+            customTitleInputObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, -10, 0);
+            titleInputBG = customTitleInputObj.GetComponent<Image>();
+            titleInput = customTitleInputObj.GetComponent<InputField>();
+            titleInput.text = "量化计算器".Translate();
+            titleInput.characterLimit = 30;
+            titleInput.transition = Selectable.Transition.None; // 要不然鼠标不在上面时颜色会很浅，刚打开容易找不到，不够明显
+            titleInput.onEndEdit.RemoveAllListeners();
+            customTitleInputObj.GetComponent<Image>().color = new Color(0, 0, 0, 0.5f);
+            customTitleInputObj.transform.Find("value-text").GetComponent<Text>().color = Color.white;
+            customTitleInputObj.transform.Find("value-text").GetComponent<Text>().fontSize = 18;
+            customTitleInputObj.transform.Find("value-text").GetComponent<Text>().font = titleText.font;
+            customTitleInputObj.transform.Find("value-text").GetComponent<Text>().alignment = TextAnchor.MiddleCenter;
+            customTitleInputObj.GetComponent<UIButton>().tips.tipTitle = "";
+            customTitleInputObj.GetComponent<UIButton>().tips.tipText = "";
+            customTitleInputObj.SetActive(false);
+            customTitleInputObj.SetActive(true);
+            titleInputUIBtn = customTitleInputObj.GetComponent<UIButton>();
+            UIButton.Transition transition = new UIButton.Transition();
+            transition.target = customTitleInputObj.GetComponent<Image>();
+            transition.normalColor = new Color(0, 0, 0, 0.01f); // 不能试0，否则会失效，好奇怪
+            transition.mouseoverColor = new Color(0, 0, 0, 0.3f);
+            transition.highlightColorOverride = new Color(0, 0, 0, 0.5f);
+            transition.damp = 0.3f;
+            transition.highlightColorMultiplier = 1;
+            transition.highlightSizeMultiplier = 1;
+            transition.mouseoverSize = 1;
+            transition.pressedColor = new Color(0, 0, 0, 0.5f);
+            transition.pressedSize = 1;
+            titleInputUIBtn.transitions = new UIButton.Transition[] { transition };
+            titleInputUIBtn.highlighted = false;
+
+            if(DSPCalculatorPlugin.EditableTitle.Value)
+            {
+                windowTitleObj.SetActive(false);
+            }
+            else
+            {
+                customTitleInputObj.SetActive(false);
+            }
+
             // 目标产物文本
             targetProductTextObj = GameObject.Instantiate(TextObj, panelParent);
             targetProductTextObj.name = "target-title";
@@ -269,11 +327,6 @@ namespace DSPCalculator.UI
             }
 
             // 目标速度输入的文本框
-            GameObject oriInputFieldObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser/inspector-group/Scroll View/Viewport/Content/group-1/input-short-text");
-            if (oriInputFieldObj == null)
-                oriInputFieldObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser/inspector-group/BP-panel-scroll(Clone)/Viewport/pane/group-1/input-short-text");
-            if (oriInputFieldObj == null)
-                Debug.LogError("Error when init oriInputField because some other mods has changed the Blueprint Browser UI. Please check if you've install the BluePrintTweaks and then contant jinxOAO.");
             speedInputObj = GameObject.Instantiate(oriInputFieldObj, panelParent);
             speedInputObj.name = "speed-input";
             speedInputObj.transform.localPosition = new Vector3(120, 0, 0);
@@ -561,6 +614,15 @@ namespace DSPCalculator.UI
             customAccInput.SetActive(false);
             customAccInput.SetActive(true);
 
+
+            GameObject roundUpCbObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
+            roundUpCbObj.name = "checkbox-roundup";
+            cbRoundUp = roundUpCbObj.GetComponent<Image>();
+            txtRoundUp = roundUpCbObj.transform.Find("text").GetComponent<Text>();
+            //inferiorCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, 0, 0);
+            roundUpCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -40, 0);
+            roundUpCbObj.GetComponent<Button>().onClick.AddListener(OnAssemblerRoundUpSettingChange);
+
             GameObject showHideMixBeltInfoObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
             showHideMixBeltInfoObj.name = "checkbox-mixbelt";
             cbMixbelt = showHideMixBeltInfoObj.GetComponent<Image>();
@@ -569,7 +631,7 @@ namespace DSPCalculator.UI
             showHideMixBeltInfoObj.GetComponent<UIButton>().tips.tipText = "混带显示说明".Translate();
             showHideMixBeltInfoObj.GetComponent<UIButton>().tips.corner = 1;
             showHideMixBeltInfoObj.GetComponent<UIButton>().tips.delay = 0.1f;
-            showHideMixBeltInfoObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -40, 0);
+            showHideMixBeltInfoObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -60, 0);
             showHideMixBeltInfoObj.GetComponent<Button>().onClick.AddListener(OnMixbeltInfoCbClick);
             showHideMixBeltInfoObj.SetActive(DSPCalculatorPlugin.showMixBeltCheckbox);
 
@@ -779,6 +841,11 @@ namespace DSPCalculator.UI
                 solution.ReSolve();
                 RefreshAll();
             }
+
+            if (titleInput.isFocused)
+                titleInputUIBtn.highlighted = true;
+            else
+                titleInputUIBtn.highlighted = false;
 
             if (!isTopAndActive) return;
             // 下面的只有Topwindow可以响应
@@ -1052,7 +1119,8 @@ namespace DSPCalculator.UI
             count = 0;
             foreach (var node in solution.itemNodes)
             {
-                if (!node.Value.IsOre(solution.userPreference) && (node.Value.satisfiedSpeed - node.Value.needSpeed > 0.001f))
+                //if (!node.Value.IsOre(solution.userPreference) && (node.Value.satisfiedSpeed - node.Value.needSpeed > 0.001f))
+                if (node.Value.satisfiedSpeed - node.Value.needSpeed > 0.001f)
                 {
                     UIItemNodeSimple uiOverflowNode = new UIItemNodeSimple(node.Value, false, this);
                     uiSideItemNodes.Add(uiOverflowNode);
@@ -1369,12 +1437,19 @@ namespace DSPCalculator.UI
             }
             if(cbAccMilli != null)
             {
-
                 if (solution.userPreference.customizeAccMilli)
                     cbAccMilli.sprite = checkboxOnSprite;
                 else
                     cbAccMilli.sprite = checkboxOffSprite;
                 txtAccMilli.text = "强制加速效能".Translate();
+            }
+            if(cbRoundUp != null)
+            {
+                if(solution.userPreference.roundUpAssemgblerNum)
+                    cbRoundUp.sprite = checkboxOnSprite;
+                else
+                    cbRoundUp.sprite = checkboxOffSprite;
+                txtRoundUp.text = "生产设施数量显示向上取整".Translate();
             }
             if (cbMixbelt != null)
             {
@@ -1463,6 +1538,22 @@ namespace DSPCalculator.UI
             accInput.text = accOverride.ToString();
             solution.userPreference.accMilliOverride = 1.0 * accOverride / 100;
             nextFrameRecalc = true;
+        }
+
+        public void OnAssemblerRoundUpSettingChange()
+        {
+            bool ori = solution.userPreference.roundUpAssemgblerNum;
+            bool res = !ori;
+            solution.userPreference.roundUpAssemgblerNum = res;
+            DSPCalculatorPlugin.RoundUpAssemblerNum.Value = res;
+            DSPCalculatorPlugin.RoundUpAssemblerNum.ConfigFile.Save();
+
+            // nextFrameRecalc = true;
+            RefreshCheckBoxes();
+            foreach (var uiNodeData in uiItemNodes)
+            {
+                uiNodeData.RefreshAssemblerDisplay(false); // 刷新每个节点的assembler显示即可
+            }
         }
 
 

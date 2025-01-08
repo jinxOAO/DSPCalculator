@@ -27,6 +27,7 @@ namespace DSPCalculator.Logic
         public double incMilliOverride;
         public double accMilliOverride;
         public Dictionary<int, int> finishedRecipes; // 用来记录那些已完成的配方。只有在修改目标产物或者速度的时候才会重置，更改增产剂等重新计算时均不会重置
+        public bool roundUpAssemgblerNum; // 生产设施数量显示是否向上取整
 
         public bool showMixBeltInfo; // 是否显示混带数据
 
@@ -43,6 +44,7 @@ namespace DSPCalculator.Logic
             inferior = false;
             customizeIncMilli = false;
             customizeAccMilli = false;
+            roundUpAssemgblerNum = DSPCalculatorPlugin.RoundUpAssemblerNum.Value;
             showMixBeltInfo = false;
             incMilliOverride = 0;
             accMilliOverride = 0;
