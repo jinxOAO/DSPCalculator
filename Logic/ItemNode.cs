@@ -16,6 +16,7 @@ namespace DSPCalculator.Logic
         public SolutionTree solutionTree;
         public double needSpeed; // 所需数量
         public double satisfiedSpeed; // 配方已产出的数量
+        public double speedFromOre; // 作为原矿部分直接提供的数量，用于最后处理溢出时，可以无论何种情况直接移除的最大部分
         public RecipeInfo mainRecipe; // 最初用于生成此Item的recipe的信息
         public List<RecipeInfo> byProductRecipes; // 在建立solutionTree完成之后，会因为配方的副产物，连接数个节点，连过来时，要在byProductRecipes里面加入
         public List<ItemNode> parents; // 此物品被用于制造
@@ -28,10 +29,12 @@ namespace DSPCalculator.Logic
             this.itemId = itemId;
             this.needSpeed = needSpeed;
             this.satisfiedSpeed = 0f;
+            this.speedFromOre = 0f;
             byProductRecipes = new List<RecipeInfo>();
             parents = new List<ItemNode>();
             children = new List<ItemNode>();
             this.solutionTree = solutionTree;
+            this.unsolvedCount = 0;
         }
 
         public void TryRecipe(NormalizedRecipe recipe)

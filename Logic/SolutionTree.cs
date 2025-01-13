@@ -1,4 +1,8 @@
-﻿using JetBrains.Annotations;
+﻿using DSPCalculator.UI;
+using JetBrains.Annotations;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Factorization;
+using MathNet.Numerics.LinearAlgebra.Solvers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +32,7 @@ namespace DSPCalculator.Logic
         public List<ItemNode> nodeStack; // 用于解决过程中存储暂存节点
 
         public Dictionary<int, double> proliferatorCount; // 用于存储所有增产剂的使用量（但目前不会链式求解增产剂）
+        public Dictionary<int, double> proliferatorCountSelfSprayed; // 如果是自喷涂过的增产剂需求量
         public bool unsolved { get { return nodeStack.Count > 0; } }
 
 
@@ -38,6 +43,7 @@ namespace DSPCalculator.Logic
             recipeInfos = new Dictionary<int, RecipeInfo>();
             nodeStack = new List<ItemNode>();
             proliferatorCount = new Dictionary<int, double>();
+            proliferatorCountSelfSprayed = new Dictionary<int, double>();
             userPreference = new UserPreference();
             targetSpeed = 3600;
             displaySpeedRatio = 1;
@@ -49,6 +55,7 @@ namespace DSPCalculator.Logic
             recipeInfos.Clear();
             nodeStack.Clear();
             proliferatorCount.Clear();
+            proliferatorCountSelfSprayed.Clear();
         }
 
         public void ClearUserPreference()
@@ -82,6 +89,17 @@ namespace DSPCalculator.Logic
         {
             if (targetItem > 0)
             {
+
+                // 如果需要计算增产剂生产线，还需要解决增产剂的路线
+                if(userPreference.solveProliferators)
+                {
+                    for (int i = 0; i < CalcDB.proliferatorItemIds.Count; i++)
+                    {
+                        ItemNode p = new ItemNode(CalcDB.proliferatorItemIds[i], 0, this);
+                        Push(p);
+                    }
+                }
+                // 将root放在栈顶（其实放在栈底也没影响，但是这会使得：当root就是增产剂时，且增产剂并入产线计算，那么在Calc的时候，root本身只能作为signNode，且其与itemNodes里面存储的同Id的ItemNode不是同一个对象）
                 root = new ItemNode(targetItem, targetSpeed, this);
                 ItemNode node = root;
                 Push(node);
@@ -89,12 +107,18 @@ namespace DSPCalculator.Logic
                 if (SolvePath())
                 {
                     //TestLog();
-                    CalcAll();
+                    CalcTree();
                     RemoveOverflow();
                     CalcProliferator();
+
+                    if(userPreference.solveProliferators) // 如果需要单独计算增产剂
+                    {
+                        CalcProliferatorInProductLine();
+                    }
+
                     return true;
                 }
-                //TestLog2();
+                TestLog2();
             }
             return false;
         }
@@ -121,6 +145,10 @@ namespace DSPCalculator.Logic
                         if (cur.parents.Count > 0)
                         {
                             cur.parents[0].SolveOne();
+                        }
+                        else if (CalcDB.proliferatorItemIds.Contains(cur.itemId) && cur.needSpeed == 0 || itemNodes[cur.itemId].needSpeed == 0) // 这是可预见的，在将增产剂生产并入当前产线时可能会产生的情况
+                        {
+                            itemNodes[cur.itemId].needSpeed += cur.needSpeed;
                         }
                         else
                         {
@@ -285,11 +313,28 @@ namespace DSPCalculator.Logic
         /// <summary>
         /// 在准备好的有向图的基础上，计算各个节点需要的生产速度
         /// </summary>
-        public void CalcAll()
+        public void CalcTree(int proliferatorId = -1, double addedSpeed = 0)
         {
             Stack<ItemNode> stack = new Stack<ItemNode>();
-            root.needSpeed = targetSpeed;
-            stack.Push(root);
+            if (proliferatorId <= 0) // 如果是默认参数，代表是为了计算root而非增产剂
+            {
+                root.needSpeed = targetSpeed;
+                stack.Push(root);
+            }
+            else
+            {
+                if(itemNodes.ContainsKey(proliferatorId))
+                {
+                    itemNodes[proliferatorId].needSpeed += addedSpeed;
+                    stack.Push(itemNodes[proliferatorId]);
+                }
+                else
+                {
+                    ItemNode pNode = new ItemNode(proliferatorId, addedSpeed, this);
+                    stack.Push(pNode);
+                }
+            }
+
 
             while(stack.Any())
             {
@@ -300,8 +345,11 @@ namespace DSPCalculator.Logic
 
                 if(sharedItemNode.children.Count == 0) // 说明视为原矿
                 {
-                    if(sharedItemNode.satisfiedSpeed < sharedItemNode.needSpeed)
+                    if (sharedItemNode.satisfiedSpeed < sharedItemNode.needSpeed)
+                    {
+                        sharedItemNode.speedFromOre += sharedItemNode.needSpeed - sharedItemNode.satisfiedSpeed; // 将原矿补充数量记录
                         sharedItemNode.satisfiedSpeed = sharedItemNode.needSpeed;
+                    }
                 }
                 else
                 {
@@ -378,136 +426,216 @@ namespace DSPCalculator.Logic
         /// <summary>
         /// 用于去除不必要的溢出量
         /// </summary>
-        public void RemoveOverflow()
+        public void RemoveOverflow(int proliferatorId = -1)
         {
             Dictionary<int, ItemNode> visitingNodes = new Dictionary<int, ItemNode>(); // 用于排查环
             Dictionary<int, int> neverShrinkThisBecauseLoop = new Dictionary<int, int>(); // 一旦检测到环，将交叉点录入这个字典，并且不再检查
-            Stack<ItemNode> stack = new Stack<ItemNode>();
 
-            ItemNode signRootNode = new ItemNode(root.itemId, root.needSpeed, this); // 专门用于路劲成环过程的标志。
-
-            stack.Push(signRootNode);
-
-            while (stack.Any())
+            //if (proliferatorId <= 0)
+            //{
+            //    ItemNode signRootNode = new ItemNode(root.itemId, root.needSpeed, this); // 专门用于路径成环过程的标志。
+            //    stack.Push(signRootNode);
+            //}
+            //else
+            //{
+            //    ItemNode pNode = new ItemNode(proliferatorId,0, this);
+            //    stack.Push(pNode);
+            //}
+            foreach (var nodeData in itemNodes)
             {
-                ItemNode oriSignNode = stack.Pop();
-                int itemId = oriSignNode.itemId;
-                ItemNode sharedNode = itemNodes[itemId];
-
-                // 先判断是否成环
-                // 如果只处理mainRecipe应该是不会成环的！！！！
-
-                // 判断是不是原矿
-                bool isOre = CalcDB.itemDict[itemId].defaultAsOre || CalcDB.itemDict[itemId].recipes.Count == 0;
-                if (userPreference.itemConfigs.ContainsKey(itemId))
+                Stack<ItemNode> stack = new Stack<ItemNode>();
+                if (!visitingNodes.ContainsKey(nodeData.Key))
                 {
-                    isOre = userPreference.itemConfigs[itemId].consideredAsOre || isOre;
-                    if (userPreference.itemConfigs[itemId].forceNotOre && CalcDB.itemDict[itemId].recipes.Count > 0)
-                        isOre = false;
-                }
-                if (isOre)
-                {
-                    oriSignNode.unsolvedCount = 0;
+                    ItemNode signNode = new ItemNode(nodeData.Key, 0, this);
+                    stack.Push(signNode);
 
-                    if(oriSignNode.parents.Count > 0)
-                        oriSignNode.parents[0].SolveOne();
-
-                    if(sharedNode.satisfiedSpeed < sharedNode.needSpeed)
-                        sharedNode.satisfiedSpeed = sharedNode.needSpeed;
-                    continue;
-                }
-                else
-                {
-                    double overflowSpeed = sharedNode.satisfiedSpeed - sharedNode.needSpeed;
-                    if (overflowSpeed > 0.0001f) // 如果有溢出
+                    while (stack.Any())
                     {
-                        if (DSPCalculatorPlugin.developerMode)
-                        {
-                            Debug.Log($"检测到溢出 id {itemId}, 溢出量{overflowSpeed / 60}/min");
-                        }
+                        ItemNode oriSignNode = stack.Pop();
+                        int itemId = oriSignNode.itemId;
+                        ItemNode sharedNode = itemNodes[itemId];
 
-                        // 只判断生成此物品的主要配方可不可以被削减
-                        RecipeInfo sharedRecipeInfo = null;
-                        if (visitingNodes.ContainsKey(itemId))
+                        // 先判断是否成环
+                        // 如果只处理mainRecipe应该是不会成环的！！！！
+
+                        // 判断是不是原矿
+                        bool isOre = CalcDB.itemDict[itemId].defaultAsOre || CalcDB.itemDict[itemId].recipes.Count == 0;
+                        if (userPreference.itemConfigs.ContainsKey(itemId))
                         {
-                            if (visitingNodes[itemId].unsolvedCount > 0) // 说明成环
+                            isOre = userPreference.itemConfigs[itemId].consideredAsOre || isOre;
+                            if (userPreference.itemConfigs[itemId].forceNotOre && CalcDB.itemDict[itemId].recipes.Count > 0)
+                                isOre = false;
+                        }
+                        if (isOre)
+                        {
+                            oriSignNode.unsolvedCount = 0;
+
+                            if (oriSignNode.parents.Count > 0)
+                                oriSignNode.parents[0].SolveOne();
+
+                            if (sharedNode.satisfiedSpeed < sharedNode.needSpeed)
                             {
-                                while (stack.Any() && visitingNodes.ContainsKey(stack.Last().itemId) && visitingNodes[stack.Last().itemId].unsolvedCount > 0) // 将所有栈中与环有关的节点清除
-                                {
-                                    stack.Pop();
-                                }
-                                // 这些成环节点在visitingNodes中保留，不再能shrink
-                                continue; // 进入下一个配方的尝试shrink
+                                sharedNode.satisfiedSpeed = sharedNode.needSpeed;
                             }
+                            else if (sharedNode.satisfiedSpeed > sharedNode.needSpeed) // 如果原矿有溢出
+                            {
+                                double overflowSpeed = sharedNode.satisfiedSpeed - sharedNode.needSpeed;
+                                if (sharedNode.speedFromOre > overflowSpeed) // 如果从原矿来的部分比溢出量还多，那说明可以将所有溢出部分当做原矿来的部分，直接移除
+                                {
+                                    sharedNode.speedFromOre -= overflowSpeed;
+                                    sharedNode.satisfiedSpeed -= overflowSpeed;
+                                }
+                                else // 否则，只能移除原矿来源的部分，其他的部分都是来自于配方产出
+                                {
+                                    sharedNode.satisfiedSpeed -= sharedNode.speedFromOre;
+                                    sharedNode.speedFromOre = 0;
+                                }
+                            }
+                            continue;
                         }
-
-                        // 首先判断mainRecipe (r==-1的时候)
-                        if (sharedNode.mainRecipe != null)
-                            sharedRecipeInfo = recipeInfos[sharedNode.mainRecipe.ID];
                         else
-                            continue;
-
-                        if (sharedRecipeInfo == null)
-                            continue;
-
-                        // 接下来开始对选定配方进行处理
-                        double minShrinkCount = sharedRecipeInfo.count;
-                        foreach (var item in sharedRecipeInfo.productIndices) // 对于每个产物，看看他是不是溢出，最终取最小的可缩减数目
                         {
-                            int productId = item.Key;
-                            double relatedOverflowSpd = itemNodes[productId].satisfiedSpeed - itemNodes[productId].needSpeed;
-                            if (relatedOverflowSpd > 0.0001f)
+                            double overflowSpeed = sharedNode.satisfiedSpeed - sharedNode.needSpeed;
+                            if (overflowSpeed > 0.0001f) // 如果有溢出
                             {
-                                minShrinkCount = Math.Min(minShrinkCount, sharedRecipeInfo.CalcCountByOutputSpeed(productId, relatedOverflowSpd));
-                            }
-                            else
-                            {
-                                minShrinkCount = 0;
-                                break;
-                            }
-                        }
-                        if (minShrinkCount > 0.001f) // 如果有可削减的数量，进行处理
-                        {
-                            oriSignNode.SetUnsolvedCountByRecipe(sharedRecipeInfo.recipeNorm); // 此处只是设置一下unsolvedCount，这里不要用TryRecipe，可能扰乱正常solution
-
-                            if (DSPCalculatorPlugin.developerMode)
-                            {
-                                Debug.Log($"该溢出可以削减 {minShrinkCount}x");
-                            }
-
-                            double addedCount = -minShrinkCount;
-                            foreach (var item in sharedRecipeInfo.productIndices)
-                            {
-                                int productId = item.Key;
-                                double addedSatisfiedSpeed = sharedRecipeInfo.GetOutputSpeedByChangedCount(productId, addedCount);
-                                if (!itemNodes.ContainsKey(productId))
+                                if (DSPCalculatorPlugin.developerMode)
                                 {
-                                    itemNodes[productId] = new ItemNode(productId, 0, this);
+                                    Debug.Log($"检测到溢出 id {itemId}, 溢出量{overflowSpeed / 60}/min");
                                 }
-                                itemNodes[productId].satisfiedSpeed += addedSatisfiedSpeed;
 
-                            }
-                            // 对于该配方的每个原材料，削减对应的需求
-                            foreach (var item in sharedRecipeInfo.resourceIndices)
-                            {
-                                int resourceId = item.Key;
-                                double addedNeedSpeed = sharedRecipeInfo.GetInputSpeedByChangedCount(resourceId, addedCount);
-                                itemNodes[resourceId].needSpeed += addedNeedSpeed; // 这个resourceId应该不可能不存在
+                                // 只判断生成此物品的主要配方可不可以被削减
+                                RecipeInfo sharedRecipeInfo = null;
+                                if (visitingNodes.ContainsKey(itemId))
+                                {
+                                    if (visitingNodes[itemId].unsolvedCount > 0) // 说明成环
+                                    {
+                                        while (stack.Any() && visitingNodes.ContainsKey(stack.Last().itemId) && visitingNodes[stack.Last().itemId].unsolvedCount > 0) // 将所有栈中与环有关的节点清除
+                                        {
+                                            stack.Pop();
+                                        }
+                                        // 这些成环节点在visitingNodes中保留，不再能shrink
+                                        continue; // 进入下一个配方的尝试shrink
+                                    }
+                                }
+                                visitingNodes[itemId] = oriSignNode; // 表示处理过这个节点
 
-                                // 同时加入signNode最为子节点
-                                ItemNode signChildNode = new ItemNode(resourceId, 0, this);
-                                oriSignNode.AddChild(signChildNode);
-                                stack.Push(signChildNode);
+                                // 首先判断mainRecipe (r==-1的时候)
+                                if (sharedNode.mainRecipe != null)
+                                    sharedRecipeInfo = recipeInfos[sharedNode.mainRecipe.ID];
+                                else
+                                    continue;
+
+                                if (sharedRecipeInfo == null)
+                                    continue;
+
+                                // 接下来开始对选定配方进行处理
+                                double minShrinkCount = sharedRecipeInfo.count;
+                                foreach (var item in sharedRecipeInfo.productIndices) // 对于每个产物，看看他是不是溢出，最终取最小的可缩减数目
+                                {
+                                    int productId = item.Key;
+                                    double relatedOverflowSpd = itemNodes[productId].satisfiedSpeed - itemNodes[productId].needSpeed;
+                                    if (itemNodes[productId].IsOre(userPreference)) // 如果产物是原材料，无论如何不影响mainrecipe的削减，因为缺的部分都能补上
+                                    {
+
+                                    }
+                                    else if (relatedOverflowSpd > 0.0001f)
+                                    {
+                                        minShrinkCount = Math.Min(minShrinkCount, sharedRecipeInfo.CalcCountByOutputSpeed(productId, relatedOverflowSpd));
+                                    }
+                                    else
+                                    {
+                                        minShrinkCount = 0;
+                                        break;
+                                    }
+                                }
+                                if (minShrinkCount > 0.001f) // 如果有可削减的数量，进行处理
+                                {
+                                    oriSignNode.SetUnsolvedCountByRecipe(sharedRecipeInfo.recipeNorm); // 此处只是设置一下unsolvedCount，这里不要用TryRecipe，可能扰乱正常solution
+
+                                    if (DSPCalculatorPlugin.developerMode)
+                                    {
+                                        Debug.Log($"该溢出可以削减 {minShrinkCount}x");
+                                    }
+
+                                    double addedCount = -minShrinkCount;
+                                    foreach (var item in sharedRecipeInfo.productIndices) // 对所有该配方的产物进行削减，注意处理产物被视作原矿的情况（将不足部分补齐），因为当初产物如果是原矿，则无视了他到底移除不溢出、溢出多少
+                                    {
+                                        int productId = item.Key;
+                                        double addedSatisfiedSpeed = sharedRecipeInfo.GetOutputSpeedByChangedCount(productId, addedCount);
+                                        if (!itemNodes.ContainsKey(productId)) // 这种情况应该不存在才对
+                                        {
+                                            Debug.LogWarning("在削减溢出配方数量时，出现了配方产物不在字典中的情况，该情况不应该发生。");
+                                            itemNodes[productId] = new ItemNode(productId, 0, this);
+                                        }
+                                        itemNodes[productId].satisfiedSpeed += addedSatisfiedSpeed;
+                                        if (itemNodes[productId].satisfiedSpeed < itemNodes[productId].needSpeed)
+                                        {
+                                            if (itemNodes[productId].IsOre(userPreference))
+                                            {
+                                                double gap = itemNodes[productId].needSpeed - itemNodes[productId].satisfiedSpeed;
+                                                itemNodes[productId].speedFromOre += gap;
+                                                itemNodes[productId].satisfiedSpeed = itemNodes[productId].needSpeed;
+                                            }
+                                            else
+                                            {
+                                                Debug.LogWarning($"在削减溢出配方数量时，出现了配方id={sharedRecipeInfo.ID}产物{productId}被过度削减的情况（且该产物并未被视作原矿），该情况不应该发生。");
+                                            }
+                                        }
+
+                                    }
+                                    // 对于该配方的每个原材料，削减对应的需求
+                                    foreach (var item in sharedRecipeInfo.resourceIndices)
+                                    {
+                                        int resourceId = item.Key;
+                                        double addedNeedSpeed = sharedRecipeInfo.GetInputSpeedByChangedCount(resourceId, addedCount);
+                                        itemNodes[resourceId].needSpeed += addedNeedSpeed; // 这个resourceId应该不可能不存在
+
+                                        // 同时加入signNode最为子节点
+                                        ItemNode signRelatedNode = new ItemNode(resourceId, 0, this);
+                                        oriSignNode.AddChild(signRelatedNode);
+                                        oriSignNode.unsolvedCount++; // 这里单独计数，每添加一个child且放入了stack都要计数一个unsolved
+                                        stack.Push(signRelatedNode);
+
+                                        // 对于如果需求是原矿，并且有来自于原矿的部分，可以削减，别的就不检查了防止成环
+                                        if (itemNodes[resourceId].speedFromOre > 0) // 不需要判断是否是原矿，直接看speedFromOre是不是大于零就可以，因为如果不大于0，即使是原矿也不能处理
+                                        {
+                                            if (itemNodes[resourceId].speedFromOre > -addedNeedSpeed)
+                                            {
+                                                itemNodes[resourceId].satisfiedSpeed -= -addedNeedSpeed;
+                                                itemNodes[resourceId].speedFromOre -= -addedNeedSpeed;
+                                            }
+                                            else
+                                            {
+                                                itemNodes[resourceId].satisfiedSpeed -= itemNodes[resourceId].speedFromOre;
+                                                itemNodes[resourceId].speedFromOre = 0;
+                                            }
+                                        }
+                                    }
+                                }
                             }
+
+                            //// 然后将其所有的children加入
+                            //if (sharedNode.children != null)
+                            //{
+                            //    for (int i = 0; i < sharedNode.children.Count; i++)
+                            //    {
+                            //        ItemNode signChildNode = new ItemNode(sharedNode.children[i].itemId, 0, this);
+                            //        oriSignNode.AddChild(signChildNode);
+                            //        oriSignNode.unsolvedCount++; // 这里单独计数，每添加一个child且放入了stack都要计数一个unsolved
+                            //        stack.Push(signChildNode);
+                            //    }
+                            //}
                         }
                     }
                 }
             }
+            
         }
-
 
         public void CalcProliferator()
         {
+            proliferatorCount.Clear();
+            proliferatorCountSelfSprayed.Clear();
             foreach (var data in recipeInfos)
             {
                 int id;
@@ -521,7 +649,23 @@ namespace DSPCalculator.Logic
                         proliferatorCount[id] += count;
                 }
             }
+            // 将增产剂的自喷涂后用量记录
+            for (int i = 0; i < CalcDB.proliferatorItemIds.Count; i++)
+            {
+                int itemId = CalcDB.proliferatorItemIds[i];
+                if(proliferatorCount.ContainsKey(itemId))
+                {
+                    int oriCount = LDB.items.Select(itemId).HpMax;
+                    int ability = CalcDB.proliferatorAbilitiesMap[itemId];
+                    int proliferatedCount = (int)(oriCount * (1.0 + Utils.GetIncMilli(ability, userPreference)));
+                    if (proliferatedCount - 1 > oriCount)
+                        proliferatorCountSelfSprayed[itemId] = proliferatorCount[itemId] * oriCount / (proliferatedCount - 1);
+                    else
+                        proliferatorCountSelfSprayed[itemId] = proliferatorCount[itemId];
+                }
+            }
         }
+
 
         /// <summary>
         /// 成比例地修改所有物品的生产和需求速度
@@ -559,6 +703,117 @@ namespace DSPCalculator.Logic
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// 求解增产剂的生产线
+        /// </summary>
+        /// <returns></returns>
+        public bool CalcProliferatorInProductLine()
+        {
+            // 非齐次线性方程组求解
+            // 首先建立solution，求解每1个各类增产剂产出，需要消耗多少个自喷涂的各类增产剂，并记录
+            double[,] consumeRatio = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } }; // 每种增产剂生产过程中需要消耗的各类增产剂的数量
+            for (int i = 0; i < CalcDB.proliferatorItemIds.Count; i++)
+            {
+                int itemId = CalcDB.proliferatorItemIds[i];
+                SolutionTree solutionProlif = new SolutionTree();
+                solutionProlif.userPreference = userPreference.ShallowCopy();
+                solutionProlif.userPreference.solveProliferators = false; // 必须要！否则无限递归了
+                solutionProlif.targetSpeed = 1;
+                solutionProlif.SetTargetItemAndBeginSolve(itemId);
+                foreach (var pConsume in solutionProlif.proliferatorCountSelfSprayed)
+                {
+                    int index = CalcDB.proliferatorItemIds.IndexOf(pConsume.Key);
+                    if(index >= 0 && index < 3)
+                    {
+                        consumeRatio[i, index] = pConsume.Value;
+                    }
+                }
+            }
+
+            // 对于消耗本体大于产出的情况视为无解
+            for (int i = 0; i < 3; i++)
+            {
+                if (consumeRatio[i, i] >= 1 && proliferatorCountSelfSprayed.ContainsKey(CalcDB.proliferatorItemIds[i]))
+                {
+                    UIRealtimeTip.Popup("增产剂生产消耗比产出多警告".Translate());
+                    return false;
+                }
+            }
+
+            // 构建线性方程组
+            double[,] coefficients = new double[3, 3];
+            double[] constants = new double[3];
+            for (int i = 0; i < 3; i++)
+            {
+                int proliferatorId = CalcDB.proliferatorItemIds[i];
+                for (int j = 0; j < 3; j++)
+                {
+                    if (i == j)
+                        coefficients[i, j] = (1 - consumeRatio[j, i]);
+                    else
+                        coefficients[i, j] = -consumeRatio[j, i];
+                    
+                }
+
+                if (proliferatorCountSelfSprayed.ContainsKey(proliferatorId))
+                {
+                    constants[i] = proliferatorCountSelfSprayed[proliferatorId];
+                }
+                else
+                {
+                    constants[i] = 0;
+                }
+            }
+
+
+            // 解方程
+            Vector<double> result = null;
+            try
+            {
+                var solverCoef = Matrix<double>.Build.DenseOfArray(coefficients);
+                var solverConstants = Vector<double>.Build.DenseOfArray(constants);
+                result = solverCoef.Solve(solverConstants);
+            }
+            catch (Exception)
+            {
+                Debug.LogWarning("在解方程组时出现错误，该情况不应该发生。");
+                UIRealtimeTip.Popup("求解出错警告".Translate());
+                return false;
+            }
+
+            if(result == null)
+            {
+                Debug.LogWarning("在解方程组时出现错误，结果为null，该情况不应该发生。");
+                UIRealtimeTip.Popup("求解出错警告".Translate());
+                return false;
+            }
+
+            for (int i = 0; i < result.Count; i++)
+            {
+                if (result[i] < 0)
+                {
+                    Debug.LogWarning($"在解方程组时，增产剂{i}需求数量为负数。");
+                    UIRealtimeTip.Popup("求解出错警告".Translate());
+                    return false;
+                }
+            }
+
+            // 到此，解没问题
+            for (int i = 0; i < result.Count; i++)
+            {
+                if (result[i] > 0)
+                {
+                    int proliferatorId = CalcDB.proliferatorItemIds[i];
+                    CalcTree(proliferatorId, result[i]);
+                }
+            }
+            // 再次执行一遍去除溢出任务
+            RemoveOverflow();
+
+            return true;
+
         }
 
         public void TestLog()
@@ -603,6 +858,7 @@ namespace DSPCalculator.Logic
                 }
             }
         }
+
         public void TestLog2()
         {
             if (DSPCalculatorPlugin.developerMode)

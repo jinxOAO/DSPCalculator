@@ -315,9 +315,9 @@ namespace DSPCalculator.Logic
             {
                 // 这里不能用getoutput方法，因为也许有的第一产物不是直接的净产物，所以显然下面用的recipe也要是oriProto而不是norm里面的
                 if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
-                    shrinkByRelic += recipeNorm.oriProto.ResultCounts[0] * (1.0 + Utils.GetIncMilli(incLevel, userPreference));
+                    shrinkByRelic += Math.Min(recipeNorm.oriProto.ResultCounts[0] * (1.0 + Utils.GetIncMilli(incLevel, userPreference)), recipeNorm.oriProto.ItemCounts[0]);
                 else
-                    shrinkByRelic += recipeNorm.oriProto.ResultCounts[0];
+                    shrinkByRelic += Math.Min(recipeNorm.oriProto.ResultCounts[0], recipeNorm.oriProto.ItemCounts[0]);
             }
             // 能量迸发
             bool energyBurstFlag = userPreference.energyBurst;
@@ -335,13 +335,13 @@ namespace DSPCalculator.Logic
                     double output = 0;
                     // 这里不能用getoutput方法，因为也许有的第一产物不是直接的净产物，所以显然下面用的recipe也要是oriProto而不是norm里面的
                     if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
-                        shrinkByRelic += Math.Min(2 * recipeNorm.oriProto.ResultCounts[0], recipeNorm.oriProto.ItemCounts[returnIndex]) * (1.0 + Utils.GetIncMilli(incLevel, userPreference)); // 返还不能超过用量
+                        shrinkByRelic += Math.Min(2 * recipeNorm.oriProto.ResultCounts[0] * (1.0 + Utils.GetIncMilli(incLevel, userPreference)), recipeNorm.oriProto.ItemCounts[returnIndex]); // 返还不能超过用量
                     else
                         shrinkByRelic += Math.Min(2 * recipeNorm.oriProto.ResultCounts[0], recipeNorm.oriProto.ItemCounts[returnIndex]);
                 }
             }
 
-            proliferatorCount = 1.0 * count / recipeNorm.time * itemNeeds / itemsPerProliferator - shrinkByRelic;
+            proliferatorCount = 1.0 * count / recipeNorm.time * (itemNeeds - shrinkByRelic) / itemsPerProliferator ;
 
         }
     }

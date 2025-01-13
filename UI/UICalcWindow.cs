@@ -117,6 +117,7 @@ namespace DSPCalculator.UI
         public Image cbAccMilli;
         public Image cbRoundUp;
         public Image cbMixbelt;
+        public Image cbSolveProlifer;
         public Text txtBluebuff;
         public Text txtEnergyBurst;
         public Text txtDirac;
@@ -125,6 +126,7 @@ namespace DSPCalculator.UI
         public Text txtAccMilli;
         public Text txtRoundUp;
         public Text txtMixbelt;
+        public Text txtSolveProlifer;
         public InputField incInput;
         public InputField accInput;
 
@@ -623,6 +625,21 @@ namespace DSPCalculator.UI
             roundUpCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -40, 0);
             roundUpCbObj.GetComponent<Button>().onClick.AddListener(OnAssemblerRoundUpSettingChange);
 
+
+
+            GameObject solveProliferObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
+            solveProliferObj.name = "checkbox-roundup";
+            cbSolveProlifer = solveProliferObj.GetComponent<Image>();
+            txtSolveProlifer = solveProliferObj.transform.Find("text").GetComponent<Text>();
+            //inferiorCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, 0, 0);
+            solveProliferObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -60, 0);
+            solveProliferObj.GetComponent<Button>().onClick.AddListener(OnSolveProliferatorSettingChange);
+            solveProliferObj.GetComponent<UIButton>().tips.tipTitle = "增产剂并入产线".Translate();
+            solveProliferObj.GetComponent<UIButton>().tips.tipText = "增产剂并入产线描述".Translate();
+            solveProliferObj.GetComponent<UIButton>().tips.corner = 1;
+            solveProliferObj.GetComponent<UIButton>().tips.delay = 0.1f;
+            solveProliferObj.GetComponent<UIButton>().tips.width = 300;
+
             GameObject showHideMixBeltInfoObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
             showHideMixBeltInfoObj.name = "checkbox-mixbelt";
             cbMixbelt = showHideMixBeltInfoObj.GetComponent<Image>();
@@ -1016,7 +1033,7 @@ namespace DSPCalculator.UI
             }
             uiItemNodes.Clear();
 
-            if (solution.targetItem > 0 && solution.root != null)
+            if (solution.targetItem > 0 && solution.root != null && !solution.userPreference.solveProliferators)
             {
                 // 下面创建UI子节点
                 List<ItemNode> stack = new List<ItemNode>();
@@ -1047,6 +1064,27 @@ namespace DSPCalculator.UI
                     for (int i = 0; i < curNode.children.Count; i++)
                     {
                         stack.Add(curNode.children[i]);
+                    }
+                }
+            }
+            if(solution.userPreference.solveProliferators)
+            {
+                foreach (var node in solution.itemNodes)
+                {
+                    ItemNode curNode = node.Value;
+                    if(curNode.needSpeed > 0.001f)
+                    {
+                        if (!curNode.IsOre(solution.userPreference))
+                        {
+                            // 将不认为是原矿的节点输出
+                            UIItemNode uiNode = new UIItemNode(curNode, this);
+                            uiItemNodes.Add(uiNode);
+                        }
+                        else if (solution.userPreference.showMixBeltInfo) // 如果是混带信息，则原矿也要展示
+                        {
+                            UIItemNode uiNode = new UIItemNode(curNode, this);
+                            uiItemNodes.Add(uiNode);
+                        }
                     }
                 }
             }
@@ -1086,16 +1124,20 @@ namespace DSPCalculator.UI
                     count++;
                 }
             }
-            // 增产剂需求额外增加
-            foreach (var p in solution.proliferatorCount)
+
+            // 增产剂需求额外增加，只在不把增产剂并入产线计算时才显示
+            if (!solution.userPreference.solveProliferators)
             {
-                if(p.Key > 0 && p.Value > 0)
+                foreach (var p in solution.proliferatorCount)
                 {
-                    ItemNode node = new ItemNode(p.Key,0,solution);
-                    node.satisfiedSpeed = p.Value;
-                    UIItemNodeSimple uiResourceNode = new UIItemNodeSimple(node, false, this, true);
-                    uiSideItemNodes.Add(uiResourceNode);
-                    count++;
+                    if (p.Key > 0 && p.Value > 0)
+                    {
+                        ItemNode node = new ItemNode(p.Key, 0, solution);
+                        node.satisfiedSpeed = p.Value;
+                        UIItemNodeSimple uiResourceNode = new UIItemNodeSimple(node, false, this, true);
+                        uiSideItemNodes.Add(uiResourceNode);
+                        count++;
+                    }
                 }
             }
 
@@ -1238,35 +1280,38 @@ namespace DSPCalculator.UI
             float eachWidth = sidePanelWidth / assemblerDemandCountPerRow;
             foreach (var pair in counts) 
             {
-                int assemblerItemId = pair.Key;
-                long count = pair.Value;
-                GameObject assemblerObj = GameObject.Instantiate(iconObj_ButtonTip, assemblersDemandsGroupObj.transform);
-                assemblerObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(i % assemblerDemandCountPerRow * eachWidth, -(i / assemblerDemandCountPerRow * 35), 0);
-                assemblerObj.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 30);
-                assemblerObj.GetComponent<Image>().sprite = LDB.items.Select(assemblerItemId).iconSprite;
-                assemblerObj.GetComponent<UIButton>().tips.itemId = assemblerItemId;
-                assemblerObj.GetComponent<UIButton>().tips.corner = 3;
-                assemblerObj.GetComponent<UIButton>().tips.delay = 0.2f;
+                if (pair.Value > 0)
+                {
+                    int assemblerItemId = pair.Key;
+                    long count = pair.Value;
+                    GameObject assemblerObj = GameObject.Instantiate(iconObj_ButtonTip, assemblersDemandsGroupObj.transform);
+                    assemblerObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(i % assemblerDemandCountPerRow * eachWidth, -(i / assemblerDemandCountPerRow * 35), 0);
+                    assemblerObj.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 30);
+                    assemblerObj.GetComponent<Image>().sprite = LDB.items.Select(assemblerItemId).iconSprite;
+                    assemblerObj.GetComponent<UIButton>().tips.itemId = assemblerItemId;
+                    assemblerObj.GetComponent<UIButton>().tips.corner = 3;
+                    assemblerObj.GetComponent<UIButton>().tips.delay = 0.2f;
 
-                GameObject assemblerCountTextObj = GameObject.Instantiate(UICalcWindow.TextWithUITip, assemblersDemandsGroupObj.transform);
-                assemblerCountTextObj.name = "assembler-count";
-                assemblerCountTextObj.transform.localScale = Vector3.one;
-                assemblerCountTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(i % assemblerDemandCountPerRow * eachWidth + 35, -(i / assemblerDemandCountPerRow * 35), 0);
-                assemblerCountTextObj.GetComponent<UIButton>().tips.delay = 0.4f;
-                assemblerCountTextObj.GetComponent<UIButton>().tips.corner = 2;
+                    GameObject assemblerCountTextObj = GameObject.Instantiate(UICalcWindow.TextWithUITip, assemblersDemandsGroupObj.transform);
+                    assemblerCountTextObj.name = "assembler-count";
+                    assemblerCountTextObj.transform.localScale = Vector3.one;
+                    assemblerCountTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(i % assemblerDemandCountPerRow * eachWidth + 35, -(i / assemblerDemandCountPerRow * 35), 0);
+                    assemblerCountTextObj.GetComponent<UIButton>().tips.delay = 0.4f;
+                    assemblerCountTextObj.GetComponent<UIButton>().tips.corner = 2;
 
-                Text assemblerCountText = assemblerCountTextObj.GetComponent<Text>();
-                assemblerCountText.text = "× " + Utils.KMG(count);
-                assemblerCountText.fontSize = 16;
-                assemblerCountText.raycastTarget = true;
-                if(count > 9999)
-                    assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = count.ToString("N0"); // 如果被KMG了，要在tip里显示完整数字
+                    Text assemblerCountText = assemblerCountTextObj.GetComponent<Text>();
+                    assemblerCountText.text = "× " + Utils.KMG(count);
+                    assemblerCountText.fontSize = 16;
+                    assemblerCountText.raycastTarget = true;
+                    if (count > 9999)
+                        assemblerCountTextObj.GetComponent<UIButton>().tips.tipTitle = count.ToString("N0"); // 如果被KMG了，要在tip里显示完整数字
 
-                // 加入列表
-                assemblersDemandObjs.Add(assemblerObj);
-                assemblersDemandObjs.Add(assemblerCountTextObj);
+                    // 加入列表
+                    assemblersDemandObjs.Add(assemblerObj);
+                    assemblersDemandObjs.Add(assemblerCountTextObj);
 
-                i++;
+                    i++;
+                }
             }
         }
 
@@ -1460,6 +1505,14 @@ namespace DSPCalculator.UI
                     cbMixbelt.sprite = checkboxOffSprite;
                 txtMixbelt.text = "显示混带信息".Translate();
             }
+            if(cbSolveProlifer != null)
+            {
+                if(solution.userPreference.solveProliferators)
+                    cbSolveProlifer.sprite = checkboxOnSprite;
+                else
+                    cbSolveProlifer.sprite= checkboxOffSprite;
+                txtSolveProlifer.text = "增产剂并入产线".Translate();
+            }
         }
 
         public void OnBluebuffClick()
@@ -1554,6 +1607,18 @@ namespace DSPCalculator.UI
             {
                 uiNodeData.RefreshAssemblerDisplay(false); // 刷新每个节点的assembler显示即可
             }
+        }
+
+        public void OnSolveProliferatorSettingChange()
+        {
+
+            bool ori = solution.userPreference.solveProliferators;
+            bool res = !ori;
+            solution.userPreference.solveProliferators = res;
+
+            RefreshCheckBoxes();
+
+            nextFrameRecalc = true;
         }
 
 

@@ -28,8 +28,10 @@ namespace DSPCalculator.Logic
         public double accMilliOverride;
         public Dictionary<int, int> finishedRecipes; // 用来记录那些已完成的配方。只有在修改目标产物或者速度的时候才会重置，更改增产剂等重新计算时均不会重置
         public bool roundUpAssemgblerNum; // 生产设施数量显示是否向上取整
+        public bool solveProliferators; // 是否将增产剂作为生产线一并需要产出的物品，默认为否，即外部输入增产剂成品
 
         public bool showMixBeltInfo; // 是否显示混带数据
+
 
         public UserPreference()
         {
@@ -45,6 +47,7 @@ namespace DSPCalculator.Logic
             customizeIncMilli = false;
             customizeAccMilli = false;
             roundUpAssemgblerNum = DSPCalculatorPlugin.RoundUpAssemblerNum.Value;
+            solveProliferators = false;
             showMixBeltInfo = false;
             incMilliOverride = 0;
             accMilliOverride = 0;
@@ -54,6 +57,28 @@ namespace DSPCalculator.Logic
         public void ClearWhenChangeTarget()
         {
             finishedRecipes.Clear();
+        }
+
+        public UserPreference ShallowCopy()
+        {
+            UserPreference copied = new UserPreference();
+            copied.recipeConfigs = recipeConfigs;
+            copied.itemConfigs = itemConfigs;
+            copied.finishedRecipes = finishedRecipes;
+            copied.globalIncLevel = globalIncLevel;
+            copied.globalIsInc = globalIsInc;
+            copied.bluebuff = bluebuff;
+            copied.energyBurst = energyBurst;
+            copied.dirac = dirac;
+            copied.inferior = inferior;
+            copied.customizeIncMilli = customizeIncMilli;
+            copied.customizeAccMilli = customizeAccMilli;
+            copied.solveProliferators = solveProliferators;
+            copied.showMixBeltInfo= showMixBeltInfo;
+            copied.incMilliOverride = incMilliOverride;
+            copied.accMilliOverride = accMilliOverride;
+            copied.globalAssemblerIdByType = globalAssemblerIdByType;
+            return copied;
         }
 
         //public void Clear()

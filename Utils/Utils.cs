@@ -119,5 +119,26 @@ namespace DSPCalculator
         {
             return Cargo.powerTableRatio[index];
         }
+
+        /// <summary>
+        /// 专用于求解增产剂
+        /// </summary>
+        /// <param name="augMatrix"></param>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        public static bool SolveEquationsLimited(double[,] augMatrix, out double[] result)
+        {
+            int r = augMatrix.GetLength(1);
+            result = new double[r];
+            int eCount = augMatrix.GetLength(0);
+            for (int i = 0; i < eCount; i++)
+            {
+
+            }
+
+
+
+            return true;
+        }
     }
 }
