@@ -1067,23 +1067,49 @@ namespace DSPCalculator.UI
                     }
                 }
             }
-            if(solution.userPreference.solveProliferators)
+            if(solution.targetItem > 0 && solution.root != null && solution.userPreference.solveProliferators)
             {
-                foreach (var node in solution.itemNodes)
+                Dictionary<int, ItemNode> visitedNodes = new Dictionary<int, ItemNode>();
+                for (int n = CalcDB.proliferatorItemIds.Count; n >= 0; n--)
                 {
-                    ItemNode curNode = node.Value;
-                    if(curNode.needSpeed > 0.001f)
+                    List<ItemNode> stack = new List<ItemNode>();
+                    if (n == CalcDB.proliferatorItemIds.Count)
                     {
-                        if (!curNode.IsOre(solution.userPreference))
+                        stack.Add(solution.root);
+                    }
+                    else
+                    {
+                        int index = n;
+                        int proliferatorId = CalcDB.proliferatorItemIds[index];
+                        if (solution.itemNodes.ContainsKey(proliferatorId) && solution.itemNodes[proliferatorId].needSpeed > 0)
                         {
-                            // 将不认为是原矿的节点输出
-                            UIItemNode uiNode = new UIItemNode(curNode, this);
-                            uiItemNodes.Add(uiNode);
+                            stack.Add(solution.itemNodes[proliferatorId]);
                         }
-                        else if (solution.userPreference.showMixBeltInfo) // 如果是混带信息，则原矿也要展示
+                    }
+                    while (stack.Count > 0)
+                    {
+                        ItemNode oriNode = stack[stack.Count - 1];
+                        ItemNode curNode = solution.itemNodes[oriNode.itemId];
+                        if (!visitedNodes.ContainsKey(curNode.itemId) && curNode.needSpeed > 0.001f)
                         {
-                            UIItemNode uiNode = new UIItemNode(curNode, this);
-                            uiItemNodes.Add(uiNode);
+                            visitedNodes.Add(curNode.itemId, curNode);
+                            if (!curNode.IsOre(solution.userPreference))
+                            {
+                                // 将不认为是原矿的节点输出
+                                UIItemNode uiNode = new UIItemNode(curNode, this);
+                                uiItemNodes.Add(uiNode);
+                            }
+                            else if (solution.userPreference.showMixBeltInfo) // 如果是混带信息，则原矿也要展示
+                            {
+                                UIItemNode uiNode = new UIItemNode(curNode, this);
+                                uiItemNodes.Add(uiNode);
+                            }
+                        }
+                        stack.RemoveAt(stack.Count - 1);
+
+                        for (int c = 0; c < curNode.children.Count; c++)
+                        {
+                            stack.Add(curNode.children[c]);
                         }
                     }
                 }
