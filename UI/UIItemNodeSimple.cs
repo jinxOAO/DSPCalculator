@@ -56,6 +56,8 @@ namespace DSPCalculator.UI
         public GameObject incToggleObj;
         public Text incText;
 
+        public RecipeInfo lastFocusedRecipe; // 仅用于，手动点击一个溢出产物时，如果该产物是由多个配方溢出的，则多次点击会在这些配方间循环聚焦
+
         public UIItemNodeSimple(ItemNode node, bool isResources ,UICalcWindow calcWindow, bool isProliferatorDemand = false, bool isMixBeltInfo = false)
         {
             // 如果公共资源尚未被初始化，则初始化
@@ -241,7 +243,13 @@ namespace DSPCalculator.UI
 
         public void FocusTargetNode(int itemId)
         {
-            if (parentCalcWindow.uiItemNodeOrders.ContainsKey(itemId))
+            bool canLocateAndIsMainProduct = false; // 这个判断条件说明，溢出产物本身是某种主产物，是生产线中必须要输入的一种，并且有其主要配方，因此要定位到主要配方上
+            if(parentCalcWindow.uiItemNodeOrders.ContainsKey(itemId) && parentCalcWindow.solution.itemNodes.ContainsKey(itemId))
+            {
+                if (parentCalcWindow.solution.itemNodes[itemId].mainRecipe != null && parentCalcWindow.solution.itemNodes[itemId].mainRecipe.count > 0.001f)
+                    canLocateAndIsMainProduct = true;
+            }
+            if (canLocateAndIsMainProduct)
             {
                 int order = parentCalcWindow.uiItemNodeOrders[itemId];
                 int totalCount = parentCalcWindow.uiItemNodeOrders.Count;
@@ -265,6 +273,64 @@ namespace DSPCalculator.UI
                     UIItemNode targetNode = parentCalcWindow.uiItemNodes[order];
                     Color oldColor = targetNode.backgroundImg.color;
                     targetNode.backgroundImg.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f); // 让他闪烁一次
+                }
+            }
+            else // 说明这个溢出产物不被任何主要生产线中作为需求，或者是没有主要配方（全靠其他主要产线的副产物的产量就足够全部需求了），这两种情况下都应该定位到产出此产物配方的那个产线上
+            {
+                Dictionary<int, RecipeInfo> recipeInfos = parentCalcWindow.solution.recipeInfos;
+                bool canSearch = lastFocusedRecipe == null;
+                foreach (var recipeInfoData in recipeInfos)
+                {
+                    if (!canSearch)
+                    {
+                        if (recipeInfoData.Value != lastFocusedRecipe)
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            canSearch = true;
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        if(recipeInfoData.Value.recipeNorm.products.Contains(itemId))
+                        {
+                            for (int i = 0; i < recipeInfoData.Value.recipeNorm.products.Length; i++)
+                            {
+                                int maybeMainProductId = recipeInfoData.Value.recipeNorm.products[i];
+                                Dictionary<int, ItemNode> itemNodes = parentCalcWindow.solution.itemNodes;
+                                if (itemNodes.ContainsKey(maybeMainProductId) && itemNodes[maybeMainProductId].mainRecipe != null && itemNodes[maybeMainProductId].mainRecipe.ID == recipeInfoData.Value.ID) // 找到啦
+                                {
+                                    lastFocusedRecipe = recipeInfoData.Value;
+                                    int focusItemId = maybeMainProductId;
+                                    FocusTargetNode(focusItemId); // 不会无限递归，因为此处保证了itemNodes里面含有这个id，所以不再能继续递归
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                // 如果能进行到这里，说明没找到（上面没有return成功），则置last记录为null，从头找
+                lastFocusedRecipe = null;
+                foreach (var recipeInfoData in recipeInfos)
+                {
+                    if (recipeInfoData.Value.recipeNorm.products.Contains(itemId))
+                    {
+                        for (int i = 0; i < recipeInfoData.Value.recipeNorm.products.Length; i++)
+                        {
+                            int maybeMainProductId = recipeInfoData.Value.recipeNorm.products[i];
+                            Dictionary<int, ItemNode> itemNodes = parentCalcWindow.solution.itemNodes;
+                            if (itemNodes.ContainsKey(maybeMainProductId) && itemNodes[maybeMainProductId].mainRecipe != null && itemNodes[maybeMainProductId].mainRecipe.ID == recipeInfoData.Value.ID) // 找到啦
+                            {
+                                lastFocusedRecipe = recipeInfoData.Value;
+                                int focusItemId = maybeMainProductId;
+                                FocusTargetNode(focusItemId); // 不会无限递归，因为此处保证了itemNodes里面含有这个id，所以不再能继续递归
+                                return;
+                            }
+                        }
+                    }
                 }
             }
         }

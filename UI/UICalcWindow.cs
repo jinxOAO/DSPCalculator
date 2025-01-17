@@ -882,8 +882,8 @@ namespace DSPCalculator.UI
                     if(uiItemNodeOrders.Count > 12)
                     {
                         float shrink = uiItemNodeOrders.Count * 1.0f / 12;
-                        minMove *= (0.3f + 0.67f /shrink);
-                        moveRatio *= (0.67f + 0.33f / shrink);
+                        minMove *= (0.2f + 0.8f /shrink);
+                        moveRatio *= (0.8f + 0.2f / shrink);
                     }
                         
                     if(distance <= minMove && distance >= -minMove)
@@ -1120,7 +1120,7 @@ namespace DSPCalculator.UI
                     stack.RemoveAt(stack.Count - 1);
 
 
-                    for (int i = 0; i < curNode.children.Count; i++)
+                    for (int i = curNode.children.Count - 1; i >= 0; i--)
                     {
                         stack.Add(curNode.children[i]);
                     }
@@ -1170,7 +1170,7 @@ namespace DSPCalculator.UI
                         }
                         stack.RemoveAt(stack.Count - 1);
 
-                        for (int c = 0; c < curNode.children.Count; c++)
+                        for (int c = curNode.children.Count - 1; c >= 0; c--)
                         {
                             stack.Add(curNode.children[c]);
                         }

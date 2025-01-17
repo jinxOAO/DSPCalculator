@@ -775,16 +775,17 @@ namespace DSPCalculator.UI
         /// </summary>
         public void OnFinishedMarkCheckboxClick()
         {
-            if(itemNode.mainRecipe != null)
+            if(itemNode.mainRecipe != null && itemNode.mainRecipe.count > 0.001f)
             {
                 if (parentCalcWindow.solution.userPreference.finishedRecipes.ContainsKey(itemNode.mainRecipe.ID))
                     parentCalcWindow.solution.userPreference.finishedRecipes.Remove(itemNode.mainRecipe.ID);
                 else
                     parentCalcWindow.solution.userPreference.finishedRecipes[itemNode.mainRecipe.ID] = 1;
-            }
-            foreach (var uiNode in parentCalcWindow.uiItemNodes)
-            {
-                uiNode.RefreshFinishedMark();
+
+                foreach (var uiNode in parentCalcWindow.uiItemNodes)
+                {
+                    uiNode.RefreshFinishedMark();
+                }
             }
         }
 

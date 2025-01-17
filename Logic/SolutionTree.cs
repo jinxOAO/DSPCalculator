@@ -533,19 +533,26 @@ namespace DSPCalculator.Logic
                                 foreach (var item in sharedRecipeInfo.productIndices) // 对于每个产物，看看他是不是溢出，最终取最小的可缩减数目
                                 {
                                     int productId = item.Key;
-                                    double relatedOverflowSpd = itemNodes[productId].satisfiedSpeed - itemNodes[productId].needSpeed;
-                                    if (itemNodes[productId].IsOre(userPreference)) // 如果产物是原材料，无论如何不影响mainrecipe的削减，因为缺的部分都能补上
+                                    if (itemNodes.ContainsKey(productId)) // 不再itemNodes里面的产出物应该是不曾需求过，因此不会影响minShrinkCount
                                     {
+                                        double relatedOverflowSpd = itemNodes[productId].satisfiedSpeed - itemNodes[productId].needSpeed;
+                                        if (itemNodes[productId].IsOre(userPreference)) // 如果产物是原材料，无论如何不影响mainrecipe的削减，因为缺的部分都能补上
+                                        {
 
-                                    }
-                                    else if (relatedOverflowSpd > 0.0001f)
-                                    {
-                                        minShrinkCount = Math.Min(minShrinkCount, sharedRecipeInfo.CalcCountByOutputSpeed(productId, relatedOverflowSpd));
+                                        }
+                                        else if (relatedOverflowSpd > 0.0001f)
+                                        {
+                                            minShrinkCount = Math.Min(minShrinkCount, sharedRecipeInfo.CalcCountByOutputSpeed(productId, relatedOverflowSpd));
+                                        }
+                                        else
+                                        {
+                                            minShrinkCount = 0;
+                                            break;
+                                        }
                                     }
                                     else
                                     {
-                                        minShrinkCount = 0;
-                                        break;
+                                        // Debug.LogWarning($"在计算溢出配方{sharedRecipeInfo.ID}时不包含{productId}");
                                     }
                                 }
                                 if (minShrinkCount > 0.001f) // 如果有可削减的数量，进行处理

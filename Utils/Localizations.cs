@@ -14,7 +14,7 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("量化计算器", "Calculator", "量化计算器", "Calculator");
             LocalizationModule.RegisterTranslation("设置目标产物", "Target Product", "设置目标产物", "Target Product");
 
-            LocalizationModule.RegisterTranslation("来自calc", "- From ", "- 来自", "- From ");
+            LocalizationModule.RegisterTranslation("来自calc", "> From ", "> 来自", "- From ");
             LocalizationModule.RegisterTranslation("实际需求calc", "- Actual demand  ", "- 实际需求  ", "- Actual demand  ");
             LocalizationModule.RegisterTranslation("溢出calc", "- Excessive output  ", "- 产出过量  ", "- Excessive output  ");
             LocalizationModule.RegisterTranslation("当前配方", "current recipe", "当前配方", "current recipe");
