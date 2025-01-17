@@ -119,8 +119,11 @@ namespace DSPCalculator.UI
                 iconObj.GetComponent<UIButton>().tips.delay = 0.1f;
 
                 string finalSpeedStr = Utils.KMG(itemNode.satisfiedSpeed);
-                if(!isResources && !isProliferatorDemand) // 说明是为了显示副产物或者溢出量
+                if (!isResources && !isProliferatorDemand) // 说明是为了显示副产物或者溢出量
+                {
                     finalSpeedStr = Utils.KMG(itemNode.satisfiedSpeed - itemNode.needSpeed);
+                    iconObj.GetComponent<Button>().onClick.AddListener(() => { FocusTargetNode(itemId); });
+                }
                 outputText.text = finalSpeedStr;
                 if(isMixBeltInfo)
                     outputText.text = itemNode.satisfiedSpeed.ToString() + " " + "条calc".Translate();
@@ -206,15 +209,18 @@ namespace DSPCalculator.UI
         }
 
 
-        public void OnUpdate()
+        public void OnUpdate(bool isMoving)
         {
-            Color targetColor = backgroundImageColor;
-            if (backgroundImg != null && backgroundImg.color.a > targetColor.a)
+            if (!isMoving)
             {
-                float targetAlpha = backgroundImg.color.a - 0.02f;
-                if (targetAlpha < targetColor.a)
-                    targetAlpha = targetColor.a;
-                backgroundImg.color = new Color(targetColor.r, targetColor.g, targetColor.b, targetAlpha);
+                Color targetColor = backgroundImageColor;
+                if (backgroundImg != null && backgroundImg.color.a > targetColor.a)
+                {
+                    float targetAlpha = backgroundImg.color.a - 0.02f;
+                    if (targetAlpha < targetColor.a)
+                        targetAlpha = targetColor.a;
+                    backgroundImg.color = new Color(targetColor.r, targetColor.g, targetColor.b, targetAlpha);
+                }
             }
         }
         public void RemoveThisFromRawOre()
@@ -231,6 +237,36 @@ namespace DSPCalculator.UI
 
             parentCalcWindow.solution.ReSolve();
             parentCalcWindow.RefreshAll();
+        }
+
+        public void FocusTargetNode(int itemId)
+        {
+            if (parentCalcWindow.uiItemNodeOrders.ContainsKey(itemId))
+            {
+                int order = parentCalcWindow.uiItemNodeOrders[itemId];
+                int totalCount = parentCalcWindow.uiItemNodeOrders.Count;
+                if (order >= 0 && order < parentCalcWindow.uiItemNodeOrders.Count)
+                {
+                    // 跳转到目标位置，小于8不需要跳转
+                    if (totalCount >= 8)
+                    {
+                        int calcOrder = order - 3;
+                        if (calcOrder < 0)
+                            calcOrder = 0;
+                        int calcTotal = totalCount - 7;
+                        if (calcOrder > calcTotal)
+                            calcOrder = calcTotal;
+                        float vPos = 1f - (1.0f * calcOrder / calcTotal);
+                        parentCalcWindow.targetVerticalPosition = vPos;
+                        //parentCalcWindow.contentScrollRect.verticalNormalizedPosition = vPos;
+                    }
+
+
+                    UIItemNode targetNode = parentCalcWindow.uiItemNodes[order];
+                    Color oldColor = targetNode.backgroundImg.color;
+                    targetNode.backgroundImg.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f); // 让他闪烁一次
+                }
+            }
         }
     }
 }

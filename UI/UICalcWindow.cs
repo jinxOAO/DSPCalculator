@@ -136,6 +136,7 @@ namespace DSPCalculator.UI
         public SolutionTree solution; // 该窗口对应的量化计算路径
 
         public bool isLargeWindow;
+        public float targetVerticalPosition; // 主内容ScrollRect需要移动到的位置
 
         /// <summary>
         /// 创建新窗口
@@ -155,6 +156,7 @@ namespace DSPCalculator.UI
             isTopAndActive = true;
             isLargeWindow = true;
             nextFrameRecalc = false;
+            targetVerticalPosition = -1;
 
             GameObject oriWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser");
             GameObject parentWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows"); // (-----/Calc Window Group");
@@ -872,13 +874,44 @@ namespace DSPCalculator.UI
 
             if(windowObj.activeSelf)
             {
+                if(targetVerticalPosition >= 0)
+                {
+                    float distance = targetVerticalPosition - contentScrollRect.verticalNormalizedPosition;
+                    float minMove = 0.01f;
+                    float moveRatio = 0.1f;
+                    if(uiItemNodeOrders.Count > 12)
+                    {
+                        float shrink = uiItemNodeOrders.Count * 1.0f / 12;
+                        minMove *= (0.3f + 0.67f /shrink);
+                        moveRatio *= (0.67f + 0.33f / shrink);
+                    }
+                        
+                    if(distance <= minMove && distance >= -minMove)
+                    {
+                        contentScrollRect.verticalNormalizedPosition = targetVerticalPosition;
+                        targetVerticalPosition = -1;
+                    }
+                    else
+                    {
+                        float move = distance * moveRatio;
+                        if(move > 0 && move < minMove)
+                            move = minMove;
+                        else if (move < 0 && move > -minMove)
+                            move = -minMove;
+
+                        contentScrollRect.verticalNormalizedPosition += move;
+                    }
+
+
+                }
+                bool isMoveing = targetVerticalPosition >= 0;
                 for (int i = 0; i < uiItemNodes.Count; i++)
                 {
-                    uiItemNodes[i].OnUpdate();
+                    uiItemNodes[i].OnUpdate(isMoveing);
                 }
                 for (int i = 0; i < uiSideItemNodes.Count; i++)
                 {
-                    uiSideItemNodes[i].OnUpdate();
+                    uiSideItemNodes[i].OnUpdate(isMoveing);
                 }
             }
 

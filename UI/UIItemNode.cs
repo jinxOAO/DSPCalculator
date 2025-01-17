@@ -305,6 +305,8 @@ namespace DSPCalculator.UI
                         recipeItem.GetComponent<UIButton>().tips.itemId = recipeProto.Results[i]; // 有tip的图标才能写
                         recipeItem.GetComponent<UIButton>().tips.corner = 3; // 有tip的图标才能写
                         recipeItem.GetComponent<UIButton>().tips.delay = 0.3f; // 有tip的图标才能写
+                        int resultItemId = recipeProto.Results[i];
+                        recipeItem.GetComponent<Button>().onClick.AddListener(() => { FocusTargetNode(resultItemId); });
                         if (recipeProto.Type == ERecipeType.Fractionate)
                             recipeItem.transform.Find("count").GetComponent<Text>().text = "1";
 
@@ -496,19 +498,22 @@ namespace DSPCalculator.UI
             RefreshFinishedMark();
         }
 
-        public void OnUpdate()
+        public void OnUpdate(bool isMoving)
         {
-            Color targetColor = backgroundImageColor;
-            if (parentCalcWindow.solution.userPreference.finishedRecipes.ContainsKey(itemNode.mainRecipe.ID))
+            if (!isMoving)
             {
-                targetColor = backgroundImageFinishedColor;
-            }
-            if(backgroundImg.color.a > targetColor.a)
-            {
-                float targetAlpha = backgroundImg.color.a - 0.02f;
-                if(targetAlpha < targetColor.a)
-                    targetAlpha = targetColor.a;
-                backgroundImg.color = new Color(targetColor.r, targetColor.g, targetColor.b, targetAlpha);
+                Color targetColor = backgroundImageColor;
+                if (parentCalcWindow.solution.userPreference.finishedRecipes.ContainsKey(itemNode.mainRecipe.ID))
+                {
+                    targetColor = backgroundImageFinishedColor;
+                }
+                if (backgroundImg.color.a > targetColor.a)
+                {
+                    float targetAlpha = backgroundImg.color.a - 0.02f;
+                    if (targetAlpha < targetColor.a)
+                        targetAlpha = targetColor.a;
+                    backgroundImg.color = new Color(targetColor.r, targetColor.g, targetColor.b, targetAlpha);
+                }
             }
         }
 
@@ -818,12 +823,15 @@ namespace DSPCalculator.UI
                     // 跳转到目标位置，小于8不需要跳转
                     if(totalCount >= 8)
                     {
-                        int calcOrder = order;
+                        int calcOrder = order - 3;
                         int calcTotal = totalCount - 7;
+                        if(calcOrder < 0)
+                            calcOrder = 0;
                         if(calcOrder > calcTotal)
                             calcOrder = calcTotal;
                         float vPos = 1f - (1.0f * calcOrder / calcTotal);
-                        parentCalcWindow.contentScrollRect.verticalNormalizedPosition = vPos;
+                        parentCalcWindow.targetVerticalPosition = vPos;
+                        //parentCalcWindow.contentScrollRect.verticalNormalizedPosition = vPos;
                     }
 
 
