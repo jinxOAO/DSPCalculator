@@ -494,6 +494,21 @@ namespace DSPCalculator.UI
             RefreshFinishedMark();
         }
 
+        public void OnUpdate()
+        {
+            Color targetColor = backgroundImageColor;
+            if (parentCalcWindow.solution.userPreference.finishedRecipes.ContainsKey(itemNode.mainRecipe.ID))
+            {
+                targetColor = backgroundImageFinishedColor;
+            }
+            if(backgroundImg.color.a > targetColor.a)
+            {
+                float targetAlpha = backgroundImg.color.a - 0.02f;
+                if(targetAlpha < targetColor.a)
+                    targetAlpha = targetColor.a;
+                backgroundImg.color = new Color(targetColor.r, targetColor.g, targetColor.b, targetAlpha);
+            }
+        }
 
         public void RefreshAssemblerDisplay(bool refreshGlobal = true)
         {

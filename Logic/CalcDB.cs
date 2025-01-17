@@ -76,6 +76,13 @@ namespace DSPCalculator.Logic
                     {
                         if (recipe.Type != ERecipeType.Fractionate)
                         {
+                            if(recipe.Results == null || recipe.Items == null)
+                                continue;
+                            else if(recipe.Results.Length <= 0 || recipe.Items.Length <= 0)
+                                continue;
+                            else if (recipe.Results[0] == 9500 && recipe.Results.Length == 1)
+                                continue;
+                            
                             NormalizedRecipe normalizedRecipe = new NormalizedRecipe(recipe);
                             recipeDict[recipe.ID] = normalizedRecipe;
                         }

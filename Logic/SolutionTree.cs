@@ -118,7 +118,7 @@ namespace DSPCalculator.Logic
 
                     return true;
                 }
-                TestLog2();
+                // TestLog2();
             }
             return false;
         }

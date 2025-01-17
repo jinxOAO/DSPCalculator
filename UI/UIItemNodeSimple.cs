@@ -32,6 +32,7 @@ namespace DSPCalculator.UI
 
         // 对象资源
         public GameObject obj;
+        public Image backgroundImg;
 
         public int ID;
         public UICalcWindow parentCalcWindow;
@@ -84,10 +85,10 @@ namespace DSPCalculator.UI
             GameObject backObj = new GameObject();
             backObj.name = "bg";
             backObj.transform.SetParent(obj.transform);
-            Image background = backObj.AddComponent<Image>();
-            background.sprite = backgroundSprite;
-            background.type = Image.Type.Sliced;
-            background.color = backgroundImageColor;
+            backgroundImg = backObj.AddComponent<Image>();
+            backgroundImg.sprite = backgroundSprite;
+            backgroundImg.type = Image.Type.Sliced;
+            backgroundImg.color = backgroundImageColor;
             backObj.GetComponent<RectTransform>().sizeDelta = new Vector2(UICalcWindow.sideCellWidth - UICalcWindow.cellDistance, UICalcWindow.sideCellHeight - UICalcWindow.cellDistance / 2);
 
             // 设置图标
@@ -162,6 +163,18 @@ namespace DSPCalculator.UI
                 obj.transform.localScale = Vector3.one;
                 obj.SetActive(false);
                 obj.SetActive(true);
+            }
+        }
+
+        public void OnUpdate()
+        {
+            Color targetColor = backgroundImageColor;
+            if (backgroundImg.color.a > targetColor.a)
+            {
+                float targetAlpha = backgroundImg.color.a - 0.02f;
+                if (targetAlpha < targetColor.a)
+                    targetAlpha = targetColor.a;
+                backgroundImg.color = new Color(targetColor.r, targetColor.g, targetColor.b, targetAlpha);
             }
         }
 

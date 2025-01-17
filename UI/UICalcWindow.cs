@@ -130,6 +130,10 @@ namespace DSPCalculator.UI
         public InputField incInput;
         public InputField accInput;
 
+        public Dictionary<int, int> uiItemNodeOrders;
+        public Dictionary<int, UIItemNode> uiItemNodesByItemId;
+        public Dictionary<int, UIItemNodeSimple> uiItemSimplesByItemId;
+
         public SolutionTree solution; // 该窗口对应的量化计算路径
 
         public bool isLargeWindow;
@@ -147,6 +151,9 @@ namespace DSPCalculator.UI
             proliferatorUsedButtons = new Dictionary<int, UIButton>();
             assemblerUsedButtons = new Dictionary<int, Dictionary<int, UIButton>>();
             assemblersDemandObjs = new List<GameObject>();
+            uiItemNodeOrders = new Dictionary<int, int>();
+            uiItemNodesByItemId = new Dictionary<int, UIItemNode>();
+            uiItemSimplesByItemId = new Dictionary<int, UIItemNodeSimple>();
             isTopAndActive = true;
             isLargeWindow = true;
             nextFrameRecalc = false;
@@ -864,6 +871,20 @@ namespace DSPCalculator.UI
             else
                 titleInputUIBtn.highlighted = false;
 
+            if(windowObj.activeSelf)
+            {
+                for (int i = 0; i < uiItemNodes.Count; i++)
+                {
+                    uiItemNodes[i].OnUpdate();
+                }
+                for (int i = 0; i < uiSideItemNodes.Count; i++)
+                {
+                    uiSideItemNodes[i].OnUpdate();
+                }
+            }
+
+
+
             if (!isTopAndActive) return;
             // 下面的只有Topwindow可以响应
 
@@ -1021,6 +1042,7 @@ namespace DSPCalculator.UI
             RefreshCheckBoxes();
         }
 
+
         /// <summary>
         /// 刷新主界面的所有产物
         /// </summary>
@@ -1031,7 +1053,7 @@ namespace DSPCalculator.UI
             {
                 GameObject.DestroyImmediate(uiItemNodes[i].obj);
             }
-            uiItemNodes.Clear();
+            ClearNodes();
 
             if (solution.targetItem > 0 && solution.root != null && !solution.userPreference.solveProliferators)
             {
@@ -1125,7 +1147,7 @@ namespace DSPCalculator.UI
             {
                 GameObject.DestroyImmediate(uiSideItemNodes[i].obj);
             }
-            uiSideItemNodes.Clear();
+            ClearSideNodes();
 
             if (solution.itemNodes.Count == 0)
             {
@@ -1269,6 +1291,21 @@ namespace DSPCalculator.UI
                 }
             }
         }
+
+        public void ClearNodes()
+        {
+
+            uiItemNodes.Clear();
+            uiItemNodeOrders.Clear();
+            uiItemNodesByItemId.Clear();
+        }
+
+        public void ClearSideNodes()
+        {
+            uiSideItemNodes.Clear();
+            uiItemSimplesByItemId.Clear();
+        }
+
 
         public void RefreshFinalInfoText()
         {
