@@ -166,18 +166,6 @@ namespace DSPCalculator.UI
             }
         }
 
-        public void OnUpdate()
-        {
-            Color targetColor = backgroundImageColor;
-            if (backgroundImg.color.a > targetColor.a)
-            {
-                float targetAlpha = backgroundImg.color.a - 0.02f;
-                if (targetAlpha < targetColor.a)
-                    targetAlpha = targetColor.a;
-                backgroundImg.color = new Color(targetColor.r, targetColor.g, targetColor.b, targetAlpha);
-            }
-        }
-
         /// <summary>
         /// 专用于创建一个文字标签，并可以放在GridLayoutGroup里
         /// </summary>
@@ -217,6 +205,18 @@ namespace DSPCalculator.UI
             }
         }
 
+
+        public void OnUpdate()
+        {
+            Color targetColor = backgroundImageColor;
+            if (backgroundImg != null && backgroundImg.color.a > targetColor.a)
+            {
+                float targetAlpha = backgroundImg.color.a - 0.02f;
+                if (targetAlpha < targetColor.a)
+                    targetAlpha = targetColor.a;
+                backgroundImg.color = new Color(targetColor.r, targetColor.g, targetColor.b, targetAlpha);
+            }
+        }
         public void RemoveThisFromRawOre()
         {
             UserPreference preference = parentCalcWindow.solution.userPreference;

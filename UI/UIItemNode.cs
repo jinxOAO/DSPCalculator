@@ -330,6 +330,8 @@ namespace DSPCalculator.UI
                         recipeItem.GetComponent<UIButton>().tips.itemId = recipeProto.Items[i]; // 有tip的图标才能写
                         recipeItem.GetComponent<UIButton>().tips.corner = 3; // 有tip的图标才能写
                         recipeItem.GetComponent<UIButton>().tips.delay = 0.3f; // 有tip的图标才能写
+                        int resourceItemId = recipeProto.Items[i];
+                        recipeItem.GetComponent<Button>().onClick.AddListener(() => { FocusTargetNode(resourceItemId); });
                         if (recipeProto.Type == ERecipeType.Fractionate)
                             recipeItem.transform.Find("count").GetComponent<Text>().text = "1";
 
@@ -798,6 +800,43 @@ namespace DSPCalculator.UI
                     cbFinishedMark.sprite = UICalcWindow.checkboxOffSprite;
                     backgroundImg.color = backgroundImageColor;
                 }
+            }
+        }
+
+        /// <summary>
+        /// 聚焦到UICalcWindow中的特定物品的node（如果是原材料则不聚焦），并使其ui背景闪烁一次
+        /// </summary>
+        /// <param name="itemId"></param>
+        public void FocusTargetNode(int itemId)
+        {
+            if(parentCalcWindow.uiItemNodeOrders.ContainsKey(itemId))
+            {
+                int order = parentCalcWindow.uiItemNodeOrders[itemId];
+                int totalCount = parentCalcWindow.uiItemNodeOrders.Count;
+                if (order >= 0 && order < parentCalcWindow.uiItemNodeOrders.Count)
+                {
+                    // 跳转到目标位置，小于8不需要跳转
+                    if(totalCount >= 8)
+                    {
+                        int calcOrder = order;
+                        int calcTotal = totalCount - 7;
+                        if(calcOrder > calcTotal)
+                            calcOrder = calcTotal;
+                        float vPos = 1f - (1.0f * calcOrder / calcTotal);
+                        parentCalcWindow.contentScrollRect.verticalNormalizedPosition = vPos;
+                    }
+
+
+                    UIItemNode targetNode = parentCalcWindow.uiItemNodes[order];
+                    Color oldColor = targetNode.backgroundImg.color;
+                    targetNode.backgroundImg.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f); // 让他闪烁一次
+                }
+            }
+            if(parentCalcWindow.uiItemSimplesByItemId.ContainsKey(itemId))
+            {
+                UIItemNodeSimple targetNodeSimple = parentCalcWindow.uiItemSimplesByItemId[itemId];
+                Color oldColor = targetNodeSimple.backgroundImg.color;
+                targetNodeSimple.backgroundImg.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f); // 闪烁一次
             }
         }
     }

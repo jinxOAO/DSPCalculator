@@ -131,7 +131,6 @@ namespace DSPCalculator.UI
         public InputField accInput;
 
         public Dictionary<int, int> uiItemNodeOrders;
-        public Dictionary<int, UIItemNode> uiItemNodesByItemId;
         public Dictionary<int, UIItemNodeSimple> uiItemSimplesByItemId;
 
         public SolutionTree solution; // 该窗口对应的量化计算路径
@@ -152,7 +151,6 @@ namespace DSPCalculator.UI
             assemblerUsedButtons = new Dictionary<int, Dictionary<int, UIButton>>();
             assemblersDemandObjs = new List<GameObject>();
             uiItemNodeOrders = new Dictionary<int, int>();
-            uiItemNodesByItemId = new Dictionary<int, UIItemNode>();
             uiItemSimplesByItemId = new Dictionary<int, UIItemNodeSimple>();
             isTopAndActive = true;
             isLargeWindow = true;
@@ -178,6 +176,7 @@ namespace DSPCalculator.UI
             GameObject.Destroy(windowObj.transform.Find("inspector-group").gameObject);
             GameObject.Destroy(windowObj.transform.Find("folder-info-group").gameObject);
             GameObject.Destroy(windowObj.transform.Find("title-group").gameObject);
+
             // 移除所有子蓝图图标
             GameObject contentObj = windowObj.transform.Find("view-group/Scroll View/Viewport/Content").gameObject;
             while (contentObj.transform.childCount > 0)
@@ -1054,6 +1053,7 @@ namespace DSPCalculator.UI
                 GameObject.DestroyImmediate(uiItemNodes[i].obj);
             }
             ClearNodes();
+            int nodeOrder = 0;
 
             if (solution.targetItem > 0 && solution.root != null && !solution.userPreference.solveProliferators)
             {
@@ -1073,11 +1073,15 @@ namespace DSPCalculator.UI
                             // 将不认为是原矿的节点输出
                             UIItemNode uiNode = new UIItemNode(curNode, this);
                             uiItemNodes.Add(uiNode);
+                            uiItemNodeOrders[curNode.itemId] = nodeOrder;
+                            nodeOrder++;
                         }
                         else if (solution.userPreference.showMixBeltInfo) // 如果是混带信息，则原矿也要展示
                         {
                             UIItemNode uiNode = new UIItemNode(curNode, this);
                             uiItemNodes.Add(uiNode);
+                            uiItemNodeOrders[curNode.itemId] = nodeOrder;
+                            nodeOrder++;
                         }
                     }
                     stack.RemoveAt(stack.Count - 1);
@@ -1120,11 +1124,15 @@ namespace DSPCalculator.UI
                                 // 将不认为是原矿的节点输出
                                 UIItemNode uiNode = new UIItemNode(curNode, this);
                                 uiItemNodes.Add(uiNode);
+                                uiItemNodeOrders[curNode.itemId] = nodeOrder;
+                                nodeOrder++;
                             }
                             else if (solution.userPreference.showMixBeltInfo) // 如果是混带信息，则原矿也要展示
                             {
                                 UIItemNode uiNode = new UIItemNode(curNode, this);
                                 uiItemNodes.Add(uiNode);
+                                uiItemNodeOrders[curNode.itemId] = nodeOrder;
+                                nodeOrder++;
                             }
                         }
                         stack.RemoveAt(stack.Count - 1);
@@ -1169,6 +1177,7 @@ namespace DSPCalculator.UI
                 {
                     UIItemNodeSimple uiResourceNode = new UIItemNodeSimple(node.Value, true, this);
                     uiSideItemNodes.Add(uiResourceNode);
+                    uiItemSimplesByItemId[node.Value.itemId] = uiResourceNode;
                     count++;
                 }
             }
@@ -1294,10 +1303,8 @@ namespace DSPCalculator.UI
 
         public void ClearNodes()
         {
-
             uiItemNodes.Clear();
             uiItemNodeOrders.Clear();
-            uiItemNodesByItemId.Clear();
         }
 
         public void ClearSideNodes()
