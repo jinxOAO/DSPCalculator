@@ -731,16 +731,11 @@ namespace DSPCalculator.UI
                     if (preference.recipeConfigs[recipeId].forceIncMode >= 0)
                         isInc = preference.recipeConfigs[recipeId].forceIncMode == 1;
                     RefreshIncLevelDisplay();
-                    if (!isInc) // 如果当前配方不是增产，不需要重新计算路径
+                    if (!isInc) 
                     {
-                        parentCalcWindow.RefreshAssemblerDemandsDisplay();
-                        parentCalcWindow.RefreshFinalInfoText();
-                        foreach (var uiNodeData in parentCalcWindow.uiItemNodes)
-                        {
-                            uiNodeData.RefreshAssemblerDisplay(false); // 刷新每个节点的assembler显示即可
-                        }
+                        parentCalcWindow.nextFrameRecalc = true;
                     }
-                    else // 如果是增产，需要重新解决
+                    else 
                     {
                         parentCalcWindow.nextFrameRecalc = true;
                     }
