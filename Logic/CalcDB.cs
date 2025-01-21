@@ -489,7 +489,7 @@ namespace DSPCalculator.Logic
             else if (desc.isFractionator) // 分馏的速度根据最大带速来计算，和建筑本身无关
             {
                 // 不做处理，而是在所有物品加载完成后最后处理
-                workEnergyW *= 5.5; // 四层堆叠时耗能是5.5倍
+                workEnergyW *= CalcDB.maxStackSize * 1.5 - 0.5; // 四层堆叠时耗能是5.5倍
             }
             else
             {
