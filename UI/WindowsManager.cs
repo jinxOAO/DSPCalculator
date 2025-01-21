@@ -68,10 +68,12 @@ namespace DSPCalculator.UI
             bool ShiftDown = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
             bool CtrlDown = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
             bool AltDown = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
-
-            if (Input.GetKeyDown(DSPCalculatorPlugin.OpenWindowHotKey.Value) && UIHotkeySettingPatcher.CheckModifier(1, ShiftDown, CtrlDown, AltDown))
+            if (!VFInput.inputing)
             {
-                OpenOne();
+                if (Input.GetKeyDown(DSPCalculatorPlugin.OpenWindowHotKey.Value) && UIHotkeySettingPatcher.CheckModifier(1, ShiftDown, CtrlDown, AltDown))
+                {
+                    OpenOne();
+                }
             }
 
             if (UIPauseBarPatcher.pauseBarObj != null)

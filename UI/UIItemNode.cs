@@ -237,6 +237,9 @@ namespace DSPCalculator.UI
                         recipeChangeButtonObj.GetComponent<UIButton>().tips.tipText = "更改配方说明".Translate();
                         recipeChangeButtonObj.GetComponent<UIButton>().tips.corner = 3;
                         recipeChangeButtonObj.GetComponent<UIButton>().tips.width = 200;
+                        Navigation n = new Navigation();
+                        n.mode = Navigation.Mode.None;
+                        recipeChangeButtonObj.GetComponent<Button>().navigation = n;
                     }
 
                     // 清除指定配方规则的按钮
@@ -258,6 +261,9 @@ namespace DSPCalculator.UI
                         clearRecipePreferenceButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0, 0, 1);
                         clearRecipePreferenceButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.6f, 0, 0, 1);
                         clearRecipePreferenceButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.9f, 0.2f, 0.2f, 1);
+                        Navigation n = new Navigation();
+                        n.mode = Navigation.Mode.None;
+                        clearRecipePreferenceButtonObj.GetComponent<Button>().navigation = n;
                     }
 
                     // 视为原矿按钮
@@ -273,6 +279,9 @@ namespace DSPCalculator.UI
                     treatAsOreButtonObj.GetComponent<UIButton>().tips.tipText = "视为原矿说明".Translate();
                     treatAsOreButtonObj.GetComponent<UIButton>().tips.corner = 3;
                     treatAsOreButtonObj.GetComponent<UIButton>().tips.width = 200;
+                    Navigation nvg = new Navigation();
+                    nvg.mode = Navigation.Mode.None;
+                    treatAsOreButtonObj.GetComponent<Button>().navigation = nvg;
 
                     // 生成配方显示
                     recipeGroupObj = new GameObject();
