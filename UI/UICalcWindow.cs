@@ -566,6 +566,11 @@ namespace DSPCalculator.UI
             customIncMilliCbObj.name = "checkbox-custom-inc";
             cbIncMilli = customIncMilliCbObj.GetComponent<Image>();
             txtIncMilli = customIncMilliCbObj.transform.Find("text").GetComponent<Text>();
+            customIncMilliCbObj.transform.Find("text").GetComponent<Localizer>().stringKey = "强制增产效能";
+            GameObject percentageObj1 = GameObject.Instantiate(customIncMilliCbObj.transform.Find("text").gameObject, customIncMilliCbObj.transform); // 百分号
+            percentageObj1.GetComponent<Localizer>().stringKey = "%"; // 每次active都会刷新，翻译stringKey，暂存到translation然后赋值给text
+            percentageObj1.GetComponent<Text>().text = "%";
+            percentageObj1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(132, 0, 0);
             customIncMilliCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, 0, 0);
             customIncMilliCbObj.GetComponent<Button>().onClick.AddListener(OnCustomIncMilliClick);
             customIncMilliCbObj.GetComponent<UIButton>().tips.tipTitle = "强制增产效能标题".Translate();
@@ -597,6 +602,11 @@ namespace DSPCalculator.UI
             customAccMilliCbObj.name = "checkbox-custom-acc";
             cbAccMilli = customAccMilliCbObj.GetComponent<Image>();
             txtAccMilli = customAccMilliCbObj.transform.Find("text").GetComponent<Text>();
+            customAccMilliCbObj.transform.Find("text").GetComponent<Localizer>().stringKey = "强制加速效能";
+            GameObject percentageObj2 = GameObject.Instantiate(customAccMilliCbObj.transform.Find("text").gameObject, customAccMilliCbObj.transform); // 百分号
+            percentageObj2.GetComponent<Localizer>().stringKey = "%"; // 每次active都会刷新，翻译stringKey，暂存到translation然后赋值给text
+            percentageObj2.GetComponent<Text>().text = "%";
+            percentageObj2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(132, 0, 0);
             customAccMilliCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -20, 0);
             customAccMilliCbObj.GetComponent<Button>().onClick.AddListener(OnCustomAccMilliClick);
             customAccMilliCbObj.GetComponent<UIButton>().tips.tipTitle = "强制加速效能标题".Translate();
