@@ -25,7 +25,7 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.1.13";
+        public const string VERSION = "0.1.15";
 
         // ---------------------------------------------------------------------------
         public static bool developerMode = false; //           发布前修改             |
@@ -37,6 +37,7 @@ namespace DSPCalculator
         public static ConfigEntry<int> SwitchWindowModifier;
         public static ConfigEntry<bool> EditableTitle;
         public static ConfigEntry<bool> RoundUpAssemblerNum;
+        public static ConfigEntry<bool> SingleWindow;
 
         //public static ConfigEntry<bool> assemblerNumberKMG; // 生产设施是否用使用最大千分位符号
         //public static ConfigEntry<int> assemblerNumberDecimalPlaces; // 生产设施数量显示的小数位数，-1表示默认3位有效数字，正数表示恒定保留x位小数
@@ -52,8 +53,9 @@ namespace DSPCalculator
             SwitchWindowSizeHotKey = Config.Bind<KeyCode>("config", "SwitchWindowSizeHotKey", KeyCode.Tab, "将计算器窗口展开或缩小的快捷键。HotKey to fold or unfold calculator window.");
             OpenWindowModifier = Config.Bind<int>("config", "OpenWindowHKModifier", 0, "byte shift = 1, ctrl = 2, alt = 4");
             SwitchWindowModifier = Config.Bind<int>("config", "SwitchWindowHKModifier", 0, "byte shift = 1, ctrl = 2, alt = 4");
-            EditableTitle = Config.Bind<bool>("config", "EditTitle", false, "将此项置为true可以使计算器的窗口标题可以被编辑。Set the to true will allow you to edit the calculator window's title in game.");
+            EditableTitle = Config.Bind<bool>("config", "EditTitle", false, "将此项置为true可以使计算器的窗口标题可以被编辑。Set this to true will allow you to edit the calculator window's title in game.");
             RoundUpAssemblerNum = Config.Bind<bool>("config", "RoundUpAssemblerNum", true, "生产设施数量显示是否自动向上取整。Is the display of the number of production facilities automatically rounded up.");
+            SingleWindow = Config.Bind<bool>("config", "SingleWindow", false, "单窗口模式启用时，打开和关闭窗口都将使用打开窗口的那个快捷键。这会使你无法开启多个窗口，除非你同时按住Ctrl+Shift+Alt。  When single window mode is enabled, both opening and closing calculator window will use the same shortcut key (i.e. the open the window hot key). But if you want to open multiple windows in this mode, you must hold down Ctrl+Shift+Alt at the same time.");
 
             Harmony.CreateAndPatchAll(typeof(DSPCalculatorPlugin));
             Harmony.CreateAndPatchAll(typeof(RecipePickerPatcher));

@@ -72,7 +72,34 @@ namespace DSPCalculator.UI
             {
                 if (Input.GetKeyDown(DSPCalculatorPlugin.OpenWindowHotKey.Value) && UIHotkeySettingPatcher.CheckModifier(1, ShiftDown, CtrlDown, AltDown))
                 {
-                    OpenOne();
+                    if (!DSPCalculatorPlugin.SingleWindow.Value || (DSPCalculatorPlugin.SingleWindow.Value && ShiftDown && CtrlDown && AltDown)) // CtrlShiftAlt都按下时，且是单窗口模式，则无视单窗口模式，打开新窗口
+                    {
+                        OpenOne();
+                    }
+                    else // 单窗口模式下，开启窗口的快捷键在已经有窗口的情况下反而会被用于关闭窗口
+                    {
+                        bool hasOpenedWindow = false;
+                        // 如果有开启的窗口，关闭所有窗口
+                        if (windows != null && windows.Count > 0)
+                        {
+                            for (int i = windows.Count - 1; i >= 0; i--)
+                            {
+                                if(i >= windows.Count)
+                                {
+                                    continue;
+                                }
+                                else if (windows[i].windowObj.activeSelf)
+                                {
+                                    hasOpenedWindow = true;
+                                    windows[i].CloseWindow();
+                                }
+                            }
+                        }
+
+                        // 如果没有开启的窗口，打开一个窗口
+                        if (!hasOpenedWindow)
+                            OpenOne();
+                    }
                 }
             }
 
