@@ -25,6 +25,13 @@ namespace DSPCalculator.Logic
         {
             get
             {
+                if (IASpecializationType == 2 && GetSpecBuffLevel() > 0) // 巨构反应釜固定给增产
+                    return 4;
+                if(useIA)
+                {
+                    if (!isInc)
+                        return 0; // 星际组装厂有的配方无法设定为
+                }
 
                 if (userPreference.recipeConfigs.ContainsKey(ID) && userPreference.recipeConfigs[ID].incLevel >= 0) // 如果该配方有专属设置，且不使用全局
                 {
@@ -41,6 +48,10 @@ namespace DSPCalculator.Logic
         {
             get
             {
+                if (useIA)
+                {
+                    return canInc; // 对于星际组装厂，能增产的配方都设定为增产，无法增产的配方都设定为加速，但是加速永远是0级
+                }
                 if (userPreference.recipeConfigs.ContainsKey(ID) && userPreference.recipeConfigs[ID].forceIncMode >= 0) // 如果该配方有专属设置，且不使用全局
                 {
                      return userPreference.recipeConfigs[ID].forceIncMode == 1; // 等于0代表强制加速
@@ -51,23 +62,95 @@ namespace DSPCalculator.Logic
                 }
             }
         }
+
+        public bool canInc
+        {
+            get 
+            { 
+                if (useIA)
+                {
+                    if (GetSpecBuffLevel() > 0) // 星际组装厂特化会让激活的配方允许增产
+                        return true;
+                }
+
+                return recipeNorm.productive;
+            }
+        }
+        /// <summary>
+        /// -1：该配方不使用星际组装厂。>=0则代表组装厂及其特化。
+        /// </summary>
+        public int IASpecializationType
+        {
+            get
+            {
+                if (!CompatManager.MMS)
+                    return -1;
+
+                bool IAActive = false;
+                if (userPreference.recipeConfigs.ContainsKey(ID)) // 如果此配方有专属设定
+                {
+                    if (userPreference.recipeConfigs[ID].forceUseIA) // 强制使用组装厂，无视全局设定
+                    {
+                        if (userPreference.recipeConfigs[ID].IAType >= 0)
+                            return userPreference.recipeConfigs[ID].IAType;
+                        else
+                            return userPreference.globalIAType;
+                    }
+                    else
+                    {
+                        if (userPreference.recipeConfigs[ID].assemblerItemId <= 0) // 说明没有特殊指定的生产设施，则要根据全局的默认设置来
+                        {
+                            if (userPreference.globalUseIA) // 虽然采用了全局是否使用组装厂的设定，但是还是要首先看自己的组装厂特化有没有特殊设定
+                            {
+                                if (userPreference.recipeConfigs[ID].IAType >= 0)
+                                    return userPreference.recipeConfigs[ID].IAType;
+                                else
+                                    return userPreference.globalIAType;
+                            }
+                            else
+                                return -1;
+                        }
+                        else // 也就是说有强制指定的非星际组装厂的生产设施
+                        {
+                            return -1;
+                        }
+                    }
+                }
+                else if (userPreference.globalUseIA) // 此配方没有专属设定，则直接使用全局设定，如果全局启用则返回全局的特化类型
+                {
+                    return userPreference.globalIAType;
+                }
+                else
+                {
+                    return -1;
+                }
+
+            }
+        }
+        public bool useIA
+        {
+            get
+            {
+                return IASpecializationType >= 0;
+            }
+        }
         public int assemblerItemId
         {
             get
             {
-                if (userPreference.recipeConfigs.ContainsKey(ID) && userPreference.recipeConfigs[ID].assemblerItemId > 0)
+                if (userPreference.recipeConfigs.ContainsKey(ID) && userPreference.recipeConfigs[ID].assemblerItemId > 0) // 有特殊配方设定
                 {
                     return userPreference.recipeConfigs[ID].assemblerItemId;
                 }
-                else if (userPreference.globalAssemblerIdByType.ContainsKey(recipeNorm.type) && userPreference.globalAssemblerIdByType[recipeNorm.type] > 0)
+                else if (userPreference.globalAssemblerIdByType.ContainsKey(recipeNorm.type) && userPreference.globalAssemblerIdByType[recipeNorm.type] > 0) // 有全局（按照配方类型设定的）统一使用的设施
                 {
                     return userPreference.globalAssemblerIdByType[recipeNorm.type];
                 }
-                else if (CalcDB.assemblerListByType.ContainsKey(recipeNorm.type) && CalcDB.assemblerListByType[recipeNorm.type].Count > 0)
+                else if (CalcDB.assemblerListByType.ContainsKey(recipeNorm.type) && CalcDB.assemblerListByType[recipeNorm.type].Count > 0) // 什么特殊设定都没有，使用0号位置的默认设施
                 {
                     return CalcDB.assemblerListByType[recipeNorm.type][0].ID;
                 }
-                else
+                else // 正常情况下不应该到这里
                 {
                     Debug.LogError("DSPCalculator get assemblerId Error. no such aseembler that could match the recipe.");
                     return -1;
@@ -79,6 +162,9 @@ namespace DSPCalculator.Logic
         {
             get
             {
+                if (useIA) // 星际组装厂
+                    return 1;
+
                 AssemblerData assemblerData = CalcDB.assemblerDict[assemblerItemId];
                 double countD = count / assemblerData.speed / 60;
                 if (!isInc && incLevel >= 0 && incLevel < Cargo.accTableMilli.Length)
@@ -94,10 +180,38 @@ namespace DSPCalculator.Logic
         {
             get
             {
-                if (assemblerItemId == CalcDB.dfSmelterId && CompatManager.GB)
+                if (assemblerItemId == CalcDB.dfSmelterId && CompatManager.GB && !useIA)
                     return 2.0;
                 else
                     return 1.0;
+            }
+        }
+
+        public double bonusInc
+        {
+            get 
+            {
+                if(CompatManager.MMS && useIA)
+                {
+                    int specType = IASpecializationType;
+                    int specLevel = GetSpecBuffLevel();
+                    if(specLevel > 0)
+                    {
+                        if (specType == 3)
+                        {
+                            return 0.25;
+                        }
+                        else if (specType == 4)
+                        {
+                            return 0.25 * specLevel;
+                        }
+                        else if (specType == 5)
+                        {
+                            return 0.25 * specLevel;
+                        }
+                    }
+                }
+                return 0f;
             }
         }
 
@@ -176,11 +290,11 @@ namespace DSPCalculator.Logic
 
                 if (isInc && incLevel >= 0 && incLevel < Cargo.incTableMilli.Length) // 增产效果计算
                 {
-                    return addedCount / (1.0 + Utils.GetIncMilli(incLevel, userPreference) + CalcOutputDiracInc(itemId)) / bonusFactor;
+                    return addedCount / (1.0 + Utils.GetIncMilli(incLevel, userPreference) + CalcOutputDiracInc(itemId) + bonusInc) / bonusFactor;
                 }
                 else
                 {
-                    return addedCount / (1.0 + CalcOutputDiracInc(itemId)) / bonusFactor;
+                    return addedCount / (1.0 + CalcOutputDiracInc(itemId) + bonusInc) / bonusFactor;
                 }
             }
             else
@@ -200,9 +314,9 @@ namespace DSPCalculator.Logic
 
                 int index = productIndices[itemId];
                 if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
-                    return factor * changedCount * recipeNorm.productCounts[index] / recipeNorm.time * (1.0 + Utils.GetIncMilli(incLevel, userPreference) + CalcOutputDiracInc(itemId));
+                    return factor * changedCount * recipeNorm.productCounts[index] / recipeNorm.time * (1.0 + Utils.GetIncMilli(incLevel, userPreference) + CalcOutputDiracInc(itemId) + bonusInc);
                 else
-                    return factor * changedCount * recipeNorm.productCounts[index] / recipeNorm.time * (1.0 + CalcOutputDiracInc(itemId));
+                    return factor * changedCount * recipeNorm.productCounts[index] / recipeNorm.time * (1.0 + CalcOutputDiracInc(itemId) + bonusInc);
             }
             Debug.LogWarning($"获取配方输出数量时，试图用非此配方{recipeNorm.oriProto.name}的产物{itemId}计算，先前路径可能存在逻辑错误。");
             return 0;
@@ -224,7 +338,7 @@ namespace DSPCalculator.Logic
 
             // 判断蓝buff
             bool blueBuffFlag = userPreference.bluebuff;
-            blueBuffFlag = blueBuffFlag && (recipeNorm.type == (int)ERecipeType.Assemble || recipeNorm.type == 9 || recipeNorm.type == 10 || recipeNorm.type == 12);
+            blueBuffFlag = blueBuffFlag && (recipeNorm.type == (int)ERecipeType.Assemble || recipeNorm.type == 9 || recipeNorm.type == 10 || recipeNorm.type == 12 || useIA);
             blueBuffFlag = blueBuffFlag && recipeNorm.resources.Length > 1 && recipeNorm.products[0] != 1803 && recipeNorm.products[0] != 6006;
             blueBuffFlag = blueBuffFlag && recipeNorm.resources[0] == itemId;
             if (blueBuffFlag)
@@ -232,7 +346,7 @@ namespace DSPCalculator.Logic
                 double output = 0;
                 // 这里不能用getoutput方法，因为也许有的第一产物不是直接的净产物，所以显然下面用的recipe也要是oriProto而不是norm里面的
                 if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
-                    output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time * (1.0 + Utils.GetIncMilli(incLevel, userPreference));
+                    output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time * (1.0 + Utils.GetIncMilli(incLevel, userPreference) + bonusInc);
                 else
                     output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time;
                 result -= output;
@@ -253,7 +367,7 @@ namespace DSPCalculator.Logic
                     double output = 0;
                     // 这里不能用getoutput方法，因为也许有的第一产物不是直接的净产物，所以显然下面用的recipe也要是oriProto而不是norm里面的
                     if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
-                        output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time * (1.0 + Utils.GetIncMilli(incLevel, userPreference));
+                        output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time * (1.0 + Utils.GetIncMilli(incLevel, userPreference) + bonusInc);
                     else
                         output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time;
                     result -= 2 * output;
@@ -271,6 +385,9 @@ namespace DSPCalculator.Logic
 
         public double GetTotalEnergyConsumption()
         {
+            if (useIA) // 星际组装厂
+                return 0;
+
             double ratio = 1.0;
             if(incLevel >= 0 && incLevel < Cargo.powerTableRatio.Length)
             {
@@ -288,7 +405,7 @@ namespace DSPCalculator.Logic
             return ((fullyWork + partIdle) * assemblerData.workEnergyW * ratio) + additionalIdle * assemblerData.idleEnergyW;
         }
 
-        // 增产剂消耗
+        // 增产剂消耗，目前尚未考虑星际组装厂
         public void GetProliferatorUsed(out int proliferatorId, out double proliferatorCount)
         {
             if(incLevel == 0 || !CalcDB.proliferatorAbilityToId.ContainsKey(incLevel))
@@ -308,7 +425,8 @@ namespace DSPCalculator.Logic
             }
             // 蓝buff返回的原材料不需要涂增产，所以要减去
             bool blueBuffFlag = userPreference.bluebuff;
-            blueBuffFlag = blueBuffFlag && (recipeNorm.type == (int)ERecipeType.Assemble || recipeNorm.type == 9 || recipeNorm.type == 10 || recipeNorm.type == 12);
+            // 制造台配方和组装厂可以享受蓝buff
+            blueBuffFlag = blueBuffFlag && (recipeNorm.type == (int)ERecipeType.Assemble || recipeNorm.type == 9 || recipeNorm.type == 10 || recipeNorm.type == 12 || useIA); 
             blueBuffFlag = blueBuffFlag && recipeNorm.resources.Length > 1 && recipeNorm.products[0] != 1803 && recipeNorm.products[0] != 6006;
             double shrinkByRelic = 0;
             if (blueBuffFlag)
@@ -343,6 +461,132 @@ namespace DSPCalculator.Logic
 
             proliferatorCount = 1.0 * count / recipeNorm.time * (itemNeeds - shrinkByRelic) / itemsPerProliferator ;
 
+            if (IASpecializationType == 2 && GetSpecBuffLevel() > 0)
+            {
+                proliferatorId = 0;
+                proliferatorCount = 0;
+            }
+        }
+
+        public int GetSpecBuffLevel()
+        {
+            if(CompatManager.MMS && IASpecializationType > 0)
+            {
+                int curSpecType = IASpecializationType;
+                int slotSpecBuffLvl = 0;
+                ERecipeType recipeType = recipeNorm.oriProto.Type;
+
+                // 1
+                if (curSpecType == 1)
+                {
+                    if (recipeType == ERecipeType.Smelt)
+                    {
+                        slotSpecBuffLvl = 1;
+                    }
+                }
+
+                // 2
+                if (curSpecType == 2)
+                {
+                    if (recipeType == ERecipeType.Chemical || recipeType == ERecipeType.Refine || (int)recipeType == 16 || recipeNorm.products.Contains(1141) || recipeNorm.products.Contains(1142) || recipeNorm.products.Contains(1143))
+                    {
+                        slotSpecBuffLvl = 1;
+                    }
+                }
+
+                // 3
+                if (curSpecType == 3)
+                {
+                    bool flag3 = false;
+                    for (int i = 0; i < recipeNorm.resources.Length; i++)
+                    {
+                        if (recipeNorm.resources[i] == 1121 || recipeNorm.resources[i] == 1122)
+                        {
+                            flag3 = true;
+                            break;
+                        }
+                    }
+                    if (!flag3)
+                    {
+                        for (int i = 0; i < recipeNorm.products.Length; i++)
+                        {
+                            if (recipeNorm.products[i] == 1121 || recipeNorm.products[i] == 1122)
+                            {
+                                flag3 = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (flag3)
+                    {
+                        slotSpecBuffLvl = 1;
+                    }
+                }
+                // 4
+                if (curSpecType == 4)
+                {
+                    int flag4Lvl = 0;
+                    for (int i = 0; i < recipeNorm.products.Length; i++)
+                    {
+                        if (recipeNorm.products[i] == 1303 || recipeNorm.products[i] == 1305 || recipeNorm.products[i] == 9486)
+                        {
+                            flag4Lvl = 2;
+                            break;
+                        }
+                    }
+                    if (flag4Lvl <= 0)
+                    {
+                        for (int i = 0; i < recipeNorm.resources.Length; i++)
+                        {
+                            if (recipeNorm.resources[i] == 1303 || recipeNorm.resources[i] == 1305 || recipeNorm.resources[i] == 9486)
+                            {
+                                flag4Lvl = 1;
+                                break;
+                            }
+                        }
+                    }
+                    if (flag4Lvl > 0)
+                    {
+                        slotSpecBuffLvl = flag4Lvl;
+                    }
+                }
+
+                // 5
+                if (curSpecType == 5)
+                {
+                    int flag5Lvl = 0;
+                    for (int i = 0; i < recipeNorm.products.Length; i++) // 遍历产物 是否有弹药或防御、舰队等
+                    {
+                        int pId = recipeNorm.products[i];
+                        ItemProto pItem = LDB.items.Select(pId);
+                        if (pItem.isAmmo) // 要加||isBomb? 没发现有符合的，可能后续会需要改动
+                        {
+                            flag5Lvl = 4;
+                            break;
+                        }
+                        else if (pItem.Type == EItemType.Defense || pItem.Type == EItemType.Turret || pItem.isCraft) // isFighter等是冗余的？ 类似上面可能后续需要改动
+                        {
+                            flag5Lvl = 2; // 不要break是万一产物既有弹药又有防御，按高的算（这合理吗？）反正目前没有这种recipe无所谓啦
+                        }
+                    }
+                    slotSpecBuffLvl = flag5Lvl;
+                }
+
+                return slotSpecBuffLvl;
+            }
+
+            return 0;
+        }
+
+        public long GetIAInputCount()
+        {
+            double speedFactor = 1;
+            if (IASpecializationType == 1 && GetSpecBuffLevel() > 0) 
+                speedFactor = 3;
+            else if (IASpecializationType == 2 && GetSpecBuffLevel() > 0)
+                speedFactor = 2;
+
+            return (long)Math.Ceiling(count / recipeNorm.time * recipeNorm.oriProto.ResultCounts[0] / speedFactor);
         }
     }
 }

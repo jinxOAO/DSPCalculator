@@ -18,6 +18,8 @@ namespace DSPCalculator.Logic
         public int globalIncLevel; // 如果非负，则视为全局属性
         public bool globalIsInc; // 全局是否是增产模式
         public Dictionary<int, int> globalAssemblerIdByType; // 全局：每种type的强制使用工厂。参数1是type的int，参数2是工厂的itemId而非index！
+        public bool globalUseIA; // 全局：所有type：默认是否使用星际组装厂
+        public int globalIAType; // 全局：星际组装厂的默认特化类型，0为无特化
         public bool bluebuff;
         public bool energyBurst;
         public bool dirac;
@@ -52,6 +54,8 @@ namespace DSPCalculator.Logic
             incMilliOverride = 0;
             accMilliOverride = 0;
             globalAssemblerIdByType = new Dictionary<int, int>();
+            globalUseIA = false;
+            globalIAType = 0;
         }
 
         public void ClearWhenChangeTarget()
@@ -97,6 +101,8 @@ namespace DSPCalculator.Logic
         //    incMilliOverride = 0;
         //    accMilliOverride = 0;
         //    globalAssemblerIdByType.Clear();
+        //    globalUseIA = false;
+        //    globalIAType = 0;
         //}
     }
 
@@ -106,6 +112,8 @@ namespace DSPCalculator.Logic
         public int incLevel; // 如果非负，视为用户需要这个配方应用增产
         public int forceIncMode; // -1 为使用全局，0为强制加速，1为强制增产
         public int assemblerItemId; // 如果大于零，视为用户需要这个配方用特定的建筑生产，此处记录的是对应建筑ItemId，要去CalcDB.assemblerDict[对应建筑ItemId]这里访问。
+        public bool forceUseIA; // 是否强制使用星际组装厂，为false只是代表不强制使用，还要查看assemblerItemId
+        public int IAType; // 星际组装厂特化类型，0为无特化，-1代表需要读取全局
 
         public RecipeConfig(RecipeInfo recipeInfo)
         {
@@ -113,6 +121,8 @@ namespace DSPCalculator.Logic
             incLevel = -1; // -1为使用全局
             forceIncMode = -1;
             assemblerItemId = -1;
+            forceUseIA = false;
+            IAType = -1;
         }
     }
 

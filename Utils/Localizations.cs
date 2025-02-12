@@ -78,6 +78,12 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("条calc", "lines", "条", "lines");
             LocalizationModule.RegisterTranslation("标记为已完成", "Mark as completed", "标记为已完成", "Mark as completed");
 
+
+            LocalizationModule.RegisterTranslation("使用星际组装厂按钮标题", "Interstellar Assembly", "星际组装厂", "Interstellar Assembly");
+            LocalizationModule.RegisterTranslation("使用星际组装厂按钮说明", "Click to switch all recipes' production facilities to Interstellar Assembly. Click again to switch the specialization of Interstellar Assembly.\nAttention: Due to the internal transmission and specialized settings of the Interstellar Assembly, the actual consumption of proliferator may be less than the calculated results. Therefore, it is not recommended to add the proliferator product line, to avoid affecting the calculation of main production line.", "将所有配方的生产设施切换为星际组装厂，重复点击以切换星际组装厂特化。\n注意：由于星际组装厂的内部传递以及特化设定，实际消耗的增产剂可能比计算结果要少，因此不推荐将增产剂并入产线。", "Click to switch all recipes' production facilities to Interstellar Assembly. Click again to switch the specialization of Interstellar Assembly.\nAttention: Due to the internal transmission and specialized settings of the Interstellar Assembly, the actual consumption of proliferator may be less than the calculated results. Therefore, it is not recommended to add the proliferator product line, to avoid affecting the calculation of main production line.");
+            LocalizationModule.RegisterTranslation("无特化", "No Specialization", "无特化", "No Specialization");
+            LocalizationModule.RegisterTranslation("组装厂输入", "Write", "填写", "Write");
+
         }
     }
 }

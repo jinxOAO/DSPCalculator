@@ -10,5 +10,6 @@ namespace DSPCalculator.Compatibility
     {
         public static bool GB = false;
         public static bool TCFV = false;
+        public static bool MMS = false;
     }
 }

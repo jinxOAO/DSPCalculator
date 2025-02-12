@@ -92,6 +92,7 @@
   <ItemGroup>
     <Compile Include="Compatibility\CompatManager.cs" />
     <Compile Include="Compatibility\GBCompat.cs" />
+    <Compile Include="Compatibility\MMSCompat.cs" />
     <Compile Include="Compatibility\TCFVCompat.cs" />
     <Compile Include="DSPCalculatorPlugin.cs" />
     <Compile Include="Logic\CalcDB.cs" />

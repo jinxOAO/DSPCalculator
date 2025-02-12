@@ -45,6 +45,8 @@ namespace DSPCalculator.UI
         public static float largeWindowViewGroupHeight = 570;
         public static float smallWindowViewGroupHeight = 610;
         public static float animationSpeed = 150;
+        public static int[] IASpecializationIconItemMap = new int[] { 1201, 1107, 1116, -74, 1305, 1606 }; // 代表特化的图标，对应的物品ID
+        public static int IAIconItemId = 9493; // 9493是巨构里面用来表示巨构图标的隐藏物品，原本是接收站用途
         // "ui/textures/sprites/icons/eraser-icon" 橡皮擦
         // "ui/textures/sprites/icons/minus-32" 粗短横线
 
@@ -108,6 +110,7 @@ namespace DSPCalculator.UI
         public Text assemblerDemandsTitleText;
         public GameObject assemblersDemandsGroupObj; // 显示所有工厂数量的group
         public List<GameObject> assemblersDemandObjs; // 所有工厂需求数量的obj列表
+        public Image IABtnSpecializationImg; // 星际组装厂按钮特化图标
 
         public Image cbBluebuff;
         public Image cbEnergyBurst;
@@ -477,6 +480,52 @@ namespace DSPCalculator.UI
                     }
                     typeCount++;
                 }
+            }
+            // 切换为星际组装厂的全局设置按钮
+            if(CompatManager.MMS)
+            {
+                if (btnCount * 35 + typeCount * 10 + posXDelta > 9 * 35)
+                {
+                    rowCount++;
+                    btnCount = 0;
+                    typeCount = 0;
+                }
+                GameObject aBtnObj = GameObject.Instantiate(UICalcWindow.imageButtonObj, assemblerSelectionObj.transform);
+                aBtnObj.GetComponent<Image>().sprite = UICalcWindow.buttonBackgroundSprite;
+                GameObject iconObj = aBtnObj.transform.Find("icon").gameObject;
+                GameObject subIconObj = GameObject.Instantiate(iconObj,iconObj.transform);
+                subIconObj.name = "sub-icon";
+                subIconObj.GetComponent<RectTransform>().sizeDelta = new Vector2(20, 20);
+                subIconObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(3, -3);
+                Image icon = aBtnObj.transform.Find("icon").GetComponent<Image>();
+                IABtnSpecializationImg = subIconObj.GetComponent<Image>();
+                IABtnSpecializationImg.sprite = LDB.items.Select(IASpecializationIconItemMap[0])?.iconSprite;
+                Sprite IARepresentIcon = LDB.items.Select(IAIconItemId)?.iconSprite; // 9487是组装厂组件。
+                iconObj.GetComponent<RectTransform>().sizeDelta = new Vector2(25, 25); // 因为那个星际组装厂的图标有点大了，改小
+                if (IARepresentIcon != null)
+                    icon.sprite = IARepresentIcon;
+                else
+                    icon.sprite = Resources.Load<Sprite>("ui/textures/sprites/starmap/planets-icon");
+                aBtnObj.transform.localPosition = new Vector3((btnCount) * 35 + typeCount * 10, rowCount * 35);
+                if (CompatManager.GB)
+                    aBtnObj.transform.localPosition = new Vector3(415, 0);
+
+                aBtnObj.GetComponent<Button>().onClick.AddListener(() => { SetGlobalAssemblerPreference(-1); });
+                // aBtnObj.GetComponent<UIButton>().transitions[0].highlightColorOverride = iconButtonHighLightColor;
+                aBtnObj.GetComponent<UIButton>().highlighted = false; // 永远不会高亮
+                aBtnObj.GetComponent<UIButton>().tips.tipTitle = "使用星际组装厂按钮标题".Translate();
+                aBtnObj.GetComponent<UIButton>().tips.tipText = "使用星际组装厂按钮说明".Translate();
+                aBtnObj.GetComponent<UIButton>().tips.corner = 3;
+                aBtnObj.GetComponent<UIButton>().tips.delay = 0.1f;
+                aBtnObj.GetComponent<UIButton>().tips.width = 250;
+
+                if (!assemblerUsedButtons.ContainsKey(-1))
+                {
+                    assemblerUsedButtons[-1] = new Dictionary<int, UIButton>();
+                }
+                assemblerUsedButtons[-1][-1] = aBtnObj.GetComponent<UIButton>();
+                btnCount++;
+                typeCount++;
             }
 
             // 右侧最终文本信息
@@ -1380,6 +1429,8 @@ namespace DSPCalculator.UI
             foreach (var data in solution.recipeInfos)
             {
                 RecipeInfo recipeInfo = data.Value;
+                if (recipeInfo.useIA) // 使用星际组装厂的配方不计算工厂设施数量
+                    continue;
                 int assemblerItemId = recipeInfo.assemblerItemId;
                 long ceilingCount =(long) Math.Ceiling(recipeInfo.assemblerCount);
                 if (!counts.ContainsKey(assemblerItemId))
@@ -1487,18 +1538,50 @@ namespace DSPCalculator.UI
 
         public void SetGlobalAssemblerPreference(int assemblerFullCode)
         {
-            int typeInt = assemblerFullCode / TYPE_FILTER;
-            int assemblerItemId = assemblerFullCode % TYPE_FILTER;
-
-            solution.userPreference.globalAssemblerIdByType[typeInt] = assemblerItemId;
-
-            // 然后对每个独立的recipeConfig进行更改
-            foreach (var recipeConfigData in solution.userPreference.recipeConfigs)
+            if (assemblerFullCode >= 0)
             {
-                int configType = CalcDB.recipeDict[recipeConfigData.Value.ID].type;
-                if(configType == typeInt)
+                int typeInt = assemblerFullCode / TYPE_FILTER;
+                int assemblerItemId = assemblerFullCode % TYPE_FILTER;
+
+                solution.userPreference.globalUseIA = false;
+                solution.userPreference.globalAssemblerIdByType[typeInt] = assemblerItemId;
+
+                if(assemblerFullCode == -1) // 星际组装厂将为每个配方创建独特设定，如果已经处于计算状态的话
                 {
-                    solution.userPreference.recipeConfigs[recipeConfigData.Key].assemblerItemId = assemblerItemId; 
+                    foreach (var item in solution.recipeInfos)
+                    {
+                        int ID = item.Value.ID;
+                        if (!solution.userPreference.recipeConfigs.ContainsKey(ID))
+                            solution.userPreference.recipeConfigs[ID] = new RecipeConfig(item.Value);
+                    }
+                }
+                // 然后对每个独立的recipeConfig进行更改
+                foreach (var recipeConfigData in solution.userPreference.recipeConfigs)
+                {
+                    int configType = CalcDB.recipeDict[recipeConfigData.Value.ID].type;
+                    if (configType == typeInt)
+                    {
+                        solution.userPreference.recipeConfigs[recipeConfigData.Key].assemblerItemId = assemblerItemId;
+                        solution.userPreference.recipeConfigs[recipeConfigData.Key].forceUseIA = false; // 取消该配方使用IA的设定
+                    }
+                }
+            }
+            else if (assemblerFullCode == -1) // 设置为星际组装厂
+            {
+                if(!solution.userPreference.globalUseIA) // 之前没有选中
+                {
+                    solution.userPreference.globalUseIA = true;
+                }
+                else // 已经处于全局使用组装厂状态了
+                {
+                    solution.userPreference.globalIAType = (solution.userPreference.globalIAType + 1) % 6;
+                }
+
+                // 然后对每个独立的recipeConfig进行更改
+                foreach (var recipeConfigData in solution.userPreference.recipeConfigs)
+                {
+                    solution.userPreference.recipeConfigs[recipeConfigData.Key].forceUseIA = solution.userPreference.globalUseIA;
+                    solution.userPreference.recipeConfigs[recipeConfigData.Key].IAType = solution.userPreference.globalIAType;
                 }
             }
 
@@ -1506,7 +1589,7 @@ namespace DSPCalculator.UI
             {
                 uiNodeData.RefreshAssemblerDisplay(false);
             }
-            if (CompatManager.GB)
+            if (CompatManager.GB || CompatManager.MMS)
             {
                 nextFrameRecalc = true;
             }
@@ -1531,13 +1614,55 @@ namespace DSPCalculator.UI
 
                 foreach (var aData in typeData.Value)
                 {
-                    if(aData.Key == assemblerId)
+                    if (aData.Key >= 0) // 非星际组装厂的常规按钮
                     {
-                        aData.Value.highlighted = true;
+                        if (!solution.userPreference.globalUseIA && aData.Key == assemblerId)
+                        {
+                            aData.Value.highlighted = true;
+                        }
+                        else
+                        {
+                            aData.Value.highlighted = false;
+                        }
                     }
-                    else
+                    else if (aData.Key == -1) // 星际组装厂按钮
                     {
-                        aData.Value.highlighted = false;
+                        if (solution.userPreference.globalUseIA)
+                        {
+                            aData.Value.highlighted = true;
+                            int iconId = IASpecializationIconItemMap[solution.userPreference.globalIAType];
+                            if(iconId > 0)
+                                IABtnSpecializationImg.sprite = LDB.items.Select(iconId)?.iconSprite;
+                            else
+                                IABtnSpecializationImg.sprite = LDB.recipes.Select(-iconId)?.iconSprite;
+
+                            if (solution.userPreference.globalIAType > 0)
+                            {
+                                //IABtnSpecializationImg.gameObject.SetActive(true);
+                                aData.Value.tips.tipTitle = $"特化{solution.userPreference.globalIAType}介绍标题".Translate();
+                            }
+                            else
+                            {
+                                //IABtnSpecializationImg.gameObject.SetActive(true);
+                                aData.Value.tips.tipTitle = "使用星际组装厂按钮标题".Translate();
+                            }
+                            if (aData.Value.tipShowing)
+                            {
+                                try
+                                {
+                                    float enterTime = aData.Value.enterTime;
+                                    aData.Value.OnPointerExit(null);
+                                    aData.Value.OnPointerEnter(null);
+                                    aData.Value.enterTime = enterTime;
+                                }
+                                catch (Exception)
+                                { }
+                            }
+                        }
+                        else
+                        {
+                            aData.Value.highlighted = false;
+                        }
                     }
                 }
             }
