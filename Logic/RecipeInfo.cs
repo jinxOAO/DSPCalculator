@@ -281,8 +281,8 @@ namespace DSPCalculator.Logic
             if (productIndices.ContainsKey(itemId))
             {
                 // 劣质加工
-                if (userPreference.inferior && itemId == 1501 && recipeNorm.products[0] == 1501)
-                    speed = speed / 2;
+                if (userPreference.inferior && itemId == 1501 && recipeNorm.products[0] == 1501 && !useIA)
+                    speed = speed * recipeNorm.productCounts[0] / (recipeNorm.productCounts[0] + 1);
 
                 int index = productIndices[itemId];
 
@@ -309,8 +309,8 @@ namespace DSPCalculator.Logic
             {
                 double factor = 1.0 * bonusFactor;
                 // 劣质加工
-                if (userPreference.inferior && itemId == 1501 && recipeNorm.products[0] == 1501)
-                    factor = factor * 2.0;
+                if (userPreference.inferior && itemId == 1501 && recipeNorm.products[0] == 1501 && !useIA)
+                    factor = factor * (recipeNorm.productCounts[0] + 1) / recipeNorm.productCounts[0];
 
                 int index = productIndices[itemId];
                 if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)

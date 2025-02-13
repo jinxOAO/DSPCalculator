@@ -123,17 +123,20 @@ namespace DSPCalculator.UI
 
         }
 
-        public static void OpenOne()
+        public static UICalcWindow OpenOne(bool forceNewWindow = false)
         {
             UIPauseBarPatcher.Init();
 
-            if(lastClosedWindow != null)
+            if(lastClosedWindow != null && !forceNewWindow)
             {
                 lastClosedWindow.OpenWindow();
+                return lastClosedWindow;
             }
             else
             {
-                windows.Add(new UICalcWindow(windows.Count));
+                UICalcWindow window = new UICalcWindow(windows.Count);
+                windows.Add(window);
+                return window;
             }
         }
 

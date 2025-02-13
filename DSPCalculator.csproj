@@ -90,6 +90,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BP\TestPatchers.cs" />
     <Compile Include="Compatibility\CompatManager.cs" />
     <Compile Include="Compatibility\GBCompat.cs" />
     <Compile Include="Compatibility\MMSCompat.cs" />

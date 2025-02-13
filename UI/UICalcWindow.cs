@@ -68,7 +68,8 @@ namespace DSPCalculator.UI
         public static Sprite rightTriangleSprite;
         public static Sprite backgroundSprite = null;
         public static Sprite buttonBackgroundSprite = null;
-        public static Sprite gearSprite = null;
+        public static Sprite gearWithCursorSprite = null;
+        public static Sprite gearSimpleSprite = null;
         public static Sprite filterSprite = null;
         public static Sprite biaxialArrowSprite = null;
         public static Sprite oreSprite = null;
@@ -78,6 +79,8 @@ namespace DSPCalculator.UI
         public static Sprite resetSprite = null;
         public static Sprite checkboxOnSprite = null;
         public static Sprite checkboxOffSprite = null;
+        public static Sprite arrowInBoxSprite = null;
+        public static Sprite squarePlusSprite = null;
 
         // UI元素
         public GameObject windowObj;
@@ -837,7 +840,8 @@ namespace DSPCalculator.UI
                 rightTriangleSprite = Resources.Load<Sprite>("ui/textures/sprites/test/next-icon");
                 backgroundSprite = Resources.Load<Sprite>("ui/textures/sprites/sci-fi/window-content-3");
                 buttonBackgroundSprite = Resources.Load<Sprite>("ui/textures/sprites/sci-fi/window-content-3");
-                gearSprite = Resources.Load<Sprite>("icons/signal/signal-405");
+                gearWithCursorSprite = Resources.Load<Sprite>("icons/signal/signal-405");
+                gearSimpleSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/settings-icon-24");
                 filterSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/filter-icon");
                 biaxialArrowSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/biaxial-arrow");
                 oreSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/vein-icon-56");
@@ -847,6 +851,8 @@ namespace DSPCalculator.UI
                 resetSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/refresh-32-icon");
                 checkboxOnSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/checkbox-on");
                 checkboxOffSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/checkbox-off");
+                arrowInBoxSprite = Resources.Load<Sprite>("ui/textures/sprites/dashboard/pading-icon-2");
+                squarePlusSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/insert-icon");
             }
         }
 
@@ -1160,7 +1166,7 @@ namespace DSPCalculator.UI
                     if (!visitedNodes.ContainsKey(curNode.itemId) && curNode.needSpeed > 0.001f)
                     {
                         visitedNodes.Add(curNode.itemId, curNode);
-                        if (!curNode.IsOre(solution.userPreference))
+                        if (!curNode.IsOre(solution.userPreference) || curNode.speedFromOre <= 0.001f)
                         {
                             // 将不认为是原矿的节点输出
                             UIItemNode uiNode = new UIItemNode(curNode, this);
@@ -1265,7 +1271,8 @@ namespace DSPCalculator.UI
             int count = 0;
             foreach (var node in solution.itemNodes)
             {
-                if(node.Value.IsOre(solution.userPreference) && node.Value.needSpeed > 0.001f)
+                //if(node.Value.IsOre(solution.userPreference) && node.Value.needSpeed > 0.001f)
+                if (node.Value.IsOre(solution.userPreference) && node.Value.speedFromOre > 0.001f)
                 {
                     UIItemNodeSimple uiResourceNode = new UIItemNodeSimple(node.Value, true, this);
                     uiSideItemNodes.Add(uiResourceNode);

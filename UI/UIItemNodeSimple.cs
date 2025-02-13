@@ -38,6 +38,7 @@ namespace DSPCalculator.UI
         public UICalcWindow parentCalcWindow;
         public ItemNode itemNode;
         public RecipeInfo mainRecipeInfo;
+        public bool isProliferatorDemand;
 
         public Text outputText;
         public GameObject overflowNoteTextObj; // 溢出提示文本
@@ -80,6 +81,7 @@ namespace DSPCalculator.UI
 
             this.itemNode = node;
             this.parentCalcWindow = calcWindow;
+            this.isProliferatorDemand = isProliferatorDemand;
 
             obj.AddComponent<RectTransform>().sizeDelta = new Vector2(UICalcWindow.sideCellWidth, UICalcWindow.sideCellHeight);
 
@@ -121,10 +123,14 @@ namespace DSPCalculator.UI
                 iconObj.GetComponent<UIButton>().tips.delay = 0.1f;
 
                 string finalSpeedStr = Utils.KMG(itemNode.satisfiedSpeed);
-                if (!isResources && !isProliferatorDemand) // 说明是为了显示副产物或者溢出量
+                if (!isProliferatorDemand) // 显示原矿需求时，需要的数值是speedFromOre
                 {
-                    finalSpeedStr = Utils.KMG(itemNode.satisfiedSpeed - itemNode.needSpeed);
-                    iconObj.GetComponent<Button>().onClick.AddListener(() => { FocusTargetNode(itemId); });
+                    finalSpeedStr = Utils.KMG(itemNode.speedFromOre);
+                    if (!isResources) // 说明是为了显示副产物或者溢出量
+                    {
+                        finalSpeedStr = Utils.KMG(itemNode.satisfiedSpeed - itemNode.needSpeed);
+                        iconObj.GetComponent<Button>().onClick.AddListener(() => { FocusTargetNode(itemId); });
+                    }
                 }
                 outputText.text = finalSpeedStr;
                 if(isMixBeltInfo)
@@ -141,7 +147,7 @@ namespace DSPCalculator.UI
 
                 string speedDetails = "";
 
-                // 如果有生产他的配方，说明可以不设为原矿，则增加取消作为原矿的按钮
+                // 如果有生产他的配方，说明可以不设为原矿，则增加取消作为原矿的按钮，以及在新窗口中计算按钮
                 if (CalcDB.itemDict[itemId].recipes.Count > 0 && isResources)
                 {
                     GameObject clearRecipePreferenceButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
@@ -159,6 +165,30 @@ namespace DSPCalculator.UI
                     clearRecipePreferenceButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0, 0, 1);
                     clearRecipePreferenceButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.6f, 0, 0, 1);
                     clearRecipePreferenceButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.9f, 0.2f, 0.2f, 1);
+                }
+
+                if (CalcDB.itemDict[itemId].recipes.Count > 0 && isResources || isProliferatorDemand)
+                {
+                    //ui/textures/sprites/icons/insert-icon 方框右上角有加号
+                    //ui/textures/sprites/dashboard/pading-icon-2 箭头向右上角指进方框
+                    //ui/textures/sprites/icons/padding-icon 箭头向左下角指进方框
+                    GameObject calcInNewWindowButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
+                    calcInNewWindowButtonObj.name = "open-new";
+                    calcInNewWindowButtonObj.transform.SetParent(obj.transform, false);
+                    calcInNewWindowButtonObj.transform.localScale = Vector3.one;
+                    calcInNewWindowButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(100, 17, 0);
+                    if(isProliferatorDemand)
+                        calcInNewWindowButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 17, 0);
+                    calcInNewWindowButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(16, 16);
+                    calcInNewWindowButtonObj.GetComponent<Image>().sprite = UICalcWindow.arrowInBoxSprite;
+                    calcInNewWindowButtonObj.GetComponent<Button>().onClick.AddListener(() => { CalcInNewWindow(); });
+                    calcInNewWindowButtonObj.GetComponent<UIButton>().tips.tipTitle = "在新窗口中计算标题".Translate();
+                    calcInNewWindowButtonObj.GetComponent<UIButton>().tips.tipText = "在新窗口中计算说明".Translate();
+                    calcInNewWindowButtonObj.GetComponent<UIButton>().tips.corner = 3;
+                    calcInNewWindowButtonObj.GetComponent<UIButton>().tips.width = 210;
+                    calcInNewWindowButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.4f, 0.4f, 0.7f, 1);
+                    calcInNewWindowButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.4f, 0.4f, 0.7f, 1);
+                    calcInNewWindowButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.5f, 0.5f, 0.8f, 1);
                 }
             }
             // 加入到窗口中显示出来
@@ -333,6 +363,32 @@ namespace DSPCalculator.UI
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 打开一个新窗口来计算这个拥有配方的原材料
+        /// </summary>
+        public void CalcInNewWindow(bool autoFold = false)
+        {
+            UICalcWindow calcWindow = WindowsManager.OpenOne(true);
+            int itemId = itemNode.itemId;
+            long requiredSpeed = (long)Math.Ceiling(itemNode.speedFromOre);
+            if(isProliferatorDemand)
+                requiredSpeed = (long)Math.Ceiling(parentCalcWindow.solution.proliferatorCountSelfSprayed[itemId]);
+
+            // 打开新窗口后，该物品必须默认不被视为原矿，否则对于默认视为原矿的材料没有意义
+            UserPreference thatPreference = calcWindow.solution.userPreference;
+            if (!thatPreference.itemConfigs.ContainsKey(itemNode.itemId))
+                thatPreference.itemConfigs[itemNode.itemId] = new ItemConfig(itemNode.itemId);
+            thatPreference.itemConfigs[itemNode.itemId].forceNotOre = true;
+            thatPreference.itemConfigs[itemNode.itemId].consideredAsOre = false;
+
+            calcWindow.speedInputObj.GetComponent<InputField>().text = requiredSpeed.ToString();
+            calcWindow.OnTargetSpeedChange(requiredSpeed.ToString());
+            calcWindow.OnTargetProductChange(LDB.items.Select(itemId));
+
+            if (autoFold)
+                calcWindow.SwitchWindowSize();
         }
     }
 }

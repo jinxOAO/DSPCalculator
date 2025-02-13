@@ -267,7 +267,7 @@ namespace DSPCalculator.UI
                                         iconButton.GetComponent<Image>().sprite = LDB.recipes.Select(-iconId)?.iconSprite;
                                 }
                                 else
-                                    iconButton.GetComponent<Image>().sprite = UICalcWindow.crossSprite; // x号
+                                    iconButton.GetComponent<Image>().sprite = UICalcWindow.gearSimpleSprite; // x号
                                 iconButton.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(i % 3 * 25, 12f - 25 * (i / 3), 0);
                                 iconButton.GetComponent<RectTransform>().sizeDelta = new Vector2(20, 20);
                                 UIButton uibtn = iconButton.GetComponent<UIButton>();
@@ -594,16 +594,19 @@ namespace DSPCalculator.UI
             if (!isMoving)
             {
                 Color targetColor = backgroundImageColor;
-                if (parentCalcWindow.solution.userPreference.finishedRecipes.ContainsKey(itemNode.mainRecipe.ID))
+                if(itemNode.mainRecipe != null)
                 {
-                    targetColor = backgroundImageFinishedColor;
-                }
-                if (backgroundImg.color.a > targetColor.a)
-                {
-                    float targetAlpha = backgroundImg.color.a - 0.02f;
-                    if (targetAlpha < targetColor.a)
-                        targetAlpha = targetColor.a;
-                    backgroundImg.color = new Color(targetColor.r, targetColor.g, targetColor.b, targetAlpha);
+                    if (parentCalcWindow.solution.userPreference.finishedRecipes.ContainsKey(itemNode.mainRecipe.ID))
+                    {
+                        targetColor = backgroundImageFinishedColor;
+                    }
+                    if (backgroundImg.color.a > targetColor.a)
+                    {
+                        float targetAlpha = backgroundImg.color.a - 0.02f;
+                        if (targetAlpha < targetColor.a)
+                            targetAlpha = targetColor.a;
+                        backgroundImg.color = new Color(targetColor.r, targetColor.g, targetColor.b, targetAlpha);
+                    }
                 }
             }
         }
@@ -775,8 +778,15 @@ namespace DSPCalculator.UI
 
             preference.itemConfigs[itemNode.itemId].consideredAsOre = true;
             preference.itemConfigs[itemNode.itemId].forceNotOre = false;
+
+            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+            {
+                CalcInNewWindow(true);
+            }
+
             parentCalcWindow.solution.ReSolve();
             parentCalcWindow.RefreshAll();
+
         }
 
         public void OnIncToggleClick()
@@ -998,7 +1008,8 @@ namespace DSPCalculator.UI
             {
                 if (CompatManager.MMS && itemNode.mainRecipe.useIA)
                 {
-                    incToggleObj.transform.Find("inc-switch").GetComponent<Button>().interactable = false; // 星际组装厂禁止调整
+                    if (incToggleObj != null) // 对于纯溢出产物可能会没有这个实例
+                        incToggleObj.transform.Find("inc-switch").GetComponent<Button>().interactable = false; // 星际组装厂禁止调整
                     if (itemNode.mainRecipe.IASpecializationType == 2 && itemNode.mainRecipe.GetSpecBuffLevel() > 0)
                     {
                         foreach (var item in proliferatorUsedButtons)
@@ -1019,6 +1030,27 @@ namespace DSPCalculator.UI
                     }
                 }
             }
+        }
+
+        public void CalcInNewWindow(bool autoFold = false)
+        {
+            UICalcWindow calcWindow = WindowsManager.OpenOne(true);
+            int itemId = itemNode.itemId;
+            long requiredSpeed = (long)Math.Ceiling(itemNode.satisfiedSpeed);
+
+            // 打开新窗口后，该物品必须默认不被视为原矿，否则对于默认视为原矿的材料没有意义
+            UserPreference thatPreference = calcWindow.solution.userPreference;
+            if (!thatPreference.itemConfigs.ContainsKey(itemNode.itemId))
+                thatPreference.itemConfigs[itemNode.itemId] = new ItemConfig(itemNode.itemId);
+            thatPreference.itemConfigs[itemNode.itemId].forceNotOre = true;
+            thatPreference.itemConfigs[itemNode.itemId].consideredAsOre = false;
+
+            calcWindow.speedInputObj.GetComponent<InputField>().text = requiredSpeed.ToString();
+            calcWindow.OnTargetSpeedChange(requiredSpeed.ToString());
+            calcWindow.OnTargetProductChange(LDB.items.Select(itemId));
+
+            if (autoFold)
+                calcWindow.SwitchWindowSize();
         }
     }
 }
