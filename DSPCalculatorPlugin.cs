@@ -8,6 +8,7 @@ using BepInEx.Configuration;
 using CommonAPI;
 using CommonAPI.Systems;
 using CommonAPI.Systems.ModLocalization;
+using DSPCalculator.BP;
 using DSPCalculator.Logic;
 using DSPCalculator.UI;
 using HarmonyLib;
@@ -25,7 +26,7 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.2.0";
+        public const string VERSION = "0.2.1";
 
         // ---------------------------------------------------------------------------
         public static bool developerMode = false; //           发布前修改             |
@@ -60,6 +61,7 @@ namespace DSPCalculator
             Harmony.CreateAndPatchAll(typeof(DSPCalculatorPlugin));
             Harmony.CreateAndPatchAll(typeof(RecipePickerPatcher));
             Harmony.CreateAndPatchAll(typeof(UIHotkeySettingPatcher));
+            Harmony.CreateAndPatchAll(typeof(TestPatchers));
             Localizations.AddLocalizations();
         }
 

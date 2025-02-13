@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,9 +9,23 @@ namespace DSPCalculator.BP
 {
     public class TestPatchers
     {
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(GameData), "NewGame")]
         public static void TestLog()
+        {
+
+        }
+
+
+        public static void TestCreateBuilding()
+        {
+
+        }
+
+        public static void TestCreateBelt()
+        {
+
+        }
+
+        public static void TestCreateSorter()
         {
 
         }

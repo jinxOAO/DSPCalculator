@@ -143,6 +143,7 @@ namespace DSPCalculator.UI
 
         public bool isLargeWindow;
         public float targetVerticalPosition; // 主内容ScrollRect需要移动到的位置
+        public bool ShiftState;
 
         /// <summary>
         /// 创建新窗口
@@ -970,6 +971,7 @@ namespace DSPCalculator.UI
 
                 }
                 bool isMoveing = targetVerticalPosition >= 0;
+                ShiftState = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
                 for (int i = 0; i < uiItemNodes.Count; i++)
                 {
                     uiItemNodes[i].OnUpdate(isMoveing);

@@ -140,6 +140,27 @@ namespace DSPCalculator.UI
             }
         }
 
+        public static UICalcWindow OpenOne(bool forceNewWindow, float offsetX, float offsetY)
+        {
+            UIPauseBarPatcher.Init();
+
+            if (lastClosedWindow != null && !forceNewWindow)
+            {
+                lastClosedWindow.OpenWindow();
+                Vector3 oriPos = lastClosedWindow.windowObj.transform.localPosition;
+                lastClosedWindow.windowObj.transform.localPosition = new Vector3(oriPos.x + offsetX, oriPos.y + offsetY, oriPos.z);
+                return lastClosedWindow;
+            }
+            else
+            {
+                UICalcWindow window = new UICalcWindow(windows.Count);
+                windows.Add(window);
+                Vector3 oriPos = window.windowObj.transform.localPosition;
+                window.windowObj.transform.localPosition = new Vector3(oriPos.x + offsetX, oriPos.y + offsetY, oriPos.z);
+                return window;
+            }
+        }
+
         public static void CloseTopWindow()
         {
             if (windows != null)

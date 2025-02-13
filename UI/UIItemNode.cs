@@ -1,6 +1,7 @@
 ﻿using CommonAPI;
 using DSPCalculator.Compatibility;
 using DSPCalculator.Logic;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,6 +40,7 @@ namespace DSPCalculator.UI
         public GameObject assemblerCountTextObj; // 生产机器数量Obj
         public Text assemblerCountText; // 生产机器数量 
         public GameObject IASpecializationIconGroup; // 星际组装厂切换特化类型的图标按钮的父级Obj
+        public GameObject CalcInNewWinIconObj; // 视为原矿按钮右上角在新窗口中计算的图标
 
         public GameObject recipeGroupObj; // 主要配方的显示
         // public GameObject clearRecipePreferenceButtonObj; // 用于清除特定配方设定的按钮
@@ -351,6 +353,25 @@ namespace DSPCalculator.UI
                     Navigation nvg = new Navigation();
                     nvg.mode = Navigation.Mode.None;
                     treatAsOreButtonObj.GetComponent<Button>().navigation = nvg;
+                    // 视为原矿按钮右上角的新窗口计算图标
+                    CalcInNewWinIconObj = new GameObject("calc-sep-icon");
+                    CalcInNewWinIconObj.transform.SetParent(treatAsOreButtonObj.transform, false);
+                    CalcInNewWinIconObj.transform.localScale = Vector3.one;
+                    Image CINWIcon = CalcInNewWinIconObj.AddComponent<Image>();
+                    CINWIcon.sprite = UICalcWindow.arrowInBoxSprite;
+                    CINWIcon.material = treatAsOreButtonObj.GetComponent<Image>().material;
+                    CalcInNewWinIconObj.GetComponent<RectTransform>().sizeDelta = new Vector2(16, 16);
+                    CalcInNewWinIconObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(10, 10, 0);
+                    UIButton.Transition uibtnTrans = new UIButton.Transition();
+                    UIButton.Transition oriTrans = treatAsOreButtonObj.GetComponent<UIButton>().transitions[0];
+                    uibtnTrans.target = CINWIcon;
+                    uibtnTrans.normalColor = new Color(0.4f, 0.4f, 0.7f, 1);
+                    uibtnTrans.pressedColor = new Color(0.4f, 0.4f, 0.7f, 1);
+                    uibtnTrans.mouseoverColor = new Color(0.5f, 0.5f, 0.8f, 1);
+                    uibtnTrans.mouseoverSize = 1f;
+                    uibtnTrans.damp = oriTrans.damp;
+                    
+                    treatAsOreButtonObj.GetComponent<UIButton>().transitions = treatAsOreButtonObj.GetComponent<UIButton>().transitions.AddItem(uibtnTrans).ToArray();
 
                     // 生成配方显示
                     recipeGroupObj = new GameObject();
@@ -609,6 +630,11 @@ namespace DSPCalculator.UI
                     }
                 }
             }
+
+            if (parentCalcWindow.ShiftState && CalcInNewWinIconObj != null && !CalcInNewWinIconObj.activeSelf)
+                CalcInNewWinIconObj.SetActive(true);
+            else if (!parentCalcWindow.ShiftState && CalcInNewWinIconObj != null && CalcInNewWinIconObj.activeSelf)
+                CalcInNewWinIconObj.SetActive(false);
         }
 
         public void RefreshAssemblerDisplay(bool refreshGlobal = true)
@@ -1034,7 +1060,7 @@ namespace DSPCalculator.UI
 
         public void CalcInNewWindow(bool autoFold = false)
         {
-            UICalcWindow calcWindow = WindowsManager.OpenOne(true);
+            UICalcWindow calcWindow = WindowsManager.OpenOne(true, 1000, 0);
             int itemId = itemNode.itemId;
             long requiredSpeed = (long)Math.Ceiling(itemNode.satisfiedSpeed);
 
