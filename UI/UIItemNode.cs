@@ -1,4 +1,5 @@
 ﻿using CommonAPI;
+using DSPCalculator.BP;
 using DSPCalculator.Compatibility;
 using DSPCalculator.Logic;
 using HarmonyLib;
@@ -30,6 +31,7 @@ namespace DSPCalculator.UI
         public int ID;
         public UICalcWindow parentCalcWindow;
         public ItemNode itemNode;
+        public BpProcessor bpProcessor;
 
         public Text outputText;
         public GameObject overflowNoteTextObj; // 溢出提示文本
@@ -48,11 +50,13 @@ namespace DSPCalculator.UI
         public Dictionary<int, UIButton> assemblerUIButtons;
         public Dictionary<int, UIButton> proliferatorUsedButtons; // 这里的key是incLevel
         public List<UIButton> IASpecUIButtons;
+        public UIButton genBpUIBtn0;
 
         public GameObject incToggleObj;
         public Text incText;
 
         public Image cbFinishedMark;
+        public GameObject GenBpButtonObj; // 生成蓝图按钮
 
         public UIItemNode(ItemNode node, UICalcWindow calcWindow) 
         {
@@ -84,12 +88,14 @@ namespace DSPCalculator.UI
             backgroundImg.color = backgroundImageColor;
             backObj.GetComponent<RectTransform>().sizeDelta = new Vector2(UICalcWindow.cellWidth - UICalcWindow.cellDistance, UICalcWindow.cellHeight - UICalcWindow.cellDistance/2);
             
-            // 设置图标
+            // 产物图标
             GameObject iconObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
             iconObj.name = "icon";
             iconObj.transform.SetParent(obj.transform, false);
             iconObj.transform.localScale = Vector3.one;
             iconObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(20, 0, 0);
+            if(BP.BpProcessor.enabled)
+                iconObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(35, 0, 0);
 
             // 产出速度文本
             GameObject outputSpeedTextObj = GameObject.Instantiate(UICalcWindow.TextWithUITip);
@@ -115,6 +121,8 @@ namespace DSPCalculator.UI
             overflowNoteTextObj.name = "overflow-note";
             overflowNoteTextObj.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 0.5f);
             overflowNoteTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(40, -25, 0);
+            if (BP.BpProcessor.enabled) 
+                overflowNoteTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(55, -25, 0);
             overflowNoteTextObj.GetComponent<Text>().text = "产出过量标签".Translate();
             overflowNoteTextObj.GetComponent<Text>().color = UICalcWindow.TextWarningColor;
             overflowNoteTextObj.GetComponent<Text>().alignment = TextAnchor.MiddleCenter;
@@ -157,7 +165,7 @@ namespace DSPCalculator.UI
                 }
                 
 
-                if(itemNode.satisfiedSpeed - itemNode.needSpeed > 0.001f) // 说明有溢出
+                if(itemNode.satisfiedSpeed - itemNode.needSpeed > 0.001f && parentCalcWindow.solution.CanShowOverflow(itemId)) // 说明有溢出
                 {
                     overflowNoteTextObj.SetActive(true); // 溢出提示要显示出来
                     if (speedDetails.Length > 0)
@@ -386,7 +394,7 @@ namespace DSPCalculator.UI
                     int posXDelta = 40;
                     int iconSize = 40;
                     int totalCount = recipeProto.Results.Length + recipeProto.Items.Length;
-                    if(totalCount >= 7) // 过长配方，图表变小
+                    if(totalCount >= 7) // 过长配方，图标变小
                     {
                         posXDelta = 32;
                         iconSize = 32;
@@ -508,6 +516,7 @@ namespace DSPCalculator.UI
                         proliferatorUsedButtons[incLevel].tips.itemId = proliferatorItemId;
                     }
 
+                    // 标记为已完成按钮
                     GameObject finishedMarkObj = GameObject.Instantiate(UICalcWindow.checkBoxObj, obj.transform);
                     finishedMarkObj.name = "finished-mark";
                     cbFinishedMark = finishedMarkObj.GetComponent<Image>();
@@ -517,7 +526,65 @@ namespace DSPCalculator.UI
                     finishedMarkObj.GetComponent<UIButton>().tips.tipTitle = "标记为已完成".Translate();
                     finishedMarkObj.GetComponent<UIButton>().tips.delay = 0.3f;
                     finishedMarkObj.GetComponent<UIButton>().tips.corner = 3;
-                
+
+                    // 生成蓝图按钮，生成带物流塔或不带的
+                    if (BP.BpProcessor.enabled)
+                    {
+                        // 按钮0，生成不带物流塔的
+                        GameObject genBp_0_Obj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
+                        GenBpButtonObj = genBp_0_Obj;
+                        genBp_0_Obj.name = "gen-bp0";
+                        genBp_0_Obj.transform.SetParent(obj.transform, false);
+                        genBp_0_Obj.transform.localScale = Vector3.one;
+                        genBp_0_Obj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(12, 0, 0);
+                        genBp_0_Obj.GetComponent<RectTransform>().sizeDelta = new Vector2(15, 15f);
+                        genBp_0_Obj.GetComponent<Image>().sprite = UICalcWindow.blueprintIconSprite;
+                        genBp_0_Obj.GetComponent<Button>().onClick.AddListener(() => { GenerateBPAndPaste(false); });
+                        genBpUIBtn0 = genBp_0_Obj.GetComponent<UIButton>();
+                        genBp_0_Obj.GetComponent<UIButton>().tips.tipTitle = "生成蓝图0标题calc".Translate();
+                        // genBp_0_Obj.GetComponent<UIButton>().tips.tipText = GenBPTipText(); // 这里不要加TipText，因为还没有初始化bpProcessor
+                        genBp_0_Obj.GetComponent<UIButton>().tips.corner = 3;
+                        genBp_0_Obj.GetComponent<UIButton>().tips.width = 270;
+                        Navigation nvg_gbp0 = new Navigation();
+                        nvg_gbp0.mode = Navigation.Mode.None;
+                        genBp_0_Obj.GetComponent<Button>().navigation = nvg_gbp0;
+
+                        //// 按钮1 生成带物流塔的
+                        //GameObject genBp_1_Obj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
+                        //genBp_1_Obj.name = "gen-bp1";
+                        //genBp_1_Obj.transform.SetParent(obj.transform, false);
+                        //genBp_1_Obj.transform.localScale = Vector3.one;
+                        //genBp_1_Obj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(12, -22, 0);
+                        //genBp_1_Obj.GetComponent<RectTransform>().sizeDelta = new Vector2(15, 15f);
+                        //genBp_1_Obj.GetComponent<Image>().sprite = UICalcWindow.blueprintIconSprite;
+                        //genBp_1_Obj.GetComponent<Button>().onClick.AddListener(() => { GenerateBPAndPaste(true); });
+                        //genBp_1_Obj.GetComponent<UIButton>().tips.tipTitle = "生成蓝图1标题calc".Translate();
+                        //genBp_1_Obj.GetComponent<UIButton>().tips.tipText = "生成蓝图1说明calc".Translate();
+                        //genBp_1_Obj.GetComponent<UIButton>().tips.corner = 3;
+                        //genBp_1_Obj.GetComponent<UIButton>().tips.width = 200;
+                        //Navigation nvg_gbp1 = new Navigation();
+                        //nvg_gbp1.mode = Navigation.Mode.None;
+                        //genBp_1_Obj.GetComponent<Button>().navigation = nvg_gbp1;
+                        //// 右下角额外图标
+                        //GameObject genBp_PLS_Obj = new GameObject("pls-icon");
+                        //genBp_PLS_Obj.transform.SetParent(genBp_1_Obj.transform, false);
+                        //genBp_PLS_Obj.transform.localScale = Vector3.one;
+                        //Image PLSIcon = genBp_PLS_Obj.AddComponent<Image>();
+                        //PLSIcon.sprite = UICalcWindow.LSWhiteSprite;
+                        //PLSIcon.material = genBp_1_Obj.GetComponent<Image>().material;
+                        //genBp_PLS_Obj.GetComponent<RectTransform>().sizeDelta = new Vector2(15, 15);
+                        //genBp_PLS_Obj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(5, -5, 0);
+                        //UIButton.Transition uibtnTrans_bpgen1 = new UIButton.Transition();
+                        //UIButton.Transition oriTrans_bpgen1 = genBp_1_Obj.GetComponent<UIButton>().transitions[0];
+                        //uibtnTrans_bpgen1.target = PLSIcon;
+                        //uibtnTrans_bpgen1.normalColor = new Color(0, 0, 0, 0.7f);
+                        //uibtnTrans_bpgen1.pressedColor = new Color(0, 0, 0, 0.7f);
+                        //uibtnTrans_bpgen1.mouseoverColor = new Color(0, 0, 0, 1f);
+                        //uibtnTrans_bpgen1.mouseoverSize = 1f;
+                        //uibtnTrans_bpgen1.damp = oriTrans.damp;
+
+                        //genBp_1_Obj.GetComponent<UIButton>().transitions = genBp_1_Obj.GetComponent<UIButton>().transitions.AddItem(uibtnTrans_bpgen1).ToArray();
+                    }
                     //if(CompatManager.MMS && itemNode.mainRecipe.IASpecializationType == 2 && itemNode.mainRecipe.GetSpeckBuffLevel() > 0) // 化工厂一定享受满增产
                     //{
                     //    int recipeId = itemNode.mainRecipe.ID;
@@ -608,6 +675,7 @@ namespace DSPCalculator.UI
             RefreshIncLevelDisplay();
             RefreshAssemblerDisplay(false);
             RefreshFinishedMark();
+            RefreshBpProcessor();
         }
 
         public void OnUpdate(bool isMoving)
@@ -778,10 +846,10 @@ namespace DSPCalculator.UI
                     preference.itemConfigs[itemNode.itemId] = new ItemConfig(itemNode.itemId);
                 int oriRecipeId = preference.itemConfigs[itemNode.itemId].recipeID;
                 preference.itemConfigs[itemNode.itemId].recipeID = recipeProto.ID;
-                if (!parentCalcWindow.solution.ReSolve()) // 如果未解决路径，则还原此次用户配置
+                if (!parentCalcWindow.solution.ReSolve(Convert.ToDouble(parentCalcWindow.speedInputObj.GetComponent<InputField>().text))) // 如果未解决路径，则还原此次用户配置
                 {
                     preference.itemConfigs[itemNode.itemId].recipeID = oriRecipeId;
-                    parentCalcWindow.solution.ReSolve();
+                    parentCalcWindow.solution.ReSolve(Convert.ToDouble(parentCalcWindow.speedInputObj.GetComponent<InputField>().text));
                 }
                 parentCalcWindow.RefreshAll();
             }
@@ -792,7 +860,7 @@ namespace DSPCalculator.UI
             UserPreference preference = parentCalcWindow.solution.userPreference;
             if (preference.itemConfigs.ContainsKey(itemNode.itemId))
                 preference.itemConfigs[itemNode.itemId].recipeID = 0;
-            parentCalcWindow.solution.ReSolve();
+            parentCalcWindow.solution.ReSolve(Convert.ToDouble(parentCalcWindow.speedInputObj.GetComponent<InputField>().text));
             parentCalcWindow.RefreshAll();
         }
 
@@ -810,7 +878,7 @@ namespace DSPCalculator.UI
                 CalcInNewWindow(true);
             }
 
-            parentCalcWindow.solution.ReSolve();
+            parentCalcWindow.solution.ReSolve(Convert.ToDouble(parentCalcWindow.speedInputObj.GetComponent<InputField>().text));
             parentCalcWindow.RefreshAll();
 
         }
@@ -1077,6 +1145,46 @@ namespace DSPCalculator.UI
 
             if (autoFold)
                 calcWindow.SwitchWindowSize();
+        }
+
+        public string GenBPTipText()
+        {
+            if (bpProcessor != null && bpProcessor.bpCountToSatisfy > 1)
+                return "生成蓝图0说明calc".Translate() + String.Format("蓝图补充说明".Translate(), bpProcessor.supportAssemblerCount, Utils.KMG(bpProcessor.bpCountToSatisfy));
+            else
+                return "生成蓝图0说明calc".Translate();
+        }
+
+        public void RefreshBpProcessor()
+        {
+            if (itemNode.mainRecipe != null && !itemNode.mainRecipe.useIA)
+            {
+                bpProcessor = new BpProcessor(itemNode.mainRecipe, parentCalcWindow.solution);
+                if (bpProcessor.canGenerate)
+                {
+                    genBpUIBtn0.tips.tipText = GenBPTipText();
+                    GenBpButtonObj.SetActive(true);
+                    return;
+                }
+            }
+
+            // 能到这里就说明无法生成蓝图
+            GenBpButtonObj.SetActive(false);
+        }
+
+        public void GenerateBPAndPaste(bool withPLS)
+        {
+            if(bpProcessor !=null)
+            {
+                bool genPLS = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                if (bpProcessor.GenerateBlueprint(genPLS))
+                {
+                    // 暂时关闭窗口以便粘贴
+                    parentCalcWindow.CloseWindow();
+                    WindowsManager.temporaryCloseBecausePasteBp = true;
+                    GameMain.mainPlayer.controller.OpenBlueprintPasteMode(bpProcessor.blueprintData, GameConfig.blueprintFolder + "DSPCalcBPTemp.txt");
+                }
+            }
         }
     }
 }

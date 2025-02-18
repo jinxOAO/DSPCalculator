@@ -87,6 +87,54 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("无特化", "No Specialization", "无特化", "No Specialization");
             LocalizationModule.RegisterTranslation("组装厂输入", "Write", "填写", "Write");
 
+
+            LocalizationModule.RegisterTranslation("右侧面板0", "Main Info", "主要信息", "Main Info");
+            LocalizationModule.RegisterTranslation("右侧面板1", "Blueprint", "蓝图设置", "Blueprint");
+
+
+            LocalizationModule.RegisterTranslation("生成蓝图0标题calc", "Sorter Preference", "生成蓝图", "Sorter Preference");
+            LocalizationModule.RegisterTranslation("生成蓝图0说明calc", "Generate a blueprint for this production line and enter the blueprint paste mode.\nHold <color=#FD965EC0>Shift</color> to generate a blueprint <color=#FD965EC0>with PLS</color>.\nOther configurations can be changed in the blueprint page on the right panel. The blueprint does not include power distribution facilities.", "生成此产线的蓝图，并进入粘贴蓝图模式。\n按住<color=#FD965EC0>Shift</color>则生成<color=#FD965EC0>带有行星内物流塔</color>的蓝图。\n其他配置可在右侧蓝图设置页面中更改。蓝图无法生成配电设施。", "Generate a blueprint for this production line and start the blueprint mode mode.\nHold <color=#FD965EC0>Shift</color> to generate a blueprint <color=#FD965EC0>with PLS</color>.\nOther configurations can be changed in the blueprint page on the right panel. The blueprint does not include power distribution facilities.");
+
+
+            LocalizationModule.RegisterTranslation("蓝图补充说明", "\n\nDue to tech or conveyor belt speed limitations, one blueprint can only support up to <color=#FD965EC0>{0}</color> production facilities, so you need to paste a total of <color=#FD965EC0>{1}</color> blueprints.", "\n\n由于科技或传送带最大速度限制，单个蓝图最多支持<color=#FD965EC0>{0}</color>个生产设施，因此你需要粘贴共<color=#FD965EC0>{1}</color>次蓝图。", "\n\nDue to tech or conveyor belt speed limitations, one blueprint can only support up to <color=#FD965EC0>{0}</color> production facilities, so you need to paste a total of <color=#FD965EC0>{1}</color> blueprints.");
+
+            LocalizationModule.RegisterTranslation("蓝图行数", "Number of Rows", "优先行数", "Number of Rows");
+            LocalizationModule.RegisterTranslation("蓝图行数单行", "Single", "单行", "Single");
+            LocalizationModule.RegisterTranslation("蓝图行数双行", "Double", "双行", "Double");
+            //LocalizationModule.RegisterTranslation("蓝图行数自动", "Auto", "自动", "Auto");
+            LocalizationModule.RegisterTranslation("生成喷涂机", "Spray Resources", "喷涂原材料", "Spray Resources");
+            LocalizationModule.RegisterTranslation("生成喷涂机自动", "Auto", "自动", "Auto");
+            LocalizationModule.RegisterTranslation("生成喷涂机自动说明", "If proliferator is used in this recipe, spraying coaters will be generated for all input material belts in the blueprint, otherwise no spraying coater will be generated.", "如果配方使用了增产剂，则在蓝图中为所有原材料的传送带生成喷涂机，否则不生成喷涂机。", "If proliferator is used in this recipe, spraying coaters will be generated for all input material belts in the blueprint, otherwise no spraying coater will be generated.");
+            LocalizationModule.RegisterTranslation("生成喷涂机总是", "Always", "总是", "Always");
+            LocalizationModule.RegisterTranslation("生成喷涂机从不", "Never", "从不", "Never");
+
+            LocalizationModule.RegisterTranslation("生成产物喷涂机", "Spray Products", "喷涂产物", "Spray Products");
+
+            LocalizationModule.RegisterTranslation("物流塔提供增产剂", "PLS provide proliferators", "物流塔提供增产剂", "PLS provide proliferators");
+            LocalizationModule.RegisterTranslation("物流塔提供增产剂是", "Yes", "是", "Yes");
+            LocalizationModule.RegisterTranslation("物流塔提供增产剂否", "No", "否", "No");
+
+            LocalizationModule.RegisterTranslation("首选传送带", "Belt Preference", "首选传送带", "Belt Preference");
+            LocalizationModule.RegisterTranslation("首选传送带最高级", "Highest", "最高", "Highest");
+            LocalizationModule.RegisterTranslation("首选传送带最高级说明", "Only use the highest level conveyor belt.", "只使用最高级传送带。", "Only use the highest level conveyor belt.");
+            LocalizationModule.RegisterTranslation("首选传送带最便宜", "Cheapest", "低价", "Cheapest");
+            LocalizationModule.RegisterTranslation("首选传送带最便宜说明", "On the premise of ensuring compliance with the production line, use the lowest level conveyor belt.", "在保证满足产线的情况下，使用最低级的传送带。", "On the premise of ensuring compliance with the production line, use the lowest level conveyor belt.");
+            LocalizationModule.RegisterTranslation("传送带科技限制", "Belt Tech Limit", "传送带科技限制", "Belt Tech Limit");
+            LocalizationModule.RegisterTranslation("传送带科技限制无限制", "No Limit", "无限制", "No Limit");
+            LocalizationModule.RegisterTranslation("传送带科技限制当前科技", "Current Tech", "当前科技", "Current Tech");
+
+            LocalizationModule.RegisterTranslation("首选分拣器", "Sorter Preference", "首选分拣器", "Sorter Preference");
+            LocalizationModule.RegisterTranslation("首选分拣器最高级", "Highest", "最高", "Highest");
+            LocalizationModule.RegisterTranslation("首选分拣器最高级说明", "Only use the highest level sorter.", "只使用最高级分拣器。", "Only use the highest level sorter.");
+            LocalizationModule.RegisterTranslation("首选分拣器最便宜", "Cheapest", "低价", "Cheapest");
+            LocalizationModule.RegisterTranslation("首选分拣器最便宜说明", "On the premise of ensuring compliance with the production line, use the lowest level sorter.", "在保证满足产线的情况下，使用最低级的传送带。", "On the premise of ensuring compliance with the production line, use the lowest level sorter.");
+            LocalizationModule.RegisterTranslation("分拣器科技限制", "Sorter Tech Limit", "分拣器科技限制", "Sorter Tech Limit");
+            LocalizationModule.RegisterTranslation("分拣器科技限制无限制", "No Limit", "无限制", "No Limit");
+            LocalizationModule.RegisterTranslation("分拣器科技限制当前科技", "Current Tech", "当前科技", "Current Tech");
+
+            LocalizationModule.RegisterTranslation("传送带堆叠", "Item Stack", "物料堆叠", "Item Stack");
+            LocalizationModule.RegisterTranslation("传送带堆叠当前科技", "Current Tech", "当前科技", "Current Tech");
+
         }
     }
 }

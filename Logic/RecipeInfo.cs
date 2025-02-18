@@ -322,6 +322,21 @@ namespace DSPCalculator.Logic
             return 0;
         }
 
+        public double GetOutputSpeedOriProto(int index, double changedCount) // 不用recipeNorm
+        {
+            int itemId = recipeNorm.oriProto.Results[index];
+            double factor = 1.0 * bonusFactor;
+            // 劣质加工
+            if (userPreference.inferior && itemId == 1501 && recipeNorm.oriProto.Results[0] == 1501 && !useIA)
+                factor = factor * (recipeNorm.oriProto.ResultCounts[0] + 1) / recipeNorm.oriProto.ResultCounts[0];
+
+            if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
+                return factor * changedCount * recipeNorm.oriProto.ResultCounts[index] / recipeNorm.time * (1.0 + Utils.GetIncMilli(incLevel, userPreference) + CalcOutputDiracInc(itemId) + bonusInc);
+            else
+                return factor * changedCount * recipeNorm.oriProto.ResultCounts[index] / recipeNorm.time * (1.0 + CalcOutputDiracInc(itemId) + bonusInc);
+
+        }
+
         public double GetInputSpeedByChangedCount(int itemId, double changedCount)
         {
             
@@ -362,7 +377,7 @@ namespace DSPCalculator.Logic
                     returnIndex = 2;
                 else if (rocketId == 9491 || rocketId == 9492 || rocketId == 9510 || rocketId == 1503)
                     returnIndex = 1;
-                if(returnIndex > 0 && returnIndex < recipeNorm.resources.Length && productIndices.ContainsKey(itemId) && returnIndex == resourceIndices[itemId])
+                if(returnIndex > 0 && returnIndex < recipeNorm.resources.Length && resourceIndices.ContainsKey(itemId) && returnIndex == resourceIndices[itemId])
                 {
                     double output = 0;
                     // 这里不能用getoutput方法，因为也许有的第一产物不是直接的净产物，所以显然下面用的recipe也要是oriProto而不是norm里面的
@@ -373,10 +388,77 @@ namespace DSPCalculator.Logic
                     result -= 2 * output;
                 }
             }
-            if(result < 0)
+            if (result < 0 && changedCount >= 0)
+            {
+                Debug.LogWarning($"GetInputSpeedByChangedCount({itemId}, {changedCount})试图在changedCount非负时，返回负数");
                 result = 0;
+            }
+            else if (result > 0 && changedCount < 0)
+            {
+                Debug.LogWarning($"GetInputSpeedByChangedCount({itemId}, {changedCount})试图在changedCount非正时，返回正数");
+                result = 0;
+            }
+
             return result;
         }
+
+        public double GetInputSpeedOriProto(int index, double changedCount)
+        {
+            int itemId = recipeNorm.oriProto.Items[index];
+            double result = 0;
+            result = changedCount * recipeNorm.oriProto.ItemCounts[index] / recipeNorm.time;
+
+            // 判断蓝buff
+            bool blueBuffFlag = userPreference.bluebuff;
+            blueBuffFlag = blueBuffFlag && (recipeNorm.type == (int)ERecipeType.Assemble || recipeNorm.type == 9 || recipeNorm.type == 10 || recipeNorm.type == 12 || useIA);
+            blueBuffFlag = blueBuffFlag && recipeNorm.resources.Length > 1 && recipeNorm.products[0] != 1803 && recipeNorm.products[0] != 6006;
+            blueBuffFlag = blueBuffFlag && recipeNorm.resources[0] == itemId;
+            if (blueBuffFlag)
+            {
+                double output = 0;
+                // 这里不能用getoutput方法，因为也许有的第一产物不是直接的净产物，所以显然下面用的recipe也要是oriProto而不是norm里面的
+                if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
+                    output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time * (1.0 + Utils.GetIncMilli(incLevel, userPreference) + bonusInc);
+                else
+                    output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time;
+                result -= output;
+            }
+
+            // 判断能量迸发
+            bool energyBurstFlag = userPreference.energyBurst;
+            int returnIndex = -1;
+            int rocketId = recipeNorm.products[0];
+            if (energyBurstFlag)
+            {
+                if (rocketId >= 9488 && rocketId <= 9490 || rocketId == 1503 && CompatManager.GB)
+                    returnIndex = 2;
+                else if (rocketId == 9491 || rocketId == 9492 || rocketId == 9510 || rocketId == 1503)
+                    returnIndex = 1;
+                if (returnIndex > 0 && returnIndex < recipeNorm.resources.Length && resourceIndices.ContainsKey(itemId) && returnIndex == resourceIndices[itemId])
+                {
+                    double output = 0;
+                    // 这里不能用getoutput方法，因为也许有的第一产物不是直接的净产物，所以显然下面用的recipe也要是oriProto而不是norm里面的
+                    if (isInc && incLevel >= 0 && incLevel <= Cargo.incTableMilli.Length)
+                        output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time * (1.0 + Utils.GetIncMilli(incLevel, userPreference) + bonusInc);
+                    else
+                        output = changedCount * recipeNorm.oriProto.ResultCounts[0] / recipeNorm.time;
+                    result -= 2 * output;
+                }
+            }
+            if (result < 0 && changedCount >= 0)
+            {
+                Debug.LogWarning($"GetInputSpeedByChangedCount({itemId}, {changedCount})试图在changedCount非负时，返回负数");
+                result = 0;
+            }
+            else if (result > 0 && changedCount < 0)
+            {
+                Debug.LogWarning($"GetInputSpeedByChangedCount({itemId}, {changedCount})试图在changedCount非正时，返回正数");
+                result = 0;
+            }
+
+            return result;
+        }
+
 
         public double GetOutputSpeedByItemId(int itemId)
         {

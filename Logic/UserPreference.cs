@@ -32,6 +32,16 @@ namespace DSPCalculator.Logic
         public bool roundUpAssemgblerNum; // 生产设施数量显示是否向上取整
         public bool solveProliferators; // 是否将增产剂作为生产线一并需要产出的物品，默认为否，即外部输入增产剂成品
 
+        public int bpRowCount;
+        public int bpResourceCoater;
+        public bool bpProductCoater;
+        public bool bpStationProlifSlot;
+        public bool bpBeltHighest;
+        public bool bpBeltTechLimit;
+        public bool bpSorterHighest;
+        public bool bpSorterTechLimit;
+        public int bpStackSetting;
+
         public bool showMixBeltInfo; // 是否显示混带数据
 
 
@@ -51,11 +61,21 @@ namespace DSPCalculator.Logic
             roundUpAssemgblerNum = DSPCalculatorPlugin.RoundUpAssemblerNum.Value;
             solveProliferators = false;
             showMixBeltInfo = false;
-            incMilliOverride = 0;
-            accMilliOverride = 0;
+            incMilliOverride = 0.25;
+            accMilliOverride = 1;
             globalAssemblerIdByType = new Dictionary<int, int>();
             globalUseIA = false;
             globalIAType = 0;
+
+            bpRowCount = 2;
+            bpResourceCoater = 0;
+            bpProductCoater = false;
+            bpStationProlifSlot = true;
+            bpBeltHighest = false;
+            bpBeltTechLimit = true;
+            bpSorterHighest = false;
+            bpSorterTechLimit = true;
+            bpStackSetting = 0;
         }
 
         public void ClearWhenChangeTarget()
@@ -83,6 +103,46 @@ namespace DSPCalculator.Logic
             copied.accMilliOverride = accMilliOverride;
             copied.globalAssemblerIdByType = globalAssemblerIdByType;
             return copied;
+        }
+
+        public int bpStack
+        {
+            get
+            {
+                if (bpStackSetting == 0)
+                {
+                    if (GameMain.history.TechUnlocked(3803))
+                        return 4;
+                    else if (GameMain.history.TechUnlocked(3802))
+                        return 3;
+                    else if (GameMain.history.TechUnlocked(3801))
+                        return 2;
+                    else 
+                        return 1;
+                }
+                else
+                    return bpStackSetting;
+            }
+        }
+
+        public int bpSorterMk4OutputStack
+        {
+            get
+            {
+                if (bpStackSetting == 0)
+                {
+                    if (GameMain.history.TechUnlocked(3315))
+                        return 4;
+                    else if (GameMain.history.TechUnlocked(3313))
+                        return 3;
+                    else if (GameMain.history.TechUnlocked(3311))
+                        return 2;
+                    else
+                        return 1;
+                }
+                else
+                    return bpStackSetting;
+            }
         }
 
         //public void Clear()

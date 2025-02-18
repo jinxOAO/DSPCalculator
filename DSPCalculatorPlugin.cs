@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Configuration;
+using BepInEx.Logging;
 using CommonAPI;
 using CommonAPI.Systems;
 using CommonAPI.Systems.ModLocalization;
@@ -29,7 +30,7 @@ namespace DSPCalculator
         public const string VERSION = "0.2.1";
 
         // ---------------------------------------------------------------------------
-        public static bool developerMode = false; //           发布前修改             |
+        public static bool developerMode = true; //           发布前修改             |
         // ---------------------------------------------------------------------------
 
         public static ConfigEntry<KeyCode> OpenWindowHotKey;
@@ -45,11 +46,12 @@ namespace DSPCalculator
         //public static ConfigEntry<bool> resourceNumberKMG; // 原材料、产物是否用使用最大千分位符号
         //public static ConfigEntry<int> resourceNumberDecimalPlaces; // 原材料、产物数量显示的小数位数，-1表示默认3位有效数字，正数表示恒定保留x位小数
 
-
+        public static ManualLogSource logger;
         public static bool showMixBeltCheckbox = false;
 
         public void Awake()
         {
+            logger = Logger;
             OpenWindowHotKey = Config.Bind<KeyCode>("config", "OpenWindowHotKey", KeyCode.Q, "打开计算器窗口的快捷键。HotKey to open calculator window.");
             SwitchWindowSizeHotKey = Config.Bind<KeyCode>("config", "SwitchWindowSizeHotKey", KeyCode.Tab, "将计算器窗口展开或缩小的快捷键。HotKey to fold or unfold calculator window.");
             OpenWindowModifier = Config.Bind<int>("config", "OpenWindowHKModifier", 0, "byte shift = 1, ctrl = 2, alt = 4");
@@ -61,7 +63,11 @@ namespace DSPCalculator
             Harmony.CreateAndPatchAll(typeof(DSPCalculatorPlugin));
             Harmony.CreateAndPatchAll(typeof(RecipePickerPatcher));
             Harmony.CreateAndPatchAll(typeof(UIHotkeySettingPatcher));
-            Harmony.CreateAndPatchAll(typeof(TestPatchers));
+            Harmony.CreateAndPatchAll(typeof(WindowsManager));
+            if (TestPatchers.enabled)
+            {
+                Harmony.CreateAndPatchAll(typeof(TestPatchers));
+            }
             Localizations.AddLocalizations();
         }
 
@@ -76,6 +82,10 @@ namespace DSPCalculator
             UIHotkeySettingPatcher.OnUpdate();
             WindowsManager.OnUpdate();
             UIPauseBarPatcher.OnUpdate();
+            if(TestPatchers.enabled && Input.GetKeyDown(KeyCode.K))
+            {
+                TestPatchers.TestCreateExample();
+            }
         }
 
 
@@ -85,6 +95,7 @@ namespace DSPCalculator
         public static void OnLoadGame()
         {
             CalcDB.TryInit();
+            BpDB.Init();
         }
 
         [HarmonyPrefix]

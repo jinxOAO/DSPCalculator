@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,7 @@ namespace DSPCalculator.UI
 
         public static Transform inGameWindows;
 
+        public static bool temporaryCloseBecausePasteBp = false; // 由于粘贴蓝图，而暂时关闭了计算器窗口，会在粘贴完成后（退出蓝图粘贴窗口时）自动打开
 
         /// <summary>
         /// mod加载时初始化
@@ -126,8 +128,9 @@ namespace DSPCalculator.UI
         public static UICalcWindow OpenOne(bool forceNewWindow = false)
         {
             UIPauseBarPatcher.Init();
+            temporaryCloseBecausePasteBp = false;
 
-            if(lastClosedWindow != null && !forceNewWindow)
+            if (lastClosedWindow != null && !forceNewWindow)
             {
                 lastClosedWindow.OpenWindow();
                 return lastClosedWindow;
@@ -143,6 +146,7 @@ namespace DSPCalculator.UI
         public static UICalcWindow OpenOne(bool forceNewWindow, float offsetX, float offsetY)
         {
             UIPauseBarPatcher.Init();
+            temporaryCloseBecausePasteBp = false;
 
             if (lastClosedWindow != null && !forceNewWindow)
             {
@@ -173,6 +177,17 @@ namespace DSPCalculator.UI
                         return;
                     }
                 }
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(UIBlueprintInspector), "_OnClose")]
+        public static void OnQuitBpPasteMode()
+        {
+            if(temporaryCloseBecausePasteBp)
+            {
+                OpenOne();
+                temporaryCloseBecausePasteBp = false;
             }
         }
     }

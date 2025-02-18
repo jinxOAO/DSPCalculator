@@ -1,14 +1,17 @@
-﻿using DSPCalculator.Logic;
+﻿using BepInEx.Logging;
+using DSPCalculator.Logic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace DSPCalculator
 {
     public static class Utils
     {
+        public static ManualLogSource logger { get { return DSPCalculatorPlugin.logger; } }
         public static string KMG(double num)
         {
             string tail = "";
@@ -139,6 +142,26 @@ namespace DSPCalculator
 
 
             return true;
+        }
+
+
+        public static string GetItemName(this int itemId)
+        {
+            ItemProto itemProto = LDB.items.Select(itemId);
+            if (itemProto != null)
+                return itemProto.name;
+            else
+                return "null";
+        }
+
+        public static string GetRecipeName(this int recipeId)
+        {
+
+            RecipeProto recipeProto = LDB.recipes.Select(recipeId);
+            if (recipeProto != null)
+                return recipeProto.name;
+            else
+                return "null";
         }
     }
 }

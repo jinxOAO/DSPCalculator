@@ -1,4 +1,5 @@
-﻿using DSPCalculator.UI;
+﻿using DSPCalculator.BP;
+using DSPCalculator.UI;
 using JetBrains.Annotations;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Factorization;
@@ -33,8 +34,13 @@ namespace DSPCalculator.Logic
 
         public Dictionary<int, double> proliferatorCount; // 用于存储所有增产剂的使用量（但目前不会链式求解增产剂）
         public Dictionary<int, double> proliferatorCountSelfSprayed; // 如果是自喷涂过的增产剂需求量
+
+        public bool tempNotShrinkRoot; // 在主产物首次发现溢出时(tempNotShrinkRoot为false)，直接暴力修改targetSpeed然后重新计算，修改后置tempNotShrinkRoot为true。
+
         public bool unsolved { get { return nodeStack.Count > 0; } }
 
+        public List<BpBeltInfo> beltsAvailable;
+        public List<BpSorterInfo> sortersAvailable;
 
         public SolutionTree() 
         {
@@ -47,6 +53,7 @@ namespace DSPCalculator.Logic
             userPreference = new UserPreference();
             targetSpeed = 3600;
             displaySpeedRatio = 1;
+            tempNotShrinkRoot = false;
         }
 
         public void ClearTree()
@@ -68,6 +75,7 @@ namespace DSPCalculator.Logic
             ClearTree();
             this.targetItem = targetItem;
             userPreference.ClearWhenChangeTarget();
+            tempNotShrinkRoot = false;
             return Solve();
         }
 
@@ -76,12 +84,36 @@ namespace DSPCalculator.Logic
             this.targetSpeed = targetSpeed;
             ClearTree();
             userPreference.ClearWhenChangeTarget();
+            tempNotShrinkRoot = false;
             return Solve();
         }
 
-        public bool ReSolve()
+        public bool SetTargetAndSolve(int targetItem, double targetSpeed)
         {
             ClearTree();
+            this.targetItem = targetItem;
+            this.targetSpeed = targetSpeed;
+            userPreference.ClearWhenChangeTarget();
+            tempNotShrinkRoot = false;
+            return Solve();
+        }
+
+        public bool ReSolve(double forceSpeed)
+        {
+            ClearTree();
+            if(forceSpeed > 0)
+            {
+                targetSpeed = forceSpeed;
+            }
+            tempNotShrinkRoot = false;
+            return Solve();
+        }
+
+        public bool ReSolveForRootShrinking(double newTargetSpeed)
+        {
+            ClearTree();
+            this.targetSpeed = newTargetSpeed;
+            tempNotShrinkRoot = true;
             return Solve();
         }
 
@@ -89,6 +121,7 @@ namespace DSPCalculator.Logic
         {
             if (targetItem > 0)
             {
+                RefreshBlueprintDicts(); // 根据userPreference生成后续节点蓝图生成所需的相关字典信息
 
                 // 如果需要计算增产剂生产线，还需要解决增产剂的路线
                 if(userPreference.solveProliferators)
@@ -108,7 +141,11 @@ namespace DSPCalculator.Logic
                 {
                     //TestLog();
                     CalcTree();
-                    RemoveOverflow();
+                    double recalcRatio = RemoveOverflow();
+                    if(recalcRatio>0)
+                    {
+                        return ReSolveForRootShrinking(targetSpeed * recalcRatio);
+                    }
                     CalcProliferator();
 
                     if(userPreference.solveProliferators) // 如果需要单独计算增产剂
@@ -421,16 +458,25 @@ namespace DSPCalculator.Logic
                 }
 
             }
+            //foreach (var item in itemNodes)
+            //{
+            //    Debug.Log($"item {LDB.items.Select(item.Value.itemId).name} have {item.Value.satisfiedSpeed} and need {item.Value.needSpeed}");
+            //}
         }
 
         /// <summary>
         /// 用于去除不必要的溢出量
         /// </summary>
-        public void RemoveOverflow(int proliferatorId = -1)
+        /// <param name="proliferatorId"></param>
+        /// <returns>正常返回0，如果返回了一个正数，则证明root产物有溢出，可以暴力将目标速度乘系数并重新计算，返回的就是这个系数</returns>
+        public double RemoveOverflow(int proliferatorId = -1)
         {
             Dictionary<int, ItemNode> visitingNodes = new Dictionary<int, ItemNode>(); // 用于排查环
             Dictionary<int, int> neverShrinkThisBecauseLoop = new Dictionary<int, int>(); // 一旦检测到环，将交叉点录入这个字典，并且不再检查
-
+            if(tempNotShrinkRoot) // 说明经过了一次暴力乘系数
+            {
+                root.needSpeed = root.satisfiedSpeed; // 那么将needSpeed修正
+            }
             //if (proliferatorId <= 0)
             //{
             //    ItemNode signRootNode = new ItemNode(root.itemId, root.needSpeed, this); // 专门用于路径成环过程的标志。
@@ -500,7 +546,7 @@ namespace DSPCalculator.Logic
                             {
                                 if (DSPCalculatorPlugin.developerMode)
                                 {
-                                    Debug.Log($"检测到溢出 id {itemId}, 溢出量{overflowSpeed / 60}/min");
+                                    Debug.Log($"检测到溢出 id {LDB.items.Select(itemId).name}, 溢出量{overflowSpeed}/min");
                                 }
 
                                 // 只判断生成此物品的主要配方可不可以被削减
@@ -555,6 +601,20 @@ namespace DSPCalculator.Logic
                                         // Debug.LogWarning($"在计算溢出配方{sharedRecipeInfo.ID}时不包含{productId}");
                                     }
                                 }
+                                if(minShrinkCount >= sharedRecipeInfo.count - 0.0001f) // 当前溢出的产物是主产物，且为了缩减溢出，会把主配方削减干净，那么禁止削减（因为这样相当于用的不是主配方了）
+                                {
+                                    minShrinkCount = 0;
+                                }
+                                if(root.itemId == itemId)
+                                {
+                                    if (!tempNotShrinkRoot)
+                                    {
+                                        double ratio = sharedNode.needSpeed / sharedNode.satisfiedSpeed;
+                                        // ReSolveForRootShrinking(targetSpeed * ratio);
+                                        return ratio;
+                                    }
+                                }
+
                                 if (minShrinkCount > 0.001f) // 如果有可削减的数量，进行处理
                                 {
                                     oriSignNode.SetUnsolvedCountByRecipe(sharedRecipeInfo.recipeNorm); // 此处只是设置一下unsolvedCount，这里不要用TryRecipe，可能扰乱正常solution
@@ -565,6 +625,7 @@ namespace DSPCalculator.Logic
                                     }
 
                                     double addedCount = -minShrinkCount;
+                                    sharedRecipeInfo.count += addedCount;
                                     foreach (var item in sharedRecipeInfo.productIndices) // 对所有该配方的产物进行削减，注意处理产物被视作原矿的情况（将不足部分补齐），因为当初产物如果是原矿，则无视了他到底移除不溢出、溢出多少
                                     {
                                         int productId = item.Key;
@@ -575,6 +636,10 @@ namespace DSPCalculator.Logic
                                             itemNodes[productId] = new ItemNode(productId, 0, this);
                                         }
                                         itemNodes[productId].satisfiedSpeed += addedSatisfiedSpeed;
+                                        if (DSPCalculatorPlugin.developerMode)
+                                        {
+                                            Debug.Log($"削减了 {LDB.items.Select(productId).name}, 削减量{addedSatisfiedSpeed}， 现在它satisfied{itemNodes[productId].satisfiedSpeed}");
+                                        }
                                         if (itemNodes[productId].satisfiedSpeed < itemNodes[productId].needSpeed)
                                         {
                                             if (itemNodes[productId].IsOre(userPreference))
@@ -594,9 +659,13 @@ namespace DSPCalculator.Logic
                                     foreach (var item in sharedRecipeInfo.resourceIndices)
                                     {
                                         int resourceId = item.Key;
-                                        double addedNeedSpeed = sharedRecipeInfo.GetInputSpeedByChangedCount(resourceId, addedCount);
+                                        double addedNeedSpeed = sharedRecipeInfo.GetInputSpeedByChangedCount(resourceId, addedCount); // 必须要双负，以防止GetInputSpeedByChangedCount不能返回负数
                                         itemNodes[resourceId].needSpeed += addedNeedSpeed; // 这个resourceId应该不可能不存在
 
+                                        if (DSPCalculatorPlugin.developerMode)
+                                        {
+                                            Debug.Log($"削减了 {LDB.items.Select(resourceId).name}, 削减量{addedNeedSpeed}， need{itemNodes[resourceId].needSpeed}");
+                                        }
                                         // 同时加入signNode最为子节点
                                         ItemNode signRelatedNode = new ItemNode(resourceId, 0, this);
                                         oriSignNode.AddChild(signRelatedNode);
@@ -636,7 +705,7 @@ namespace DSPCalculator.Logic
                     }
                 }
             }
-            
+            return 0;
         }
 
         public void CalcProliferator()
@@ -682,6 +751,23 @@ namespace DSPCalculator.Logic
         {
             displaySpeedRatio = ratio;
             // Refresh 一些显示？ 应该由调用此方法的UI执行！
+        }
+
+        public void RefreshBlueprintDicts()
+        {
+            beltsAvailable = new List<BpBeltInfo>();
+            sortersAvailable = new List<BpSorterInfo>();
+
+            for (int i = 0; i < BpDB.beltsAscending.Count; i++)
+            {
+                if (GameMain.history.ItemUnlocked(BpDB.beltsAscending[i].itemId) || !userPreference.bpBeltTechLimit || i == 0) // 第一个最慢的带子总被视为可用的
+                    beltsAvailable.Add(BpDB.beltsAscending[i]);
+            }
+            for (int i = 0; i < BpDB.sortersAscending.Count; i++)
+            {
+                if (GameMain.history.ItemUnlocked(BpDB.sortersAscending[i].itemId) || !userPreference.bpSorterTechLimit)
+                    sortersAvailable.Add(BpDB.sortersAscending[i]);
+            }
         }
 
         public ItemNode Pop()
@@ -817,10 +903,27 @@ namespace DSPCalculator.Logic
                 }
             }
             // 再次执行一遍去除溢出任务
-            RemoveOverflow();
+            double recalcRatio = RemoveOverflow();
+            if (recalcRatio > 0)
+            {
+                return ReSolveForRootShrinking(targetSpeed * recalcRatio);
+            }
 
             return true;
 
+        }
+
+        /// <summary>
+        /// 由于目标产物暴力乘了系数而进行的免溢出计算，则这个目标产物不视为溢出
+        /// </summary>
+        /// <param name="itemId"></param>
+        /// <returns></returns>
+        public bool CanShowOverflow(int itemId)
+        {
+            if (itemId == root.itemId && tempNotShrinkRoot)
+                return false;
+            else
+                return true;
         }
 
         public void TestLog()

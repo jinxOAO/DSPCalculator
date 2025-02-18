@@ -267,7 +267,7 @@ namespace DSPCalculator.UI
             preference.itemConfigs[itemNode.itemId].forceNotOre = true;
             preference.itemConfigs[itemNode.itemId].consideredAsOre = false;
 
-            parentCalcWindow.solution.ReSolve();
+            parentCalcWindow.solution.ReSolve(Convert.ToDouble(parentCalcWindow.speedInputObj.GetComponent<InputField>().text));
             parentCalcWindow.RefreshAll();
         }
 

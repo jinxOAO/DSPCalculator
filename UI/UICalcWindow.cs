@@ -1,4 +1,5 @@
-﻿using DSPCalculator.Compatibility;
+﻿using CommonAPI;
+using DSPCalculator.Compatibility;
 using DSPCalculator.Logic;
 using NGPT;
 using System;
@@ -47,11 +48,13 @@ namespace DSPCalculator.UI
         public static float animationSpeed = 150;
         public static int[] IASpecializationIconItemMap = new int[] { 1201, 1107, 1116, -74, 1305, 1606 }; // 代表特化的图标，对应的物品ID
         public static int IAIconItemId = 9493; // 9493是巨构里面用来表示巨构图标的隐藏物品，原本是接收站用途
+        public static int PLS = 2103;
         // "ui/textures/sprites/icons/eraser-icon" 橡皮擦
         // "ui/textures/sprites/icons/minus-32" 粗短横线
 
         public bool isTopAndActive;
         public bool nextFrameRecalc;
+        public int sideInfoPanelIndex;
 
         // 一些全局prefab
         public static GameObject recipeObj;
@@ -81,6 +84,11 @@ namespace DSPCalculator.UI
         public static Sprite checkboxOffSprite = null;
         public static Sprite arrowInBoxSprite = null;
         public static Sprite squarePlusSprite = null;
+        public static Sprite blueprintBookSprite = null; // 200x220比例
+        public static Sprite PLSIconSprite = null;
+        public static Sprite LSWhiteSprite = null;
+        public static Sprite blueprintIconSprite = null;// 还有其他的比如traficc-icon  transport-icon可以加入
+        public static Sprite newBPFloderSprite = null; // 18x18的大小
 
         // UI元素
         public GameObject windowObj;
@@ -114,6 +122,8 @@ namespace DSPCalculator.UI
         public GameObject assemblersDemandsGroupObj; // 显示所有工厂数量的group
         public List<GameObject> assemblersDemandObjs; // 所有工厂需求数量的obj列表
         public Image IABtnSpecializationImg; // 星际组装厂按钮特化图标
+        public List<GameObject> sideInfoPanelObjs; // 右侧panel不同页的面板obj
+        public List<UIButton> sideInfoPanelSwitchUIBtns; // 右侧panel切换按钮
 
         public Image cbBluebuff;
         public Image cbEnergyBurst;
@@ -160,6 +170,8 @@ namespace DSPCalculator.UI
             assemblersDemandObjs = new List<GameObject>();
             uiItemNodeOrders = new Dictionary<int, int>();
             uiItemSimplesByItemId = new Dictionary<int, UIItemNodeSimple>();
+            sideInfoPanelObjs = new List<GameObject>();
+            sideInfoPanelSwitchUIBtns = new List<UIButton>();
             isTopAndActive = true;
             isLargeWindow = true;
             nextFrameRecalc = false;
@@ -532,15 +544,69 @@ namespace DSPCalculator.UI
                 typeCount++;
             }
 
+            // 右侧信息面板的分页切换按钮
+            // 按钮组
+            GameObject addNewLayerButton = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Dyson Sphere Editor/Dyson Editor Control Panel/hierarchy/layers/buttons-group/buttons/add-button");
+            GameObject pageSwitchButtonGroupObj = new GameObject("info-page-switch-btns");
+            pageSwitchButtonGroupObj.transform.SetParent(sidePanel);
+            pageSwitchButtonGroupObj.transform.localScale = Vector3.one;
+            pageSwitchButtonGroupObj.transform.localPosition = Vector3.zero;
+            Transform pageSwitchBtnsGroupTrans = pageSwitchButtonGroupObj.transform;
+
+            // 按钮
+            GameObject pSwitcher0 = GameObject.Instantiate(addNewLayerButton, pageSwitchBtnsGroupTrans);
+            pSwitcher0.name = "0";
+            pSwitcher0.transform.localPosition = new Vector3(10, 24, 0);
+            pSwitcher0.GetComponent<RectTransform>().sizeDelta = new Vector2(110, 25);
+            pSwitcher0.transform.Find("Text").GetComponent<Localizer>().stringKey = "右侧面板0";
+            pSwitcher0.transform.Find("Text").GetComponent<Text>().text = "右侧面板0".Translate();
+            pSwitcher0.GetComponent<Button>().onClick.RemoveAllListeners();
+            pSwitcher0.GetComponent<Button>().onClick.AddListener(() => { OnSideInfoPageChange(0); });
+            UIButton psuibtn0 = pSwitcher0.GetComponent<UIButton>();
+            pSwitcher0.GetComponent<Image>().material = sidePanel.GetComponent<Image>().material;
+            psuibtn0.transitions[0].highlightColorOverride = sidePanel.GetComponent<Image>().color; // 高亮的颜色和背景色一样，代表选中状态
+            psuibtn0.transitions[0].mouseoverColor = new Color(0.187f, 0.693f, 0.811f, 0.580f);
+            sideInfoPanelSwitchUIBtns.Add(pSwitcher0.GetComponent<UIButton>());
+
+            GameObject pSwitcher1 = GameObject.Instantiate(addNewLayerButton, pageSwitchBtnsGroupTrans);
+            pSwitcher1.name = "1";
+            pSwitcher1.transform.localPosition = new Vector3(120, 24, 0);
+            pSwitcher1.GetComponent<RectTransform>().sizeDelta = new Vector2(110, 25);
+            pSwitcher1.transform.Find("Text").GetComponent<Localizer>().stringKey = "右侧面板1";
+            pSwitcher1.transform.Find("Text").GetComponent<Text>().text = "右侧面板1".Translate();
+            pSwitcher1.GetComponent<Button>().onClick.RemoveAllListeners();
+            pSwitcher1.GetComponent<Button>().onClick.AddListener(() => { OnSideInfoPageChange(1); });
+            UIButton psuibtn1 = pSwitcher1.GetComponent<UIButton>();
+            pSwitcher1.GetComponent<Image>().material = sidePanel.GetComponent<Image>().material;
+            psuibtn1.transitions[0].highlightColorOverride = sidePanel.GetComponent<Image>().color; // 高亮的颜色和背景色一样，代表选中状态
+            psuibtn1.transitions[0].mouseoverColor = new Color(0.187f, 0.693f, 0.811f, 0.580f);
+            sideInfoPanelSwitchUIBtns.Add(pSwitcher1.GetComponent<UIButton>());
+
+            // 右侧主要信息面板
+            GameObject infoPanel_0 = new GameObject("info-panel-0");
+            infoPanel_0.transform.SetParent(sidePanel);
+            infoPanel_0.transform.localScale = Vector3.one;
+            infoPanel_0.transform.localPosition = Vector3.zero;
+            Transform infoPanel0Trans = infoPanel_0.transform;
+            sideInfoPanelObjs.Add(infoPanel_0);
+
+            GameObject infoPanel_1 = new GameObject("info-panel-1");
+            infoPanel_1.transform.SetParent(sidePanel);
+            infoPanel_1.transform.localScale = Vector3.one;
+            infoPanel_1.transform.localPosition = Vector3.zero;
+            Transform infoPanel1Trans = infoPanel_1.transform;
+            sideInfoPanelObjs.Add(infoPanel_1);
+
+            // sideInfoPanel0
             // 右侧最终文本信息
-            GameObject finalInfoTextObj = GameObject.Instantiate(TextObj, sidePanel);
+            GameObject finalInfoTextObj = GameObject.Instantiate(TextObj, infoPanel0Trans);
             finalInfoTextObj.name = "final-info";
             finalInfoTextObj.transform.localPosition = new Vector3(15, -20, 0);
             finalInfoText = finalInfoTextObj.GetComponent<Text>();
             finalInfoText.fontSize = 16;
             finalInfoText.alignment = TextAnchor.UpperLeft;
 
-            GameObject assemblerDemandsTitleObj = GameObject.Instantiate(TextObj, sidePanel);
+            GameObject assemblerDemandsTitleObj = GameObject.Instantiate(TextObj, infoPanel0Trans);
             assemblerDemandsTitleObj.transform.localPosition = new Vector3(15, -82, 0);
             assemblerDemandsTitleText = assemblerDemandsTitleObj.GetComponent<Text>();
             assemblerDemandsTitleText.fontSize = 16;
@@ -550,7 +616,7 @@ namespace DSPCalculator.UI
             // 右侧最终工厂信息
             assemblersDemandsGroupObj = new GameObject();
             assemblersDemandsGroupObj.name = "assember-demands";
-            assemblersDemandsGroupObj.transform.SetParent(sidePanel);
+            assemblersDemandsGroupObj.transform.SetParent(infoPanel0Trans);
             assemblersDemandsGroupObj.transform.localScale = Vector3.one;
             assemblersDemandsGroupObj.transform.localPosition = new Vector3(13, -110, 0);
             // 实际创建工厂信息由RefreshAssemblerDemands()完成
@@ -578,7 +644,7 @@ namespace DSPCalculator.UI
             // 右侧可调整元驱动等配置信息                         
             GameObject checkBoxGroupObj = new GameObject();
             checkBoxGroupObj.name = "checkbox-group";
-            checkBoxGroupObj.transform.SetParent(sidePanel);
+            checkBoxGroupObj.transform.SetParent(infoPanel0Trans);
             checkBoxGroupObj.transform.localScale = Vector3.one;
             checkBoxGroupObj.transform.localPosition = new Vector3(155, -20, 0); // ori -28
 
@@ -590,6 +656,7 @@ namespace DSPCalculator.UI
                 txtBluebuff = bluebuffCbObj.transform.Find("text").GetComponent<Text>();
                 bluebuffCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, 0, 0);
                 bluebuffCbObj.GetComponent<Button>().onClick.AddListener(OnBluebuffClick);
+                bluebuffCbObj.transform.Find("text").GetComponent<Localizer>().stringKey = "遗物名称0-1".Translate().Split('\n')[0]; ;
 
                 GameObject energyBurstCbObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
                 energyBurstCbObj.name = "checkbox-energyburst";
@@ -597,6 +664,7 @@ namespace DSPCalculator.UI
                 txtEnergyBurst = energyBurstCbObj.transform.Find("text").GetComponent<Text>();
                 energyBurstCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, -20, 0);
                 energyBurstCbObj.GetComponent<Button>().onClick.AddListener(OnEnergyBurstClick);
+                energyBurstCbObj.transform.Find("text").GetComponent<Localizer>().stringKey = "遗物名称1-6".Translate().Split('\n')[0]; ;
 
                 GameObject diracCbObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
                 diracCbObj.name = "checkbox-dirac";
@@ -604,6 +672,7 @@ namespace DSPCalculator.UI
                 txtDirac = diracCbObj.transform.Find("text").GetComponent<Text>();
                 diracCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, -40, 0);
                 diracCbObj.GetComponent<Button>().onClick.AddListener(OnDiracClick);
+                diracCbObj.transform.Find("text").GetComponent<Localizer>().stringKey = "遗物名称2-8".Translate().Split('\n')[0]; ;
 
                 GameObject inferiorCbObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
                 inferiorCbObj.name = "checkbox-inferior";
@@ -612,6 +681,7 @@ namespace DSPCalculator.UI
                 //inferiorCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, 0, 0);
                 inferiorCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, -60, 0);
                 inferiorCbObj.GetComponent<Button>().onClick.AddListener(OnInferiorClick);
+                inferiorCbObj.transform.Find("text").GetComponent<Localizer>().stringKey = "遗物名称3-0".Translate().Split('\n')[0]; ;
             }
 
             // 用户可以自定义增产效果，来覆盖游戏的增产效果
@@ -695,7 +765,7 @@ namespace DSPCalculator.UI
             //inferiorCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, 0, 0);
             roundUpCbObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -40, 0);
             roundUpCbObj.GetComponent<Button>().onClick.AddListener(OnAssemblerRoundUpSettingChange);
-
+            roundUpCbObj.transform.Find("text").GetComponent<Localizer>().stringKey = "生产设施数量显示向上取整";
 
 
             GameObject solveProliferObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
@@ -710,6 +780,7 @@ namespace DSPCalculator.UI
             solveProliferObj.GetComponent<UIButton>().tips.corner = 1;
             solveProliferObj.GetComponent<UIButton>().tips.delay = 0.1f;
             solveProliferObj.GetComponent<UIButton>().tips.width = 300;
+            solveProliferObj.transform.Find("text").GetComponent<Localizer>().stringKey = "增产剂并入产线";
 
             GameObject showHideMixBeltInfoObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
             showHideMixBeltInfoObj.name = "checkbox-mixbelt";
@@ -722,13 +793,18 @@ namespace DSPCalculator.UI
             showHideMixBeltInfoObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(110, -60, 0);
             showHideMixBeltInfoObj.GetComponent<Button>().onClick.AddListener(OnMixbeltInfoCbClick);
             showHideMixBeltInfoObj.SetActive(DSPCalculatorPlugin.showMixBeltCheckbox);
+            showHideMixBeltInfoObj.transform.Find("text").GetComponent<Localizer>().stringKey = "混带显示标题";
 
-            RefreshFinalInfoText();
-            RefreshCheckBoxes();
+            // 蓝图设置信息面板初始化
+            InitBpPreferceUI(infoPanel1Trans);
+
+            // 刷新显示
+            RefreshSideInfoPanels();
+            //RefreshFinalInfoText();
+            //RefreshCheckBoxes();
             RefreshAssemblerButtonDisplay();
             RefreshProliferatorButtonDisplay();
         }
-
 
         public static void TryInitStaticPrefabs()
         {
@@ -854,6 +930,390 @@ namespace DSPCalculator.UI
                 checkboxOffSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/checkbox-off");
                 arrowInBoxSprite = Resources.Load<Sprite>("ui/textures/sprites/dashboard/pading-icon-2");
                 squarePlusSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/insert-icon");
+                blueprintBookSprite = Resources.Load<Sprite>("ui/textures/sprites/blueprint-folder-220px");
+                PLSIconSprite = LDB.items.Select(PLS).iconSprite;
+                LSWhiteSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/logistics-station-40-icon");
+                blueprintIconSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/blueprint-icon");
+                newBPFloderSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/new-bpfolder-icon");
+            }
+        }
+
+        //public UIButton uibtn_bpRowCount1;
+        //public UIButton uibtn_bpRowCount2;
+        //public UIButton uibtn_bpCoaterAuto;
+        //public UIButton uibtn_bpCoaterAlways;
+        //public UIButton uibtn_bpCoaterNever;
+        //public UIButton uibtn_bpBeltHigh;
+        //public UIButton uibtn_bpBeltLow;
+        //public UIButton uibtn_bpBeltUnlimit;
+        //public UIButton uibtn_bpBeltLimit;
+        //public UIButton uibtn_bpSorterHigh;
+        //public UIButton uibtn_bpSorterLow;
+        //public UIButton uibtn_bpSorterUnlimit;
+        //public UIButton uibtn_bpSorterLimit;
+        public Image uibtnIcon_bpRowCount1;
+        public Image uibtnIcon_bpRowCount2;
+        public Image uibtnIcon_bpCoaterAuto;
+        public Image uibtnIcon_bpCoaterAlways;
+        public Image uibtnIcon_bpCoaterNever;
+        public Image uibtnIcon_bpProductCoaterAlways;
+        public Image uibtnIcon_bpProductCoaterNever;
+        public Image uibtnIcon_bpStationProlifSlotYes;
+        public Image uibtnIcon_bpStationProlifSlotNo;
+        public Image uibtnIcon_bpBeltHigh;
+        public Image uibtnIcon_bpBeltLow;
+        public Image uibtnIcon_bpBeltUnlimit;
+        public Image uibtnIcon_bpBeltLimit;
+        public Image uibtnIcon_bpSorterHigh;
+        public Image uibtnIcon_bpSorterLow;
+        public Image uibtnIcon_bpSorterUnlimit;
+        public Image uibtnIcon_bpSorterLimit;
+        public Image uibtnIcon_bpStackCur;
+        public Image uibtnIcon_bpStack4;
+        public Image uibtnIcon_bpStack3;
+        public Image uibtnIcon_bpStack2;
+        public Image uibtnIcon_bpStack1;
+
+        public void InitBpPreferceUI(Transform parent)
+        {
+            // 行数、喷涂机、传送带使用和科技、分拣器使用和科技
+
+            // 行数
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title1";
+                titleObj1.transform.localPosition = new Vector3(15, -20, 0);
+                titleObj1.GetComponent<Text>().text = "蓝图行数".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpRowCount1 = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpRowSet(1); });
+                //cb1.GetComponent<UIButton>().tips.tipTitle = "蓝图行数单行".Translate();
+                //cb1.GetComponent<UIButton>().tips.tipText = "蓝图行数单行说明".Translate();
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 300;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "蓝图行数单行";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpRowCount2= cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpRowSet(2); });
+                //cb2.GetComponent<UIButton>().tips.tipTitle = "蓝图行数单行".Translate();
+                //cb2.GetComponent<UIButton>().tips.tipText = "蓝图行数单行说明".Translate();
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "蓝图行数双行";
+            }
+            // 喷涂机
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title2";
+                titleObj1.transform.localPosition = new Vector3(15, -45, 0);
+                titleObj1.GetComponent<Text>().text = "生成喷涂机".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpCoaterAuto = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, -0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(0); });
+                cb1.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机自动".Translate();
+                cb1.GetComponent<UIButton>().tips.tipText = "生成喷涂机自动说明".Translate();
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 300;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机自动";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpCoaterAlways = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(1); });
+                //cb2.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机总是".Translate();
+                //cb2.GetComponent<UIButton>().tips.tipText = "生成喷涂机总是说明".Translate();
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机总是";
+
+                GameObject cb3 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb3.name = "cb3";
+                uibtnIcon_bpCoaterNever = cb3.GetComponent<Image>();
+                cb3.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(280, 0, 0);
+                cb3.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(-1); });
+                //cb3.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机从不".Translate();
+                //cb3.GetComponent<UIButton>().tips.tipText = "生成喷涂机从不说明".Translate();
+                cb3.GetComponent<UIButton>().tips.corner = 1;
+                cb3.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb3.GetComponent<UIButton>().tips.width = 300;
+                cb3.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机从不";
+            } 
+            // 为产物生成喷涂机
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title2";
+                titleObj1.transform.localPosition = new Vector3(15, -70, 0);
+                titleObj1.GetComponent<Text>().text = "生成产物喷涂机".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpProductCoaterAlways = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpProductCoaterSet(true); });
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 300;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机总是";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpProductCoaterNever = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpProductCoaterSet(false); });
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机从不";
+            }
+            // 物流塔预留增产剂槽位吗
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title3";
+                titleObj1.transform.localPosition = new Vector3(15, -95, 0);
+                titleObj1.GetComponent<Text>().text = "物流塔提供增产剂".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpStationProlifSlotYes = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, -0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpStationProliferatorSlotSet(true); });
+                //cb1.GetComponent<UIButton>().tips.tipTitle = "物流塔提供增产剂是".Translate();
+                //cb1.GetComponent<UIButton>().tips.tipText = "物流塔提供增产剂是".Translate();
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 300;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "物流塔提供增产剂是";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpStationProlifSlotNo = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpStationProliferatorSlotSet(false); });
+                //cb2.GetComponent<UIButton>().tips.tipTitle = "物流塔提供增产剂否".Translate();
+                //cb2.GetComponent<UIButton>().tips.tipText = "物流塔提供增产剂否".Translate();
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "物流塔提供增产剂否";
+
+            }
+
+            // 带子
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title4";
+                titleObj1.transform.localPosition = new Vector3(15, -120, 0);
+                titleObj1.GetComponent<Text>().text = "首选传送带".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpBeltHigh = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpBeltPreferenceSet(true); });
+                cb1.GetComponent<UIButton>().tips.tipTitle = "首选传送带最高级".Translate();
+                cb1.GetComponent<UIButton>().tips.tipText = "首选传送带最高级说明".Translate();
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 0;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "首选传送带最高级";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpBeltLow = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpBeltPreferenceSet(false); });
+                cb2.GetComponent<UIButton>().tips.tipTitle = "首选传送带最便宜".Translate();
+                cb2.GetComponent<UIButton>().tips.tipText = "首选传送带最便宜说明".Translate();
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "首选传送带最便宜";
+            }
+
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title5";
+                titleObj1.transform.localPosition = new Vector3(15, -145, 0);
+                titleObj1.GetComponent<Text>().text = "传送带科技限制".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpBeltUnlimit = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpBeltTechLimitSet(false); });
+                //cb1.GetComponent<UIButton>().tips.tipTitle = "首选传送带最高级".Translate();
+                //cb1.GetComponent<UIButton>().tips.tipText = "首选传送带最高级说明".Translate();
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 300;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "传送带科技限制无限制";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpBeltLimit = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpBeltTechLimitSet(true); });
+                //cb2.GetComponent<UIButton>().tips.tipTitle = "首选传送带最便宜".Translate();
+                //cb2.GetComponent<UIButton>().tips.tipText = "首选传送带最便宜说明".Translate();
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "传送带科技限制当前科技";
+            }
+
+            // 分拣器
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title6";
+                titleObj1.transform.localPosition = new Vector3(15, -170, 0);
+                titleObj1.GetComponent<Text>().text = "首选分拣器".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpSorterHigh = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpSorterPreferenceSet(true); });
+                cb1.GetComponent<UIButton>().tips.tipTitle = "首选分拣器最高级".Translate();
+                cb1.GetComponent<UIButton>().tips.tipText = "首选分拣器最高级说明".Translate();
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 0;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "首选分拣器最高级";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpSorterLow = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpSorterPreferenceSet(false); });
+                cb2.GetComponent<UIButton>().tips.tipTitle = "首选分拣器最便宜".Translate();
+                cb2.GetComponent<UIButton>().tips.tipText = "首选分拣器最便宜说明".Translate();
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "首选分拣器最便宜";
+            }
+
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title7";
+                titleObj1.transform.localPosition = new Vector3(15, -195, 0);
+                titleObj1.GetComponent<Text>().text = "分拣器科技限制".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpSorterUnlimit = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpSorterTechLimitSet(false); });
+                //cb1.GetComponent<UIButton>().tips.tipTitle = "首选传送带最高级".Translate();
+                //cb1.GetComponent<UIButton>().tips.tipText = "首选传送带最高级说明".Translate();
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 300;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "分拣器科技限制无限制";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpSorterLimit = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpSorterTechLimitSet(true); });
+                //cb2.GetComponent<UIButton>().tips.tipTitle = "首选传送带最便宜".Translate();
+                //cb2.GetComponent<UIButton>().tips.tipText = "首选传送带最便宜说明".Translate();
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "分拣器科技限制当前科技";
+            }
+
+            // 堆叠
+            if(true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title8";
+                titleObj1.transform.localPosition = new Vector3(15, -220, 0);
+                titleObj1.GetComponent<Text>().text = "传送带堆叠".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb0 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb0.name = "cb0";
+                uibtnIcon_bpStackCur = cb0.GetComponent<Image>();
+                cb0.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
+                cb0.GetComponent<Button>().onClick.AddListener(() => { OnBpStackSet(0); });
+                //cb0.GetComponent<UIButton>().tips.tipTitle = "传送带堆叠当前科技".Translate();
+                //cb0.GetComponent<UIButton>().tips.tipText = "传送带堆叠当前科技".Translate();
+                cb0.GetComponent<UIButton>().tips.corner = 1;
+                cb0.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb0.GetComponent<UIButton>().tips.width = 0;
+                cb0.transform.Find("text").GetComponent<Localizer>().stringKey = "传送带堆叠当前科技";
+
+                GameObject cb4 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb4.name = "cb4";
+                uibtnIcon_bpStack4 = cb4.GetComponent<Image>();
+                cb4.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb4.GetComponent<Button>().onClick.AddListener(() => { OnBpStackSet(4); });
+                cb4.GetComponent<UIButton>().tips.corner = 1;
+                cb4.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb4.GetComponent<UIButton>().tips.width = 0;
+                cb4.transform.Find("text").GetComponent<Localizer>().stringKey = "4";
+
+                GameObject cb3 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb3.name = "cb3";
+                uibtnIcon_bpStack3 = cb3.GetComponent<Image>();
+                cb3.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(240, 0, 0);
+                cb3.GetComponent<Button>().onClick.AddListener(() => { OnBpStackSet(3); });
+                cb3.GetComponent<UIButton>().tips.corner = 1;
+                cb3.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb3.GetComponent<UIButton>().tips.width = 0;
+                cb3.transform.Find("text").GetComponent<Localizer>().stringKey = "3";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpStack2 = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(280, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpStackSet(2); });
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 0;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "2";
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpStack1 = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(320, 0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpStackSet(1); });
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 0;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "1";
             }
         }
 
@@ -929,7 +1389,7 @@ namespace DSPCalculator.UI
             if (nextFrameRecalc)
             {
                 nextFrameRecalc = false;
-                solution.ReSolve();
+                solution.ReSolve(Convert.ToDouble(speedInputObj.GetComponent<InputField>().text));
                 RefreshAll();
             }
 
@@ -1084,7 +1544,9 @@ namespace DSPCalculator.UI
                 targetProductIconUIBtn.tips.corner = 3;
                 targetProductIconUIBtn.tips.itemId = item.ID;
                 targetProductIconUIBtn.tips.delay = 0.1f;
-                solution.SetTargetItemAndBeginSolve(item.ID);
+                double newTargetSpeed = Convert.ToDouble(speedInputObj.GetComponent<InputField>().text);
+                solution.SetTargetAndSolve(item.ID, newTargetSpeed);
+                //solution.SetTargetItemAndBeginSolve(item.ID);
                 RefreshAll();
             }
         }
@@ -1139,6 +1601,7 @@ namespace DSPCalculator.UI
             RefreshIncToggle();
             RefreshProliferatorButtonDisplay();
             RefreshCheckBoxes();
+            RefreshSideInfoPanels();
         }
 
 
@@ -1320,7 +1783,7 @@ namespace DSPCalculator.UI
             foreach (var node in solution.itemNodes)
             {
                 //if (!node.Value.IsOre(solution.userPreference) && (node.Value.satisfiedSpeed - node.Value.needSpeed > 0.001f))
-                if (node.Value.satisfiedSpeed - node.Value.needSpeed > 0.001f)
+                if (node.Value.satisfiedSpeed - node.Value.needSpeed > 0.001f && solution.CanShowOverflow(node.Value.itemId))
                 {
                     UIItemNodeSimple uiOverflowNode = new UIItemNodeSimple(node.Value, false, this);
                     uiSideItemNodes.Add(uiOverflowNode);
@@ -1414,6 +1877,27 @@ namespace DSPCalculator.UI
             uiItemSimplesByItemId.Clear();
         }
 
+        public void RefreshSideInfoPanels()
+        {
+            for (int i = 0; i < sideInfoPanelObjs.Count; i++)
+            {
+                if (i == sideInfoPanelIndex)
+                {
+                    sideInfoPanelObjs[i].SetActive(true);
+                    sideInfoPanelSwitchUIBtns[i].highlighted = true;
+                }
+                else
+                {
+                    sideInfoPanelObjs[i].SetActive(false);
+                    sideInfoPanelSwitchUIBtns[i].highlighted = false;
+                }
+            }
+
+            RefreshFinalInfoText();
+            RefreshBpPreferences();
+            RefreshCheckBoxes();
+            RefreshAssemblerDemandsDisplay();
+        }
 
         public void RefreshFinalInfoText()
         {
@@ -1423,6 +1907,108 @@ namespace DSPCalculator.UI
                 totalEnergyConsumption += recipeInfoData.Value.GetTotalEnergyConsumption();
             }
             finalInfoText.text = "预估电量".Translate() + "\n" + Utils.KMG(totalEnergyConsumption) + "W";
+        }
+        public void RefreshBpPreferences()
+        {
+            if(solution.userPreference.bpRowCount == 1)
+            {
+                uibtnIcon_bpRowCount1.sprite = checkboxOnSprite;
+                uibtnIcon_bpRowCount2.sprite = checkboxOffSprite;
+            }
+            else
+            {
+                uibtnIcon_bpRowCount1.sprite = checkboxOffSprite;
+                uibtnIcon_bpRowCount2.sprite = checkboxOnSprite;
+            }
+
+            if (solution.userPreference.bpResourceCoater == 0)
+            {
+                uibtnIcon_bpCoaterAuto.sprite = checkboxOnSprite;
+                uibtnIcon_bpCoaterAlways.sprite = checkboxOffSprite;
+                uibtnIcon_bpCoaterNever.sprite = checkboxOffSprite;
+            }
+            else if (solution.userPreference.bpResourceCoater == 1)
+            {
+                uibtnIcon_bpCoaterAuto.sprite = checkboxOffSprite;
+                uibtnIcon_bpCoaterAlways.sprite = checkboxOnSprite;
+                uibtnIcon_bpCoaterNever.sprite = checkboxOffSprite;
+            }
+            else if(solution.userPreference.bpResourceCoater == -1)
+            {
+                uibtnIcon_bpCoaterAuto.sprite = checkboxOffSprite;
+                uibtnIcon_bpCoaterAlways.sprite = checkboxOffSprite;
+                uibtnIcon_bpCoaterNever.sprite = checkboxOnSprite;
+            }
+
+            if (solution.userPreference.bpStationProlifSlot)
+            {
+                uibtnIcon_bpStationProlifSlotYes.sprite = checkboxOnSprite;
+                uibtnIcon_bpStationProlifSlotNo.sprite = checkboxOffSprite;
+            }
+            else if (!solution.userPreference.bpStationProlifSlot)
+            {
+                uibtnIcon_bpStationProlifSlotYes.sprite = checkboxOffSprite;
+                uibtnIcon_bpStationProlifSlotNo.sprite = checkboxOnSprite;
+            }
+
+            if (solution.userPreference.bpBeltHighest)
+            {
+                uibtnIcon_bpBeltHigh.sprite = checkboxOnSprite;
+                uibtnIcon_bpBeltLow.sprite = checkboxOffSprite;
+            }
+            else
+            {
+                uibtnIcon_bpBeltHigh.sprite = checkboxOffSprite;
+                uibtnIcon_bpBeltLow.sprite = checkboxOnSprite;
+            }
+
+            if (solution.userPreference.bpBeltTechLimit)
+            {
+                uibtnIcon_bpBeltLimit.sprite = checkboxOnSprite;
+                uibtnIcon_bpBeltUnlimit.sprite = checkboxOffSprite;
+            }
+            else
+            {
+                uibtnIcon_bpBeltLimit.sprite = checkboxOffSprite;
+                uibtnIcon_bpBeltUnlimit.sprite = checkboxOnSprite;
+            }
+
+            if (solution.userPreference.bpSorterHighest)
+            {
+                uibtnIcon_bpSorterHigh.sprite = checkboxOnSprite;
+                uibtnIcon_bpSorterLow.sprite = checkboxOffSprite;
+            }
+            else
+            {
+                uibtnIcon_bpSorterHigh.sprite = checkboxOffSprite;
+                uibtnIcon_bpSorterLow.sprite = checkboxOnSprite;
+            }
+
+            if (solution.userPreference.bpSorterTechLimit)
+            {
+                uibtnIcon_bpSorterLimit.sprite = checkboxOnSprite;
+                uibtnIcon_bpSorterUnlimit.sprite = checkboxOffSprite;
+            }
+            else
+            {
+                uibtnIcon_bpSorterLimit.sprite = checkboxOffSprite;
+                uibtnIcon_bpSorterUnlimit.sprite = checkboxOnSprite;
+            }
+
+            uibtnIcon_bpStack1.sprite = solution.userPreference.bpStackSetting == 1 ? checkboxOnSprite: checkboxOffSprite;
+            uibtnIcon_bpStack2.sprite = solution.userPreference.bpStackSetting == 2 ? checkboxOnSprite : checkboxOffSprite;
+            uibtnIcon_bpStack3.sprite = solution.userPreference.bpStackSetting == 3 ? checkboxOnSprite: checkboxOffSprite;
+            uibtnIcon_bpStack4.sprite = solution.userPreference.bpStackSetting == 4 ? checkboxOnSprite: checkboxOffSprite;
+            uibtnIcon_bpStackCur.sprite = solution.userPreference.bpStackSetting == 0 ? checkboxOnSprite: checkboxOffSprite;
+
+            uibtnIcon_bpProductCoaterAlways.sprite = solution.userPreference.bpProductCoater ? checkboxOnSprite : checkboxOffSprite;
+            uibtnIcon_bpProductCoaterNever.sprite = solution.userPreference.bpProductCoater ? checkboxOffSprite : checkboxOnSprite;
+
+            solution.RefreshBlueprintDicts();
+            foreach (var item in uiItemNodes)
+            {
+                item.RefreshBpProcessor();
+            }
         }
 
         public void RefreshAssemblerDemandsDisplay()
@@ -1680,7 +2266,7 @@ namespace DSPCalculator.UI
         public void ClearAllUserPreference()
         {
             solution.ClearUserPreference();
-            solution.ReSolve();
+            solution.ReSolve(Convert.ToDouble(speedInputObj.GetComponent<InputField>().text));
             RefreshAll();
         }
 
@@ -1858,7 +2444,6 @@ namespace DSPCalculator.UI
 
         public void OnSolveProliferatorSettingChange()
         {
-
             bool ori = solution.userPreference.solveProliferators;
             bool res = !ori;
             solution.userPreference.solveProliferators = res;
@@ -1868,12 +2453,71 @@ namespace DSPCalculator.UI
             nextFrameRecalc = true;
         }
 
+        public void OnSideInfoPageChange(int page)
+        {
+            if (sideInfoPanelIndex == page)
+                return;
+            sideInfoPanelIndex = page;
+            RefreshSideInfoPanels();
+        }
 
         public void OnMixbeltInfoCbClick()
         {
             solution.userPreference.showMixBeltInfo = !solution.userPreference.showMixBeltInfo;
             cbMixbelt.sprite = solution.userPreference.showMixBeltInfo ? checkboxOnSprite : checkboxOffSprite;
             nextFrameRecalc = true;
+        }
+
+        public void OnBpRowSet(int i)
+        {
+            solution.userPreference.bpRowCount = i;
+            RefreshBpPreferences();
+        }
+
+        public void OnBpCoaterSet(int i)
+        {
+            solution.userPreference.bpResourceCoater = i;
+            RefreshBpPreferences();
+        }
+
+        public void OnBpProductCoaterSet(bool gen)
+        {
+            solution.userPreference.bpProductCoater = gen;
+            RefreshBpPreferences();
+        }
+        public void OnBpStationProliferatorSlotSet(bool haveSlot)
+        {
+            solution.userPreference.bpStationProlifSlot = haveSlot;
+            RefreshBpPreferences();
+        }
+
+        public void OnBpBeltPreferenceSet(bool highest)
+        {
+            solution.userPreference.bpBeltHighest = highest;
+            RefreshBpPreferences();
+        }
+
+        public void OnBpBeltTechLimitSet(bool limited)
+        {
+            solution.userPreference.bpBeltTechLimit = limited;
+            RefreshBpPreferences();
+        }
+        public void OnBpSorterPreferenceSet(bool highest)
+        {
+            solution.userPreference.bpSorterHighest = highest;
+            RefreshBpPreferences();
+        }
+
+        public void OnBpSorterTechLimitSet(bool limited)
+        {
+            solution.userPreference.bpSorterTechLimit = limited;
+            RefreshBpPreferences();
+        }
+
+        public void OnBpStackSet(int stack)
+        {
+            solution.userPreference.bpStackSetting = stack;
+            RefreshBpPreferences();
         }
     }
 }
