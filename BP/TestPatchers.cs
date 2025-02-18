@@ -19,8 +19,8 @@ namespace DSPCalculator.BP
 
         public static bool enabled = false;
 
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(BlueprintUtils), "GenerateBlueprintData")]
+        //[HarmonyPrefix]
+        //[HarmonyPatch(typeof(BlueprintUtils), "GenerateBlueprintData")]
         public static bool TestLog(BlueprintData _blueprintData, PlanetData _planet, PlanetAuxData _auxData, int[] _objIds, int _objCount, float _divideLongitude)
         {
             return true;
@@ -370,8 +370,8 @@ namespace DSPCalculator.BP
 
 
 
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(BlueprintData), "Export")]
+        //[HarmonyPrefix]
+        //[HarmonyPatch(typeof(BlueprintData), "Export")]
         public static bool BPExportTest(ref BlueprintData __instance)
         {
             Debug.Log($"\n\n\n------------------BP DATA------------------\n");
@@ -410,7 +410,7 @@ namespace DSPCalculator.BP
         public static bool BPBuildingExportTest(ref BlueprintBuilding __instance)
         {
             Debug.Log($"\n---Building {__instance.index}---");
-            if (!(__instance.itemId >= 2001 && __instance.itemId <= 2004) && false)
+            if (!(__instance.itemId >= 2001 && __instance.itemId <= 2004) && true)
             {
                 foreach (FieldInfo fieldInfo in __instance.GetType().GetFields())
                 {
@@ -431,6 +431,71 @@ namespace DSPCalculator.BP
             return true;
         }
 
+        //[HarmonyPrefix]
+        //[HarmonyPatch(typeof(BlueprintUtils), "InitBuildPreviewByBPData")]
+        //public static bool InitBuildPreviewByBPDataPrePatch(BlueprintData _blueprintData, ref BuildPreview[] _bpArray, int _dotsCursor, ref int __result)
+        //{
+        //    int num = _blueprintData.buildings.Length;
+        //    int num2 = (_blueprintData.areas.Length > 1) ? num : (num * _dotsCursor);
+        //    if (_bpArray == null || _bpArray.Length < num2)
+        //    {
+        //        BuildPreview[] array = _bpArray;
+        //        _bpArray = new BuildPreview[num2];
+        //    }
+        //    for (int i = 0; i < num2; i++)
+        //    {
+        //        if (_bpArray[i] == null)
+        //        {
+        //            _bpArray[i] = new BuildPreview();
+        //        }
+        //        BuildPreview buildPreview = _bpArray[i];
+        //        buildPreview.ResetAll();
+        //        buildPreview.previewIndex = -1;
+        //        buildPreview.bpgpuiModelId = i + 1;
+        //        buildPreview.bpgpuiModelInstIndex = -1;
+        //        int num3 = i / num * num;
+        //        int num4 = i % num;
+        //        BlueprintBuilding blueprintBuilding = _blueprintData.buildings[num4];
+        //        Utils.logger.LogInfo($"building param len {blueprintBuilding.parameters.Length}, and id/model{blueprintBuilding.itemId},{blueprintBuilding.modelIndex}");
+        //        buildPreview.item = LDB.items.Select((int)blueprintBuilding.itemId);
+        //        buildPreview.desc = LDB.models.Select((int)blueprintBuilding.modelIndex).prefabDesc;
+        //        buildPreview.isConnNode = buildPreview.desc.isBelt;
+        //        if (blueprintBuilding.outputObj != null && _bpArray[blueprintBuilding.outputObj.index + num3] == null)
+        //        {
+        //            _bpArray[blueprintBuilding.outputObj.index + num3] = new BuildPreview();
+        //        }
+        //        if (blueprintBuilding.inputObj != null && _bpArray[blueprintBuilding.inputObj.index + num3] == null)
+        //        {
+        //            _bpArray[blueprintBuilding.inputObj.index + num3] = new BuildPreview();
+        //        }
+        //        buildPreview.output = ((blueprintBuilding.outputObj == null) ? null : _bpArray[blueprintBuilding.outputObj.index + num3]);
+        //        buildPreview.input = ((blueprintBuilding.inputObj == null) ? null : _bpArray[blueprintBuilding.inputObj.index + num3]);
+        //        buildPreview.outputFromSlot = blueprintBuilding.outputFromSlot;
+        //        buildPreview.inputToSlot = blueprintBuilding.inputToSlot;
+        //        buildPreview.outputToSlot = blueprintBuilding.outputToSlot;
+        //        buildPreview.inputFromSlot = blueprintBuilding.inputFromSlot;
+        //        buildPreview.inputOffset = blueprintBuilding.inputOffset;
+        //        buildPreview.outputOffset = blueprintBuilding.outputOffset;
+        //        buildPreview.recipeId = blueprintBuilding.recipeId;
+        //        buildPreview.filterId = blueprintBuilding.filterId;
+        //        if (buildPreview.desc.lodCount > 0 && buildPreview.desc.lodMeshes != null && buildPreview.desc.lodMeshes[0] != null)
+        //        {
+        //            buildPreview.needModel = true;
+        //        }
+        //        else
+        //        {
+        //            buildPreview.needModel = false;
+        //        }
+        //        buildPreview.SetParameters(blueprintBuilding.parameters.Length, blueprintBuilding.parameters);
+        //        buildPreview.content = blueprintBuilding.content;
+        //        buildPreview.coverbp = null;
+        //        buildPreview.condition = EBuildCondition.Ok;
+        //    }
+        //    __result = num2;
+        //    return false;
+        //}
+
+
         public static void TestCreateBuilding()
         {
 
@@ -449,10 +514,10 @@ namespace DSPCalculator.BP
             //// bp.PostProcess(buildings);
             
             BpProcessor p = new BpProcessor();
-            p.AddBelts(2001, 0, 0, 0, 10, 0, 0, -1, 1101);
-            p.AddBelts(2001, 0, 4, 0, 10, 4, 0,-1,0, 1301);
-            p.AddBelts(2001, -6, 5, 0, 10, 5, 0,-1,1102);
-            p.AddBelts(2002, -7, 6, 0, 10, 8, 3, -1, 1102);
+            p.AddBelts(2001, 0, 0, 0, 10, 0, 0, -1, -1, 1101);
+            p.AddBelts(2001, 0, 4, 0, 10, 4, 0,-1,-1,0, 1301);
+            p.AddBelts(2001, -6, 5, 0, 10, 5, 0,-1, -1,1102);
+            p.AddBelts(2002, -7, 6, 0, 10, 8, 3, -1, -1, 1102);
             p.AddBelts(2002, 20, -4, 0, -8, -5, 0);
             p.AddPLS(-7, 0);
             p.SetPLSStorage(p.PLSs[0], 0, 1301, true);
@@ -465,7 +530,7 @@ namespace DSPCalculator.BP
             {
                 int x = beginX + dist * i;
                 int y = beginY;
-                int index = p.AddAssembler(2304, 50, x, y, 0);
+                int index = p.AddAssembler(2304, 50, x, y, 0,0,true);
                 p.AssemblerConnectToBelt(index, 0, 2012, 1, false, 1301);
                 p.AssemblerConnectToBelt(index, 1, 2012, 2, true, 0);
                 p.AssemblerConnectToBelt(index, 8, 2012, -1, true, 0);

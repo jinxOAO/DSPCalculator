@@ -89,7 +89,7 @@ namespace DSPCalculator
 
 
             LocalizationModule.RegisterTranslation("右侧面板0", "Main Info", "主要信息", "Main Info");
-            LocalizationModule.RegisterTranslation("右侧面板1", "Blueprint", "蓝图设置", "Blueprint");
+            LocalizationModule.RegisterTranslation("右侧面板1", "Blueprint Settings", "蓝图设置", "Blueprint Settings");
 
 
             LocalizationModule.RegisterTranslation("生成蓝图0标题calc", "Sorter Preference", "生成蓝图", "Sorter Preference");

@@ -536,8 +536,8 @@ namespace DSPCalculator.UI
                         genBp_0_Obj.name = "gen-bp0";
                         genBp_0_Obj.transform.SetParent(obj.transform, false);
                         genBp_0_Obj.transform.localScale = Vector3.one;
-                        genBp_0_Obj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(12, 0, 0);
-                        genBp_0_Obj.GetComponent<RectTransform>().sizeDelta = new Vector2(15, 15f);
+                        genBp_0_Obj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(10, -1, 0);
+                        genBp_0_Obj.GetComponent<RectTransform>().sizeDelta = new Vector2(20, 20);
                         genBp_0_Obj.GetComponent<Image>().sprite = UICalcWindow.blueprintIconSprite;
                         genBp_0_Obj.GetComponent<Button>().onClick.AddListener(() => { GenerateBPAndPaste(false); });
                         genBpUIBtn0 = genBp_0_Obj.GetComponent<UIButton>();
@@ -1157,10 +1157,10 @@ namespace DSPCalculator.UI
 
         public void RefreshBpProcessor()
         {
-            if (itemNode.mainRecipe != null && !itemNode.mainRecipe.useIA)
+            if (itemNode.mainRecipe != null && !itemNode.mainRecipe.useIA && BpProcessor.enabled)
             {
                 bpProcessor = new BpProcessor(itemNode.mainRecipe, parentCalcWindow.solution);
-                if (bpProcessor.canGenerate)
+                if (bpProcessor.canGenerate && genBpUIBtn0 != null)
                 {
                     genBpUIBtn0.tips.tipText = GenBPTipText();
                     GenBpButtonObj.SetActive(true);

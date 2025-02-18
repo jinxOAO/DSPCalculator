@@ -556,7 +556,7 @@ namespace DSPCalculator.UI
             // 按钮
             GameObject pSwitcher0 = GameObject.Instantiate(addNewLayerButton, pageSwitchBtnsGroupTrans);
             pSwitcher0.name = "0";
-            pSwitcher0.transform.localPosition = new Vector3(10, 24, 0);
+            pSwitcher0.transform.localPosition = new Vector3(10, 23.8f, 0);
             pSwitcher0.GetComponent<RectTransform>().sizeDelta = new Vector2(110, 25);
             pSwitcher0.transform.Find("Text").GetComponent<Localizer>().stringKey = "右侧面板0";
             pSwitcher0.transform.Find("Text").GetComponent<Text>().text = "右侧面板0".Translate();
@@ -570,7 +570,7 @@ namespace DSPCalculator.UI
 
             GameObject pSwitcher1 = GameObject.Instantiate(addNewLayerButton, pageSwitchBtnsGroupTrans);
             pSwitcher1.name = "1";
-            pSwitcher1.transform.localPosition = new Vector3(120, 24, 0);
+            pSwitcher1.transform.localPosition = new Vector3(120, 23.8f, 0);
             pSwitcher1.GetComponent<RectTransform>().sizeDelta = new Vector2(110, 25);
             pSwitcher1.transform.Find("Text").GetComponent<Localizer>().stringKey = "右侧面板1";
             pSwitcher1.transform.Find("Text").GetComponent<Text>().text = "右侧面板1".Translate();

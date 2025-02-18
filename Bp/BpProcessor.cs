@@ -27,6 +27,18 @@ namespace DSPCalculator.BP
         //   1 这边是双行的外侧（单行的下侧）
         //   3
         //   4
+        public List<BpCargoBeltPos> cargoBeltPoses; // 货物带的端点信息，用于后续连接物流塔
+        //  8 ---------------                  
+        //  7 ---------------                  8 不存在这条带子
+        //  6 ---------------                  7 不存在这条带子
+        //         工厂                        6 ---------------
+        //  5 ---------------                         工厂     
+        //  4 ---------------        或        4 ---------------                    
+        //  3 ---------------                  3 ---------------
+        //         工厂                               工厂     
+        //  2 ---------------                  2 ---------------
+        //  1 ---------------                  1 不存在这条带子
+        //  0 ---------------                  0 不存在这条带子
         public bool doubleRow; // 是否双行工程蓝图
         public int cargoCount; // 共有几种货物
         public List<int> insufficientSorterItems; // 由于科技限制，单个分拣器运力不足的那些物品们
@@ -92,6 +104,10 @@ namespace DSPCalculator.BP
                 {
                     // 如果只有两种货物，且一种小于另一种的一半，则采用0、2号带的方式，即中间共用
                     if (cargoInfoDescending[1].maxSupportAssemblerCount >= 2 * cargoInfoDescending[0].maxSupportAssemblerCount && cargoInfoDescending[1].maxSorterDistance >= 2)
+                    {
+                        cargoInfoOrderByNorm[2] = cargoInfoDescending[1];
+                    }
+                    else if (cargoInfoDescending[1].maxSupportAssemblerCount >= recipeInfo.assemblerCount && solution.sortersAvailable.Last().grade >= 4) // 或者如果分拣器速度无限制，并且单条带能支持整个全部的产线，也可以共享
                     {
                         cargoInfoOrderByNorm[2] = cargoInfoDescending[1];
                     }
@@ -197,7 +213,7 @@ namespace DSPCalculator.BP
 
                 if (DSPCalculatorPlugin.developerMode)
                 {
-                    Utils.logger.LogDebug($"物品{c.itemId.GetItemName()}的单个设施速度{c.beltSpeedRequiredPerAssembler}，根据计算单带可支持最大工厂数量{c.maxSupportAssemblerCount}，当前可用的分拣器可支持最远间隔{c.maxSorterDistance}.");
+                    //Utils.logger.LogInfo($"item{c.itemId.GetItemName()} spd per factory {c.beltSpeedRequiredPerAssembler} maxC{c.maxSupportAssemblerCount} sorter max distance{c.maxSorterDistance}.");
                 }
                 cargoInfoDescending.Add(c);
             }
@@ -215,7 +231,7 @@ namespace DSPCalculator.BP
                     c.maxSorterDistance = (int)(solution.sortersAvailable.Last().speedPerMin / c.beltSpeedRequiredPerAssembler);
                 if (DSPCalculatorPlugin.developerMode)
                 {
-                    Utils.logger.LogDebug($"物品{c.itemId.GetItemName()}的单个设施速度{c.beltSpeedRequiredPerAssembler}，根据计算单带可支持最大工厂数量{c.maxSupportAssemblerCount}，当前可用的分拣器可支持最远间隔{c.maxSorterDistance}.");
+                    //Utils.logger.LogInfo($"item{c.itemId.GetItemName()} spd per factory{c.beltSpeedRequiredPerAssembler} maxC{c.maxSupportAssemblerCount} sorter max distance{c.maxSorterDistance}.");
                 }
                 cargoInfoDescending.Add(c);
             }
@@ -228,14 +244,26 @@ namespace DSPCalculator.BP
 
             gridMap = new Dictionary<int, Dictionary<int, int>>();
             buildings = new List<BlueprintBuilding>();
+            cargoBeltPoses = new List<BpCargoBeltPos> { null, null, null, null, null, null, null, null, null };
             blueprintData = BpBuilder.CreateEmpty();
-            PLSs = new List<int>();
             insufficientSorterItems = new List<int>();
 
+            bool isLab = recipeInfo.recipeNorm.oriProto.Type == ERecipeType.Research;
+            int maxLevel = solution.userPreference.labMaxLevel;
+            if(maxLevel > supportAssemblerCount)
+                maxLevel = supportAssemblerCount;
+            int groupCount = (int)Math.Ceiling(supportAssemblerCount * 1.0 / maxLevel);
+            if (!isLab)
+                maxLevel = 1;
 
-            // 创建第一行工厂，工厂y为0
+            // 创建第一行工厂，第一行工厂y为0
             int assemblerCountFirstRow = doubleRow ? (int)Math.Ceiling(supportAssemblerCount*1.0 / 2) : supportAssemblerCount; // 每行工厂的数量，如果是单行蓝图则就等于support
             int assemblerCountSecondRow = supportAssemblerCount - assemblerCountFirstRow;
+            if (isLab)
+            {
+                assemblerCountFirstRow = doubleRow ? (int)Math.Ceiling(groupCount * 1.0 / 2) : groupCount;
+                assemblerCountSecondRow = groupCount - assemblerCountFirstRow;
+            }
             int assemblerId = recipeInfo.assemblerItemId;
             BpAssemblerInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
 
@@ -245,10 +273,22 @@ namespace DSPCalculator.BP
             {
                 int assemblerX = 0;
                 int assemblerY = 0;
-
-                for (int i = 0; i < assemblerCountFirstRow; i++)
+                if (!isLab)
                 {
-                    assemblersFirstRow.Add(this.AddAssembler(assemblerId, recipeInfo.ID, assemblerX + assemblerInfo.DragDistanceX * i, assemblerY, 0));
+                    for (int i = 0; i < assemblerCountFirstRow; i++)
+                    {
+                        assemblersFirstRow.Add(this.AddAssembler(assemblerId, recipeInfo.ID, assemblerX + assemblerInfo.DragDistanceX * i, assemblerY, 0, assemblerInfo.defaultYaw, recipeInfo.isInc));
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < assemblerCountFirstRow; i++)
+                    {
+                        if (i != assemblerCountFirstRow - 1)
+                            assemblersFirstRow.Add(this.AddLab(assemblerId, recipeInfo.ID, assemblerX + assemblerInfo.DragDistanceX * i, assemblerY, maxLevel, recipeInfo.isInc));
+                        else
+                            assemblersFirstRow.Add(this.AddLab(assemblerId, recipeInfo.ID, assemblerX + assemblerInfo.DragDistanceX * i, assemblerY, supportAssemblerCount - (groupCount - 1) * maxLevel, recipeInfo.isInc));
+                    }
                 }
                 // 处理带子
                 // ------首先处理用什么带子，以及用什么分拣器
@@ -292,12 +332,14 @@ namespace DSPCalculator.BP
                         {
                             for (int s = 0; s < solution.sortersAvailable.Count; s++)
                             {
-                                sorterId = solution.sortersAvailable[s].itemId;
-                                if (solution.sortersAvailable[s].Satisfy(cargoInfo.beltSpeedRequiredPerAssembler, i/2))
+                                if (solution.sortersAvailable[s].Satisfy(cargoInfo.beltSpeedRequiredPerAssembler * (isLab ? maxLevel : 1), i / 2 + 1))
+                                {
+                                    sorterId = solution.sortersAvailable[s].itemId;
                                     break;
+                                }
                             }
                         }
-                        if (solution.sortersAvailable.Last().speedPerMin * solution.userPreference.bpStack < cargoInfo.beltSpeedRequiredPerAssembler) // 最快的一个可用爪子（但是会受限于科技）都不能满足一个工厂的进料
+                        if (sorterId < 0) // 最快的一个可用爪子（但是会受限于科技）都不能满足一个工厂的进料
                         {
                             sorterId = BpDB.sortersAscending.Last().itemId; // 直接使用集装分拣器
                             insufficientSorterItems.Add(cargoInfo.itemId); // 将这个配方记录为分拣器无法满足，需要用户自行调整（比如换成两个低级爪子）
@@ -306,12 +348,9 @@ namespace DSPCalculator.BP
                     }
                 }
                 // ------然后开始创建带子
-                int leftExtend = assemblerInfo.slotConnectBeltXPositions.Min() - 1; // 最左格子对应的传送带的坐标，再额外延长一格
+                int beltLeftX = GetBeltLeftX(assemblerInfo);
+
                 int rightExtend = assemblerInfo.slotConnectBeltXPositions.Max() + 1; // 最右格子对应的传送带坐标，再额外延长一格
-                int reserveForCoater = BpDB.coaterBeltBackwardLen;
-                if (!genCoater)
-                    reserveForCoater = 0;
-                int beltLeftX = leftExtend - reserveForCoater;
                 int beltRightX = (assemblerCountFirstRow - 1) * assemblerInfo.DragDistanceX + rightExtend;
                 for (int i = 0; i < cargoInfoOrderByNorm.Count; i++)
                 {
@@ -321,12 +360,15 @@ namespace DSPCalculator.BP
                         int Y = GetCargoBeltY(i, assemblerInfo, true);
                         if (cargoInfo.isResource)
                         {
-                            this.AddBelts(cargoInfo.useBeltItemId, beltLeftX, Y, 0, beltRightX, Y, 0, -1, cargoInfo.itemId, 0);
+                            this.AddBelts(cargoInfo.useBeltItemId, beltLeftX, Y, 0, beltRightX, Y, 0, -1, -1, cargoInfo.itemId, 0);
                         }
                         else
                         {
-                            this.AddBelts(cargoInfo.useBeltItemId, beltRightX, Y, 0, beltLeftX, Y, 0, -1, 0, cargoInfo.itemId);
+                            this.AddBelts(cargoInfo.useBeltItemId, beltRightX, Y, 0, beltLeftX, Y, 0, -1, -1,  0, cargoInfo.itemId);
                         }
+
+                        // 将带子端点信息记录
+                        cargoBeltPoses[BpDB.cargoInfoNormIndexToBeltPosIndexMap_FirstRow[i]] = new BpCargoBeltPos(cargoInfo, beltLeftX, Y);
 
                         // 创建喷涂机
                         if (resourceGenCoater && cargoInfo.isResource || productGenCoater && !cargoInfo.isResource)
@@ -355,19 +397,26 @@ namespace DSPCalculator.BP
                 // 处理第二行工厂
                 int assemblerX2 = 0;
                 int assemblerY2 = GetAssemblerY(false, assemblerInfo);
-
-                for (int i = 0; i < assemblerCountSecondRow; i++)
+                if (!isLab)
                 {
-                    assemblersSecondRow.Add(this.AddAssembler(assemblerId, recipeInfo.ID, assemblerX2 + assemblerInfo.DragDistanceX * i, assemblerY2, 0));
+                    for (int i = 0; i < assemblerCountSecondRow; i++)
+                    {
+                        assemblersSecondRow.Add(this.AddAssembler(assemblerId, recipeInfo.ID, assemblerX2 + assemblerInfo.DragDistanceX * i, assemblerY2, 0, assemblerInfo.defaultYaw, recipeInfo.isInc));
+                    }
                 }
+                else
+                {
+                    for (int i = 0; i < assemblerCountSecondRow; i++)
+                    {
+                        assemblersSecondRow.Add(this.AddLab(assemblerId, recipeInfo.ID, assemblerX2 + assemblerInfo.DragDistanceX * i, assemblerY2, maxLevel, recipeInfo.isInc));
+                    }
+                }
+
                 // 不再处理cargoInfo，而是直接创建带子
                 // ------开始创建带子
-                int leftExtend = assemblerInfo.slotConnectBeltXPositions.Min() - 1; // 最左格子对应的传送带的坐标，再额外延长一格
+
+                int beltLeftX = GetBeltLeftX(assemblerInfo);
                 int rightExtend = assemblerInfo.slotConnectBeltXPositions.Max() + 1; // 最右格子对应的传送带坐标，再额外延长一格
-                int reserveForCoater = BpDB.coaterBeltBackwardLen;
-                if (!genCoater)
-                    reserveForCoater = 0;
-                int beltLeftX = leftExtend - reserveForCoater;
                 int beltRightX = (assemblerCountFirstRow - 1) * assemblerInfo.DragDistanceX + rightExtend;
                 for (int i = 0; i < cargoInfoOrderByNorm.Count; i++)
                 {
@@ -379,12 +428,28 @@ namespace DSPCalculator.BP
                         int Y = GetCargoBeltY(i, assemblerInfo, false); // 这里是第二行工厂的袋子，要false
                         if (cargoInfo.isResource)
                         {
-                            this.AddBelts(cargoInfo.useBeltItemId, beltLeftX, Y, 0, beltRightX, Y, 0, -1, cargoInfo.itemId, 0);
+                            this.AddBelts(cargoInfo.useBeltItemId, beltLeftX, Y, 0, beltRightX, Y, 0, -1, -1, cargoInfo.itemId, 0);
                         }
                         else
                         {
-                            this.AddBelts(cargoInfo.useBeltItemId, beltRightX, Y, 0, beltLeftX, Y, 0, -1, 0, cargoInfo.itemId);
+                            this.AddBelts(cargoInfo.useBeltItemId, beltRightX, Y, 0, beltLeftX, Y, 0, -1, -1, 0, cargoInfo.itemId);
                         }
+                        if(i == 1 && Y < 8 && withPLS) // 说明那条带子不够高，不能直接横着拉到PLS的对应Slot正上方，所以要接到那个格子。只有第二行工厂的i==1的那条有可能不够高
+                        {
+                            if (cargoInfo.isResource)
+                            {
+                                this.AddBelts(cargoInfo.useBeltItemId, beltLeftX, 8.1f, 0, beltLeftX, Y + 1, 0, -1, gridMap.GetBuilding(beltLeftX, Y), 0, 0);
+                            }
+                            else
+                            {
+                                this.AddBelts(cargoInfo.useBeltItemId, beltLeftX, Y + 1.1f, 0, beltLeftX, 8, 0, gridMap.GetBuilding(beltLeftX, Y), -1, 0, 0);
+                            }
+                            Y = 8;
+                        }
+
+                        // 将带子端点信息记录
+                        if (i != 2)
+                            cargoBeltPoses[BpDB.cargoInfoNormIndexToBeltPosIndexMap_SecondRow[i]] = new BpCargoBeltPos(cargoInfo, beltLeftX, Y);
 
                         // 创建喷涂机
                         if (resourceGenCoater && cargoInfo.isResource || productGenCoater && !cargoInfo.isResource)
@@ -408,12 +473,186 @@ namespace DSPCalculator.BP
                     }
                 }
             }
+            if (withPLS)
+                GenerateAndConnectPLS();
 
             PostProcess();
             return true;
         }
 
-        
+        public void GenerateAndConnectPLS()
+        {
+            PLSs = new List<int>();
+            // 首先生成PLS
+            int totalItemCount = cargoCount; // 所有物品数量决定要几个pls，超过4个就要俩pls
+            if (solution.userPreference.bpStationProlifSlot && genCoater)
+                totalItemCount++;
+            int assemblerId = recipeInfo.assemblerItemId;
+            BpAssemblerInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
+            int x1;
+            int y1;
+            GetPLSPos(0, assemblerInfo, out x1, out y1);
+            this.AddPLS(x1, y1);
+
+            int x2;
+            int y2;
+            GetPLSPos(1, assemblerInfo, out x2, out y2);
+            if (totalItemCount > BpDB.PLSMaxStorageKinds)
+            {
+                this.AddPLS(x2, y2);
+            }
+
+            
+            List<int> corresSlotX = new List<int> { x2 + 1, x1, x1 + 1, 0, 0, 0, x1 + 1, x1, x2 + 1 };
+            List<int> corresPLSListIndex = new List<int> { 1, 0, 0, 0, 0, 0, 0, 0, 1 };
+            List<int> beltPosesIndexToPLSSlotMap = new List<int> { 8, 7, 8, 9, 10, 11, 0, 1, 0 }; // cargoBeltPos会固定去连接物流塔的slot
+            if (cargoCount == 6) // 只能单行，这种情况下slot和线路对应情况有些不一样
+            {
+                corresSlotX[0] = x2;
+                corresSlotX[1] = x2 + 1;
+                corresPLSListIndex[1] = 1;
+                beltPosesIndexToPLSSlotMap[0] = 7;
+                beltPosesIndexToPLSSlotMap[1] = 8;
+            }
+            bool storageConflicts = false;
+            for (int i = 0; i < cargoBeltPoses.Count; i++)
+            {
+                BpCargoBeltPos beltPos = cargoBeltPoses[i];
+                if (beltPos != null)
+                {
+                    if ((i <= 2 || i >= 6))
+                    {
+                        // 将所有未默认对好带子的端点延长到PLS对应Slot的正下方
+                        if (beltPos.cargoInfo.isResource)
+                            this.AddBelts(beltPos.beltId, corresSlotX[i], beltPos.y, 0, beltPos.x - 1, beltPos.y, 0, -1, gridMap.GetBuilding(beltPos.x, beltPos.y), 0, 0);
+                        else
+                            this.AddBelts(beltPos.beltId, beltPos.x - 1, beltPos.y, 0, corresSlotX[i], beltPos.y, 0, gridMap.GetBuilding(beltPos.x, beltPos.y), -1, 0, 0);
+
+                        // 修改beltPos
+                        beltPos.x = corresSlotX[i];
+                    }
+
+                    // 然后设置storage并连接
+                    if(PLSs.Count > corresPLSListIndex[i])
+                    {
+                        int PLSIndex = PLSs[corresPLSListIndex[i]];
+                        int storageIndex;
+                        bool status = this.SetOrGetPLSStorage(PLSIndex, beltPos.cargoItemId, beltPos.isResource, out storageIndex); // 设置PLS的物流塔信息
+                        if (!status && storageIndex >= 0) // 说明有冲突
+                            storageConflicts = true;
+                        if(storageIndex >= 0)
+                            this.ConnectPLSToBelt(PLSIndex, beltPosesIndexToPLSSlotMap[i], beltPos.isResource ? storageIndex : -1, gridMap.GetBuilding(beltPos.x, beltPos.y)); // 连接物流塔
+                    }
+                }
+            }
+            // 物流塔供给增产剂
+            if(solution.userPreference.bpStationProlifSlot && genCoater)
+            {
+                int coaterSlotPosX = GetBeltLeftX(assemblerInfo) + BpDB.coaterOffsetX - 1;
+                int coaterBeginY = 999;
+                int coaterEndY = -999;
+
+                for (int i = 0; i < cargoBeltPoses.Count; i++)
+                {
+                    BpCargoBeltPos beltPos = cargoBeltPoses[i];
+                    if(beltPos != null)
+                    {
+                        if(beltPos.y < coaterBeginY)
+                            coaterBeginY = beltPos.y;
+
+                        if(beltPos.isResource && resourceGenCoater || !beltPos.isResource && productGenCoater)
+                        {
+                            if(beltPos.y > coaterEndY)
+                                coaterEndY = beltPos.y;
+                        }
+                    }
+                }
+                coaterBeginY -= 1;
+                if(coaterEndY > coaterBeginY)
+                {
+                    this.AddBelts(solution.beltsAvailable.Last().itemId, coaterSlotPosX, coaterBeginY, 0, coaterSlotPosX, coaterEndY, 1);
+                }
+                // 延长到物流塔位置
+                int portSlotIndex = 6;
+                int portSlotXPos;
+                int PLSListIndex = 0;
+                if (totalItemCount > 4)
+                    PLSListIndex = 1;
+
+                int PLSX, PLSY;
+                GetPLSPos(PLSListIndex, assemblerInfo, out PLSX, out PLSY);
+                portSlotXPos = PLSX - 1;
+
+                int proliferatorStorageIndex;
+                int proliferatorId = 1143;
+                this.AddBelts(solution.beltsAvailable.Last().itemId, portSlotXPos, coaterBeginY, 0, coaterSlotPosX - 1, coaterBeginY, 0, -1, gridMap.GetBuilding(coaterSlotPosX, coaterBeginY));
+                if(resourceGenCoater && CalcDB.proliferatorAbilityToId.ContainsKey(recipeInfo.incLevel))
+                {
+                    proliferatorId = CalcDB.proliferatorAbilityToId[recipeInfo.incLevel];
+                }
+                bool status = this.SetOrGetPLSStorage(PLSs[PLSListIndex], proliferatorId, true, out proliferatorStorageIndex);
+
+                if (proliferatorStorageIndex >= 0)
+                    this.ConnectPLSToBelt(PLSs[PLSListIndex], portSlotIndex, proliferatorStorageIndex, gridMap.GetBuilding(portSlotXPos, coaterBeginY));
+            }
+
+
+            // 对于部分配方，原材料和产出物有重叠的时候，需要根据那个多，来处理物流塔的货物是需求还是供给
+            if (storageConflicts)
+            {
+                for (int i = 0; i < recipeInfo.recipeNorm.resourceCounts.Length; i++)
+                {
+                    if (recipeInfo.recipeNorm.resourceCounts[i] <= 0)
+                    {
+                        int itemId = recipeInfo.recipeNorm.resources[i];
+                        if (recipeInfo.productIndices.ContainsKey(itemId))
+                        {
+                            int productIndex = recipeInfo.productIndices[itemId];
+                            if (recipeInfo.recipeNorm.productCounts[productIndex] > 0)// 说明是净产出
+                            {
+                                for (int p = 0; p < PLSs.Count; p++)
+                                {
+                                    int PLSIndex = PLSs[p];
+                                    for (int s = 0; s < BpDB.PLSMaxStorageKinds; s++)
+                                    {
+                                        if (buildings[PLSIndex].parameters[s*6] == itemId)
+                                        {
+                                            buildings[PLSIndex].parameters[s * 6 + 1] = 1; // 强制设定为供给模式
+                                        }    
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                for (int i = 0; i < recipeInfo.recipeNorm.productCounts.Length; i++)
+                {
+                    if (recipeInfo.recipeNorm.productCounts[i] <= 0)
+                    {
+                        int itemId = recipeInfo.recipeNorm.resources[i];
+                        if(recipeInfo.resourceIndices.ContainsKey(itemId))
+                        {
+                            int resourceIndex = recipeInfo.resourceIndices[itemId];
+                            if (recipeInfo.recipeNorm.resourceCounts[resourceIndex] >=0) // 说明是净需求或者催化剂
+                            {
+                                for (int p = 0; p < PLSs.Count; p++)
+                                {
+                                    int PLSIndex = PLSs[p];
+                                    for (int s = 0; s < BpDB.PLSMaxStorageKinds; s++)
+                                    {
+                                        if (buildings[PLSIndex].parameters[s * 6] == itemId)
+                                        {
+                                            buildings[PLSIndex].parameters[s * 6 + 1] = 2; // 强制设定为需求模式
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
 
         public void PostProcess()
         {
@@ -522,6 +761,28 @@ namespace DSPCalculator.BP
             Debug.LogError("cargoCount数量不符。");
             return 0;
         }
+
+        public void GetPLSPos(int PLSListIndex, BpAssemblerInfo assemblerInfo, out int x, out int y)
+        {
+            x = -7 - assemblerInfo.hitboxExtendX - (genCoater ? BpDB.coaterBeltBackwardLen : 0) - PLSListIndex * BpDB.PLSDistance; 
+            y = GetCargoBeltY(2, assemblerInfo, true);
+        }
+
+        public int GetBeltLeftX(BpAssemblerInfo assemblerInfo)
+        {
+            int leftExtend = assemblerInfo.slotConnectBeltXPositions.Min() - 1; // 最左格子对应的传送带的坐标，再额外延长一格
+            int reserveForCoater = BpDB.coaterBeltBackwardLen;
+            if (!genCoater)
+                reserveForCoater = 0;
+            int beltLeftX = leftExtend - reserveForCoater;
+            return beltLeftX;
+
+            //int leftExtend = assemblerInfo.slotConnectBeltXPositions.Min() - 1; // 最左格子对应的传送带的坐标，再额外延长一格
+            //int rightExtend = assemblerInfo.slotConnectBeltXPositions.Max() + 1; // 最右格子对应的传送带坐标，再额外延长一格
+            //int reserveForCoater = BpDB.coaterBeltBackwardLen;
+            //if (!genCoater)
+            //    reserveForCoater = 0;
+        }
     }
 
     public class BpCargoInfo
@@ -537,15 +798,21 @@ namespace DSPCalculator.BP
         public int useSorterItemId; // 使用的分拣器的ItemId
     }
 
-    //public class BpCargoBeltInfo
-    //{
-    //    public int y; // 主线路相对于最下面的生产设置中心的y坐标（0）的y偏移
-    //    public BpCargoInfo cargoInfo; // 承载的物品，如果是null则为生产设施
-    //}
+    public class BpCargoBeltPos
+    {
+        public BpCargoInfo cargoInfo;
+        public int x;
+        public int y;
 
-    //public struct BpPoint
-    //{
-    //    public int x;
-    //    public int y;
-    //}
+        public BpCargoBeltPos(BpCargoInfo cargoInfo, int x, int y)
+        {
+            this.cargoInfo = cargoInfo;
+            this.x = x;
+            this.y = y;
+        }
+
+        public int beltId { get { return cargoInfo.useBeltItemId; } }
+        public int cargoItemId { get { return cargoInfo.itemId; } }
+        public bool isResource { get { return cargoInfo.isResource; } }
+    }
 }

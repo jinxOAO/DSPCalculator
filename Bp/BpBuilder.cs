@@ -11,7 +11,8 @@ namespace DSPCalculator.BP
     public static class BpBuilder
     {
         // outputSlot = 1才能连接到下一个Belt
-        public static void AddBelts(this BpProcessor processor, int itemId, float startX, float startY, float startZ, float endX, float endY, float endZ, int connectTo = -1, int beginIcon = 0, int endIcon = 0)
+        // 如果只需要造一格的传送带，根据其方向传入一个类似于2.9,3,0到3,3,0这样的坐标就可以，就是方向向右但是只有一格。并且以end为准！
+        public static void AddBelts(this BpProcessor processor, int itemId, float startX, float startY, float startZ, float endX, float endY, float endZ, int inputFromBelt = -1 , int outputToBelt = -1, int beginIcon = 0, int endIcon = 0)
         {
             ref List<BlueprintBuilding> list = ref processor.buildings;
             ref Dictionary<int, Dictionary<int, int>> gridMap = ref processor.gridMap;
@@ -58,13 +59,13 @@ namespace DSPCalculator.BP
                     b.yaw2 = b.yaw;
                     b.itemId = itemShort;
                     b.modelIndex = modelIndex;
-                    if(i != 0 || connectTo >= 0) // 最末尾的传送带（第一个建立的传送带）没有后继带子，除非有强制连接的带子
+                    if(i != 0 || outputToBelt >= 0) // 最末尾的传送带（第一个建立的传送带）没有后继带子，除非有强制连接的带子
                     {
                         b.outputToSlot = 1;
-                        if (connectTo >= 0)
+                        if (outputToBelt >= 0)
                         {
-                            b.outputObj = list[connectTo];
-                            connectTo = -1; // 后续不需要再识别connectTo
+                            b.outputObj = list[outputToBelt];
+                            outputToBelt = -1; // 后续不需要再识别connectTo
                         }
                         else
                             b.outputObj = list[list.Count - 1]; // 连接上一个
@@ -111,13 +112,13 @@ namespace DSPCalculator.BP
                     b.yaw2 = b.yaw;
                     b.itemId = itemShort;
                     b.modelIndex = modelIndex;
-                    if (i != 0 || bumpX != 0 || connectTo >= 0) // 最末尾的传送带（第一个建立的传送带）没有后继带子
+                    if (i != 0 || bumpX != 0 || outputToBelt >= 0) // 最末尾的传送带（第一个建立的传送带）没有后继带子
                     {
                         b.outputToSlot = 1;
-                        if (connectTo >= 0)
+                        if (outputToBelt >= 0)
                         {
-                            b.outputObj = list[connectTo];
-                            connectTo = -1; // 后续不需要再识别connectTo
+                            b.outputObj = list[outputToBelt];
+                            outputToBelt = -1; // 后续不需要再识别connectTo
                         }
                         else
                             b.outputObj = list[list.Count - 1];
@@ -170,13 +171,13 @@ namespace DSPCalculator.BP
                     b.yaw2 = b.yaw;
                     b.itemId = itemShort;
                     b.modelIndex = modelIndex;
-                    if (i != 0 || bumpX != 0 || bumpY != 0 || connectTo >= 0) // 最末尾的传送带（第一个建立的传送带）没有后继带子
+                    if (i != 0 || bumpX != 0 || bumpY != 0 || outputToBelt >= 0) // 最末尾的传送带（第一个建立的传送带）没有后继带子
                     {
                         b.outputToSlot = 1;
-                        if (connectTo >= 0)
+                        if (outputToBelt >= 0)
                         {
-                            b.outputObj = list[connectTo];
-                            connectTo = -1; // 后续不需要再识别connectTo
+                            b.outputObj = list[outputToBelt];
+                            outputToBelt = -1; // 后续不需要再识别connectTo
                         }
                         else
                             b.outputObj = list[list.Count - 1];
@@ -197,9 +198,15 @@ namespace DSPCalculator.BP
             }
             if(beginIcon > 0)
                 list[list.Count - 1].parameters = new int[] { beginIcon, 0 };
+            if (inputFromBelt > 0)
+            {
+                list[inputFromBelt].outputToSlot = 1;
+                list[inputFromBelt].outputObj = list[list.Count - 1];
+            }
         }
 
-        public static int AddAssembler(this BpProcessor processor, int itemId, int recipeId, int x, int y, int z)
+
+        public static int AddAssembler(this BpProcessor processor, int itemId, int recipeId, int x, int y, int z, int yaw, bool isInc)
         {
 
             ref List<BlueprintBuilding> list = ref processor.buildings;
@@ -219,10 +226,12 @@ namespace DSPCalculator.BP
             b.localOffset_x2 = b.localOffset_x;
             b.localOffset_y2 = b.localOffset_y;
             b.localOffset_z2 = b.localOffset_z;
+            b.yaw = yaw;
+            b.yaw2 = yaw;
             b.itemId = (short)itemId;
             b.recipeId = recipeId;
             b.modelIndex = (short)prefabDesc.modelIndex;
-            b.parameters = new int[] { 0 };
+            b.parameters = new int[] { isInc ? 0 : 1 };
             
             list.Add(b);
             return b.index;
@@ -238,9 +247,8 @@ namespace DSPCalculator.BP
         /// <param name="y"></param>
         /// <param name="level"></param>
         /// <returns></returns>
-        public static int AddLab(this BpProcessor processor, int itemId, int recipeId, int x, int y, int level)
+        public static int AddLab(this BpProcessor processor, int itemId, int recipeId, int x, int y, int level, bool isInc)
         {
-
             ref List<BlueprintBuilding> list = ref processor.buildings;
             ref Dictionary<int, Dictionary<int, int>> gridMap = ref processor.gridMap;
 
@@ -248,27 +256,35 @@ namespace DSPCalculator.BP
             if (itemProto == null)
                 return -1;
             PrefabDesc prefabDesc = itemProto.prefabDesc;
+            int groundLevelIndex = -1;
+            for (int i = 0; i < level; i++)
+            {
+                BlueprintBuilding b = new BlueprintBuilding();
+                b.index = list.Count;
+                b.areaIndex = 0;
+                b.localOffset_x = x;
+                b.localOffset_y = y;
+                b.localOffset_z = i * BpDB.labHeight;
+                b.localOffset_x2 = b.localOffset_x;
+                b.localOffset_y2 = b.localOffset_y;
+                b.localOffset_z2 = b.localOffset_z;
+                if (i > 0)
+                    b.inputObj = list.Last();
+                b.itemId = (short)itemId;
+                b.recipeId = recipeId;
+                b.modelIndex = (short)prefabDesc.modelIndex;
+                int incSign = isInc ? 0 : 1;
+                b.parameters = new int[] { 1, incSign }; // 1,0为制造，2,0为科研
+                b.inputFromSlot = BpDB.assemblerInfos[itemId].inputFromSlot;
+                b.inputToSlot = BpDB.assemblerInfos[itemId].inputToSlot;
+                b.outputFromSlot = BpDB.assemblerInfos[itemId].outputFromSlot;
+                b.outputToSlot = BpDB.assemblerInfos[itemId].outputToSlot;
+                list.Add(b);
 
-            BlueprintBuilding b = new BlueprintBuilding();
-            b.index = list.Count;
-            b.areaIndex = 0;
-            b.localOffset_x = x;
-            b.localOffset_y = y;
-            b.localOffset_z = 0;
-            b.localOffset_x2 = b.localOffset_x;
-            b.localOffset_y2 = b.localOffset_y;
-            b.localOffset_z2 = b.localOffset_z;
-            b.itemId = (short)itemId;
-            b.recipeId = recipeId;
-            b.modelIndex = (short)prefabDesc.modelIndex;
-            b.parameters = new int[] { 1, 0 }; // 1,0为制造，2,0为科研
-            b.inputFromSlot = BpDB.assemblerInfos[itemId].inputFromSlot;
-            b.inputToSlot = BpDB.assemblerInfos[itemId].inputToSlot;
-            b.outputFromSlot = BpDB.assemblerInfos[itemId].outputFromSlot;
-            b.outputToSlot = BpDB.assemblerInfos[itemId].outputToSlot;
-
-            list.Add(b);
-            return b.index;
+                if (i == 0)
+                    groundLevelIndex = b.index;
+            }
+            return groundLevelIndex;
         }
 
         public static int AddPLS(this BpProcessor processor, int x, int y)
@@ -326,12 +342,12 @@ namespace DSPCalculator.BP
         }
 
         /// <summary>
-        /// 只支持直线正对连接
+        /// 只支持直线正对连接,storageIndex从0开始
         /// </summary>
-        public static void ConnectPLSToBelt(this BpProcessor processor, int PLSIndex, int PLSSlot, int storageIndex, int beltIndex)
+        public static void ConnectPLSToBelt(this BpProcessor processor, int PLSBuildingIndex, int PLSSlot, int storageIndex, int beltIndex)
         {
-            int PLSX = (int)processor.buildings[PLSIndex].localOffset_x;
-            int PLSY = (int)processor.buildings[PLSIndex].localOffset_y;
+            int PLSX = (int)processor.buildings[PLSBuildingIndex].localOffset_x;
+            int PLSY = (int)processor.buildings[PLSBuildingIndex].localOffset_y;
             int endX = (int)processor.buildings[beltIndex].localOffset_x;
             int endY = (int)processor.buildings[beltIndex].localOffset_y;
             short beltItemId = processor.buildings[beltIndex].itemId;
@@ -378,8 +394,8 @@ namespace DSPCalculator.BP
 
             if(isOutput)
             {
-                processor.buildings[PLSIndex].parameters[192 + PLSSlot * 4] = 1;
-                processor.buildings[PLSIndex].parameters[192 + PLSSlot * 4 + 1] = storageIndex + 1;
+                processor.buildings[PLSBuildingIndex].parameters[192 + PLSSlot * 4] = 1;
+                processor.buildings[PLSBuildingIndex].parameters[192 + PLSSlot * 4 + 1] = storageIndex + 1;
                 int lastBeltIndex = beltIndex;
                 for (int i = 0; i < count; i++) 
                 {
@@ -397,8 +413,8 @@ namespace DSPCalculator.BP
                         b.localOffset_x = PLSX + LDB.items.Select(BpDB.PLS).prefabDesc.portPoses[PLSSlot].position.x * 0.8f;
                         b.localOffset_y = PLSY + LDB.items.Select(BpDB.PLS).prefabDesc.portPoses[PLSSlot].position.z * 0.8f;
                         b.inputFromSlot = PLSSlot;
-                        b.inputObj = processor.buildings[PLSIndex];
-                        b.parameters = new int[] { processor.GetPLSItemByStorageIndex(PLSIndex, storageIndex), 0 };
+                        b.inputObj = processor.buildings[PLSBuildingIndex];
+                        b.parameters = new int[] { processor.GetPLSItemByStorageIndex(PLSBuildingIndex, storageIndex), 0 };
                     }
                     b.localOffset_z = 0;
                     b.localOffset_x2 = b.localOffset_x;
@@ -422,7 +438,7 @@ namespace DSPCalculator.BP
             }
             else
             {
-                processor.buildings[PLSIndex].parameters[192 + PLSSlot * 4] = 2;
+                processor.buildings[PLSBuildingIndex].parameters[192 + PLSSlot * 4] = 2;
                 int lastBeltIndex = -1;
                 for (int i = 0; i < count; i++)
                 {
@@ -434,7 +450,7 @@ namespace DSPCalculator.BP
                         b.localOffset_x = PLSX + LDB.items.Select(BpDB.PLS).prefabDesc.portPoses[PLSSlot].position.x * 0.8f;
                         b.localOffset_y = PLSY + LDB.items.Select(BpDB.PLS).prefabDesc.portPoses[PLSSlot].position.z * 0.8f;
                         b.outputToSlot = PLSSlot;
-                        b.outputObj = processor.buildings[PLSIndex];
+                        b.outputObj = processor.buildings[PLSBuildingIndex];
                     }
                     else
                     {
@@ -482,6 +498,11 @@ namespace DSPCalculator.BP
                 PrefabDesc prefab = LDB.items.Select(list[fromIndex].itemId).prefabDesc;
                 x1 = list[fromIndex].localOffset_x + prefab.slotPoses[fromSlot].position.x * 0.8f;
                 y1 = list[fromIndex].localOffset_y + prefab.slotPoses[fromSlot].position.z * 0.8f; // 注意这里是position.z表示蓝图的y方向！
+                if (BpDB.assemblerInfos[list[fromIndex].itemId].defaultYaw == 90) // 如果工厂自身带旋转，要将这个pos也旋转
+                {
+                    x1 = list[fromIndex].localOffset_x + prefab.slotPoses[fromSlot].position.z * 0.8f;
+                    y1 = list[fromIndex].localOffset_y - prefab.slotPoses[fromSlot].position.x * 0.8f;
+                }
             }
             else // 带子
             {
@@ -493,6 +514,11 @@ namespace DSPCalculator.BP
                 PrefabDesc prefab = LDB.items.Select(list[toIndex].itemId).prefabDesc;
                 x2 = list[toIndex].localOffset_x + prefab.slotPoses[toSlot].position.x * 0.8f;
                 y2 = list[toIndex].localOffset_y + prefab.slotPoses[toSlot].position.z * 0.8f; // 注意这里是position.z表示蓝图的y方向！
+                if (BpDB.assemblerInfos[list[toIndex].itemId].defaultYaw == 90)
+                {
+                    x2 = list[toIndex].localOffset_x + prefab.slotPoses[toSlot].position.z * 0.8f;
+                    y2 = list[toIndex].localOffset_y - prefab.slotPoses[toSlot].position.x * 0.8f;
+                }
             }
             else
             {
@@ -608,6 +634,8 @@ namespace DSPCalculator.BP
             processor.buildings[PLSIndex].parameters[storageIndex * 6 + 3] = BpDB.stationMaxItemCount;
         }
 
+
+
         public static BlueprintData CreateEmpty()
         {
             BlueprintData bp = new BlueprintData();
@@ -637,6 +665,30 @@ namespace DSPCalculator.BP
             return bp;
         }
 
+        public static bool SetOrGetPLSStorage(this BpProcessor processor, int PLSBuildingIndex, int itemId, bool isNeed, out int index)
+        {
+            for (int i = 0; i < BpDB.PLSMaxStorageKinds; i++)
+            {
+                if (processor.buildings[PLSBuildingIndex].parameters[i * 6] == 0)
+                {
+                    processor.buildings[PLSBuildingIndex].parameters[i * 6] = itemId;
+                    processor.buildings[PLSBuildingIndex].parameters[i * 6 + 1] = isNeed ? 2 : 1;
+                    processor.buildings[PLSBuildingIndex].parameters[i * 6 + 3] = BpDB.stationMaxItemCount;
+                    index = i;
+                    return true;
+                }
+                else if (processor.buildings[PLSBuildingIndex].parameters[i * 6] == itemId)
+                {
+                    index = i;
+                    int shouldStatus = isNeed ? 2 : 1;
+                    if (processor.buildings[PLSBuildingIndex].parameters[i * 6 + 1] != shouldStatus)
+                        return false; // 代表有冲突
+                    return true;
+                }
+            }
+            index = -1;
+            return false; // 代表没有找到空位
+        }
 
         public static void SetBuilding(this Dictionary<int, Dictionary<int, int>> gridMap, int x, int y, int index)
         {

@@ -144,6 +144,26 @@ namespace DSPCalculator.Logic
                     return bpStackSetting;
             }
         }
+        public int labMaxLevel
+        {
+            get
+            {
+                if (GameMain.history.TechUnlocked(3706))
+                    return 15;
+                else if (GameMain.history.TechUnlocked(3705))
+                    return 13;
+                else if (GameMain.history.TechUnlocked(3704))
+                    return 11;
+                else if (GameMain.history.TechUnlocked(3703))
+                    return 9;
+                else if (GameMain.history.TechUnlocked(3702))
+                    return 7;
+                else if (GameMain.history.TechUnlocked(3701))
+                    return 5;
+                else
+                    return 3;
+            }
+        }
 
         //public void Clear()
         //{

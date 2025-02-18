@@ -34,6 +34,12 @@ namespace DSPCalculator.BP
 
         public static int PLS = 2103;
         public static int PLSDistance = 13;
+        public static List<int> cargoInfoNormIndexToBeltPosIndexMap_FirstRow = new List<int> { 3, 2, 4, 1, 0, 5 }; // cargoInfoOrderByNorm的index，对应放到cargoBeltPoses的index的map。适用于第一行工厂
+        public static List<int> cargoInfoNormIndexToBeltPosIndexMap_SecondRow = new List<int> { 5, 6, -1, 7, 8 }; // 适用于第二行工厂，注意共享带不能重复录入，所以共享带会在第二行工厂处返回-1，读取这个是会越界的
+        public static List<int> beltPosIndexToPLSStorageIndexMap = new List<int> { };
+        public static int PLSMaxStorageKinds = 4;
+
+        public static int labHeight = 3;
 
         public static void Init()
         {
@@ -98,6 +104,7 @@ namespace DSPCalculator.BP
             collider.cargoNormIndex2SlotMap_FirstRow = new List<int> { 1, 6, 2, 7, 8, 0 };
             collider.cargoNormIndex2SlotMap_SecondRow = new List<int> { 7, 2, 8, 1, 0 };
             collider.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1 };
+            collider.hitboxExtendX = 2;
 
             BpAssemblerInfo lab = new BpAssemblerInfo();
             lab.centerDistanceBottom = 3;
@@ -134,7 +141,11 @@ namespace DSPCalculator.BP
                 {
                     assemblerInfos[itemId] = collider;
                 }
-                else if (recipeType == ERecipeType.Research)
+                else if (recipeType == ERecipeType.Refine)
+                {
+                    assemblerInfos[itemId] = refinery;
+                }
+                else if (LDB.items.Select(itemId).prefabDesc.isLab)
                 {
                     assemblerInfos[itemId] = lab;
                 }
@@ -173,6 +184,15 @@ namespace DSPCalculator.BP
             {
                 sortersAscending.Add(sorters[i].Value);
             }
+
+            ItemProto PLSProto = LDB.items.Select(2103);
+            if(PLSProto != null)
+            {
+                PLSMaxStorageKinds = PLSProto.prefabDesc.stationMaxItemKinds;
+            }
+
+            // 目前不考虑PLS客制化槽位的情况，所以
+            PLSMaxStorageKinds = 4;
         }
     }
 
@@ -194,6 +214,7 @@ namespace DSPCalculator.BP
         public List<int> cargoNormIndex2SlotMap_FirstRow; // 单行或第一行时，将对应index位置（cargoInfoOrderByNorm的index）需要使用生产设施的slot的index
         public List<int> cargoNormIndex2SlotMap_SecondRow; // 双行蓝图的第二行（上边那行），对应的norm的index获取slot的index
         public List<int> slotYDirection; // slot在工厂的哪个方向
+        public int hitboxExtendX; // 由于建筑碰撞体积，需要PLS比平时离得更远一些，额外原理的距离
 
         public BpAssemblerInfo()
         {
@@ -203,6 +224,7 @@ namespace DSPCalculator.BP
             inputToSlot = 0;
             inputFromSlot = 0;
             height = 3;
+            hitboxExtendX = 0;
         }
     }
 
@@ -243,6 +265,8 @@ namespace DSPCalculator.BP
         {
             if(grade >= 4)
                 return true;
+            if (distance == 0)
+                distance = 1;
 
             return speedPerMin / distance > speedNeed - 0.001;
         }

@@ -765,7 +765,7 @@ namespace DSPCalculator.Logic
             }
             for (int i = 0; i < BpDB.sortersAscending.Count; i++)
             {
-                if (GameMain.history.ItemUnlocked(BpDB.sortersAscending[i].itemId) || !userPreference.bpSorterTechLimit)
+                if (GameMain.history.ItemUnlocked(BpDB.sortersAscending[i].itemId) || !userPreference.bpSorterTechLimit || i == 0) // 第一个最慢的爪子总是被视为可用的
                     sortersAvailable.Add(BpDB.sortersAscending[i]);
             }
         }
