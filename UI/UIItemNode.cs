@@ -1160,7 +1160,7 @@ namespace DSPCalculator.UI
             if (itemNode.mainRecipe != null && !itemNode.mainRecipe.useIA && BpProcessor.enabled)
             {
                 bpProcessor = new BpProcessor(itemNode.mainRecipe, parentCalcWindow.solution);
-                if (bpProcessor.canGenerate && genBpUIBtn0 != null)
+                if (bpProcessor.canGenerate && genBpUIBtn0 != null && GenBpButtonObj != null)
                 {
                     genBpUIBtn0.tips.tipText = GenBPTipText();
                     GenBpButtonObj.SetActive(true);
@@ -1169,15 +1169,27 @@ namespace DSPCalculator.UI
             }
 
             // 能到这里就说明无法生成蓝图
-            GenBpButtonObj.SetActive(false);
+            if (GenBpButtonObj != null)
+                GenBpButtonObj.SetActive(false);
+
         }
 
         public void GenerateBPAndPaste(bool withPLS)
         {
+            if (GameMain.localPlanet == null)
+            {
+                UIRealtimeTip.Popup("不在行星上无法粘贴蓝图警告".Translate());
+                return;
+            }
+
             if(bpProcessor !=null)
             {
-                bool genPLS = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-                if (bpProcessor.GenerateBlueprint(genPLS))
+                int genLevel = 0;
+                if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+                    genLevel = 1;
+                else if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+                    genLevel = -1;
+                if (bpProcessor.GenerateBlueprint(genLevel))
                 {
                     // 暂时关闭窗口以便粘贴
                     parentCalcWindow.CloseWindow();

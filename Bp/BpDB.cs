@@ -1,4 +1,5 @@
-﻿using DSPCalculator.Logic;
+﻿using DSPCalculator.Compatibility;
+using DSPCalculator.Logic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -150,9 +151,20 @@ namespace DSPCalculator.BP
                     assemblerInfos[itemId] = lab;
                 }
             }
+            if(CompatManager.GB)
+            {
+                assemblerInfos[2304] = assembler;
+                assemblerInfos[2305] = assembler;
+                assemblerInfos[2318] = assembler;
+                assemblerInfos[6230] = smelter;
+                assemblerInfos[2319] = smelter;
+                assemblerInfos[2317] = chemical;
+            }
             int slotMax = LDB.items.Select(2103).prefabDesc.stationMaxItemCount;
             if (slotMax > stationMaxItemCount)
                 stationMaxItemCount = slotMax;
+            if (CompatManager.GB)
+                stationMaxItemCount = 15000;
 
             // 初始化分拣器、传送带信息
             int itemLen = LDB.items.Length;

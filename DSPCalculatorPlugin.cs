@@ -27,10 +27,10 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.2.1";
+        public const string VERSION = "0.3.0";
 
         // ---------------------------------------------------------------------------
-        public static bool developerMode = true; //           发布前修改             |
+        public static bool developerMode = false; //           发布前修改             |
         // ---------------------------------------------------------------------------
 
         public static ConfigEntry<KeyCode> OpenWindowHotKey;
