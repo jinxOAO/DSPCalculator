@@ -57,8 +57,8 @@ namespace DSPCalculator.BP
             assembler.slotConnectBeltXPositions = new List<int> { -1, 0, 1, 0, 0, 0, 1, 0, -1, 0, 0, 0 };
             assembler.slotConnectBeltSorterOffsets = new List<int> { 4, -1, -4, 0, 0, 0, -4, 1, 4, 0, 0, 0 };
             assembler.recipeType = ERecipeType.Assemble;
-            assembler.cargoNormIndex2SlotMap_FirstRow = new List<int> { 1, 8, 0, 7, 6, 2 };
-            assembler.cargoNormIndex2SlotMap_SecondRow = new List<int> { 7, 0, 6, 1, 2 }; // 六个货物不涉及第二行！！
+            assembler.cargoNormIndex2SlotMap_FirstRow = new List<int> { 2, 8, 1, 7, 6, 0 };
+            assembler.cargoNormIndex2SlotMap_SecondRow = new List<int> { 8, 0, 7, 1, 2, 6 }; 
             assembler.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1, 0, 0, 0 };
 
             BpAssemblerInfo smelter = new BpAssemblerInfo();
@@ -68,8 +68,8 @@ namespace DSPCalculator.BP
             smelter.slotConnectBeltXPositions = new List<int> { -1, 0, 1, 0, 0, 0, 1, 0, -1, 0, 0, 0 };
             smelter.slotConnectBeltSorterOffsets = new List<int> { 4, -1, -4, 0, 0, 0, -4, 1, 4, 0, 0, 0 };
             smelter.recipeType = ERecipeType.Smelt;
-            smelter.cargoNormIndex2SlotMap_FirstRow = new List<int> { 1, 8, 0, 7, 6, 2 };
-            smelter.cargoNormIndex2SlotMap_SecondRow = new List<int> { 7, 0, 6, 1, 2 };
+            smelter.cargoNormIndex2SlotMap_FirstRow = new List<int> { 2, 8, 1, 7, 6, 0 };
+            smelter.cargoNormIndex2SlotMap_SecondRow = new List<int> { 8, 0, 7, 1, 2, 6 };
             smelter.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1, 0, 0, 0 };
 
             BpAssemblerInfo chemical = new BpAssemblerInfo();
@@ -79,8 +79,8 @@ namespace DSPCalculator.BP
             chemical.slotConnectBeltXPositions = new List<int> { -1, 0, 1, 2, 1, 0, -1, 2 };
             chemical.slotConnectBeltSorterOffsets = new List<int> { 4, 0, -4, -9, -4, 0, 4, -9 };
             chemical.recipeType = ERecipeType.Chemical;
-            chemical.cargoNormIndex2SlotMap_FirstRow = new List<int> { 0, 6, 1, 5, 4, 2 };
-            chemical.cargoNormIndex2SlotMap_SecondRow = new List<int> { 3, 7, 4, 2, 1 };
+            chemical.cargoNormIndex2SlotMap_FirstRow = new List<int> { 2, 6, 1, 5, 4, 0 };
+            chemical.cargoNormIndex2SlotMap_SecondRow = new List<int> { 5, 1, 4, 2, 7, 3 };
             chemical.slotYDirection = new List<int> { 1, 1, 1, -1, -1, -1, -1, 1 };
 
             BpAssemblerInfo refinery = new BpAssemblerInfo();
@@ -91,8 +91,8 @@ namespace DSPCalculator.BP
             refinery.slotConnectBeltXPositions = new List<int> { -1, 0, 1, 1, 0, -1, 0, 0, 0 };
             refinery.slotConnectBeltSorterOffsets = new List<int> { 5, 0, -4, -4, 0, 5, 0, 0, 0 };
             refinery.recipeType = ERecipeType.Refine;
-            refinery.cargoNormIndex2SlotMap_FirstRow = new List<int> { 4, 0, 5, 1, 2, 3 };
-            refinery.cargoNormIndex2SlotMap_SecondRow = new List<int> { 1, 5, 2, 4, 3 };
+            refinery.cargoNormIndex2SlotMap_FirstRow = new List<int> { 3, 0, 4, 1, 2, 5 };
+            refinery.cargoNormIndex2SlotMap_SecondRow = new List<int> { 0, 5, 1, 4, 3, 2 };
             refinery.slotYDirection = new List<int> { -1, -1, -1, 1, 1, 1, 0, 0, 0 };
 
             BpAssemblerInfo collider = new BpAssemblerInfo();
@@ -102,8 +102,8 @@ namespace DSPCalculator.BP
             collider.slotConnectBeltXPositions = new List<int> { -1, -2, -2, 0, 0, 0, -2, -2, -1 };
             collider.slotConnectBeltSorterOffsets = new List<int> { 4, 8, -9, 0, 0, 0, -9, 8, 4 };
             collider.recipeType = ERecipeType.Particle;
-            collider.cargoNormIndex2SlotMap_FirstRow = new List<int> { 1, 6, 2, 7, 8, 0 };
-            collider.cargoNormIndex2SlotMap_SecondRow = new List<int> { 7, 2, 8, 1, 0 };
+            collider.cargoNormIndex2SlotMap_FirstRow = new List<int> { 0, 6, 1, 7, 8, 2 };
+            collider.cargoNormIndex2SlotMap_SecondRow = new List<int> { 6, 2, 7, 1, 0, 8 };
             collider.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1 };
             collider.hitboxExtendX = 2;
 
@@ -118,8 +118,8 @@ namespace DSPCalculator.BP
             lab.outputFromSlot = 15;
             lab.inputToSlot = 14;
             lab.recipeType = ERecipeType.Research;
-            lab.cargoNormIndex2SlotMap_FirstRow = new List<int> { 1, 6, 2, 7, 8, 0 };
-            lab.cargoNormIndex2SlotMap_SecondRow = new List<int> { 7, 2, 8, 1, 0 };
+            lab.cargoNormIndex2SlotMap_FirstRow = new List<int> { 0, 6, 1, 7, 8, 2 };
+            lab.cargoNormIndex2SlotMap_SecondRow = new List<int> { 6, 2, 7, 1, 0, 8 };
             lab.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1, 0, 0, 0 };
 
             foreach (var building in CalcDB.assemblerDict)

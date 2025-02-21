@@ -456,6 +456,9 @@ namespace DSPCalculator.Logic
                 result = 0;
             }
 
+            if (result == 0)
+                result = 0.00001;
+
             return result;
         }
 

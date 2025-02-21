@@ -137,6 +137,8 @@ namespace DSPCalculator
 
             LocalizationModule.RegisterTranslation("不在行星上无法粘贴蓝图警告", "You must be on a planet to paste blueprints!", "你必须处在行星上才能粘贴蓝图！", "You must be on a planet to paste blueprints!");
 
+            LocalizationModule.RegisterTranslation("分拣器科技不足警告", "Warning! Due to the low level of sorter technology, the sorter speed of some materials cannot support the factory's full speed. Therefore, the blueprint used  unlocked sorters to identify these locations. Please handle them manually.", "警告！由于分拣器科技水平过低，部分材料的抓取速度无法支持工厂满速运行，因此使用了你未解锁的分拣器进行标识，请手动处理这些位置。", "Warning! Due to the low level of sorter technology, the sorter speed of some materials cannot support the factory's full speed. Therefore, the blueprint used  unlocked sorters to identify these locations. Please handle them manually.");
+
         }
     }
 }

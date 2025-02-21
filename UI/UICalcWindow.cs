@@ -52,9 +52,6 @@ namespace DSPCalculator.UI
         // "ui/textures/sprites/icons/eraser-icon" 橡皮擦
         // "ui/textures/sprites/icons/minus-32" 粗短横线
 
-        public bool isTopAndActive;
-        public bool nextFrameRecalc;
-        public int sideInfoPanelIndex;
 
         // 一些全局prefab
         public static GameObject recipeObj;
@@ -154,6 +151,9 @@ namespace DSPCalculator.UI
         public bool isLargeWindow;
         public float targetVerticalPosition; // 主内容ScrollRect需要移动到的位置
         public bool ShiftState;
+        public bool isTopAndActive;
+        public bool nextFrameRecalc;
+        public int sideInfoPanelIndex;
 
         /// <summary>
         /// 创建新窗口
@@ -1319,6 +1319,12 @@ namespace DSPCalculator.UI
 
         public void OnUpdate()
         {
+            if(windowObj == null)
+            {
+                isTopAndActive = false;
+                WindowsManager.windows.Remove(this);
+                return;
+            }
             if (windowObj.transform.parent.GetChild(windowObj.transform.parent.childCount - 1) == windowObj.transform && windowObj.activeSelf)
             {
                 isTopAndActive = true;
@@ -1441,7 +1447,54 @@ namespace DSPCalculator.UI
                     uiSideItemNodes[i].OnUpdate(isMoveing);
                 }
             }
+            // 停靠在边缘并隐藏
+            if(windowObj.activeSelf && !isLargeWindow)
+            {
 
+                float targetX = windowObj.transform.localPosition.x;
+                bool onLeftEdge = WindowOnLeftEdge();
+                bool onRightEdge = WindowOnRightEdge();
+                if (!CursorInWindow()) // 鼠标不在窗口内，如果是边缘窗口，要执行隐藏动画
+                {
+                    if(onLeftEdge)
+                    {
+                        targetX = -WindowsManager.UIResolutionX / 2 - windowObj.GetComponent<RectTransform>().sizeDelta.x + WindowsManager.windowEdgeDockingWidth;
+                    }
+                    else if(onRightEdge)
+                    {
+                        targetX = WindowsManager.UIResolutionX / 2 - WindowsManager.windowEdgeDockingWidth;
+                    }
+                }
+                else // 鼠标在窗口内，且不是刚拖到显示器边缘必须立刻隐藏的状态
+                {
+                    if (onLeftEdge)
+                    {
+                        targetX = -WindowsManager.UIResolutionX / 2;
+                    }
+                    else if (onRightEdge)
+                    {
+                        targetX = WindowsManager.UIResolutionX / 2 - windowObj.GetComponent<RectTransform>().sizeDelta.x;
+                    }
+                }
+
+                if(targetX < windowObj.transform.localPosition.x - 0.1f)
+                {
+                    float move = Math.Min(windowObj.transform.localPosition.x - targetX, WindowsManager.windowHideOnEdgeSpeed);
+                    windowObj.transform.localPosition = new Vector3(windowObj.transform.localPosition.x - move, windowObj.transform.localPosition.y, windowObj.transform.localPosition.z);
+                }
+                else if (targetX > windowObj.transform.localPosition.x + 0.1f)
+                {
+                    float move = Math.Min(targetX - windowObj.transform.localPosition.x, WindowsManager.windowHideOnEdgeSpeed);
+                    windowObj.transform.localPosition = new Vector3(windowObj.transform.localPosition.x + move, windowObj.transform.localPosition.y, windowObj.transform.localPosition.z);
+                }
+                else // 说明窗口处于稳定状态
+                {
+                    if (onLeftEdge || onRightEdge)
+                    {
+                        windowObj.transform.SetAsFirstSibling(); // 避免抢占isTopAndActive位置
+                    }
+                }
+            }
 
 
             if (!isTopAndActive) return;
@@ -1473,20 +1526,20 @@ namespace DSPCalculator.UI
         // 将窗口关闭时，永远会保留一个最后关闭的窗口
         public void CloseWindow()
         {
-            // 如果存在其他的最后关闭的窗口，将其销毁
-            if(WindowsManager.lastClosedWindow != null)
+            WindowsManager.windows.Remove(this);
+            if(WindowsManager.closedWindows != null)
             {
-                if (WindowsManager.windows != null)
+                WindowsManager.closedWindows.Add(this);
+                while(DSPCalculatorPlugin.MaxWindowsReservedAfterClose.Value > 0 && WindowsManager.closedWindows.Count > DSPCalculatorPlugin.MaxWindowsReservedAfterClose.Value)
                 {
-                    WindowsManager.windows.Remove(WindowsManager.lastClosedWindow);
+                    GameObject.Destroy(WindowsManager.closedWindows[0].windowObj);
+                    WindowsManager.closedWindows.RemoveAt(0);
                 }
-                GameObject.Destroy(WindowsManager.lastClosedWindow.windowObj);
             }
 
             isTopAndActive = false;
             windowObj.transform.SetAsFirstSibling(); // 将其不再占用最top的UI，防止其占用其他窗口的isTopAndActive
             windowObj.SetActive(false);
-            WindowsManager.lastClosedWindow = this;
 
             if (UIPauseBarPatcher.pauseBarObj != null)
             {
@@ -1520,8 +1573,10 @@ namespace DSPCalculator.UI
 
         public void OpenWindow()
         {
-            if (WindowsManager.lastClosedWindow == this)
-                WindowsManager.lastClosedWindow = null;
+            if(WindowsManager.closedWindows != null && WindowsManager.closedWindows.Count > 0 && WindowsManager.closedWindows.Last() == this) 
+            {
+                WindowsManager.closedWindows.RemoveAt(WindowsManager.closedWindows.Count - 1);
+            }
 
             windowObj.transform.SetAsLastSibling();
             windowObj.SetActive(true);
@@ -1604,6 +1659,39 @@ namespace DSPCalculator.UI
             RefreshSideInfoPanels();
         }
 
+        public bool CursorInWindow()
+        {
+            // 将鼠标位置转换为UI位置
+            Vector3 mousePositionRaw = Input.mousePosition;
+            float UIx = mousePositionRaw.x * WindowsManager.UIResolutionRatio;
+            float UIy = mousePositionRaw.y * WindowsManager.UIResolutionRatio;
+            UIx -= WindowsManager.UIResolutionX / 2; // 距离屏幕中心的坐标
+            UIy -= WindowsManager.UIResolutionY / 2;
+            Vector3 windowTopLeftPositionFromScreenCenter = windowObj.transform.localPosition;
+            float windowWidth = windowObj.GetComponent<RectTransform>().sizeDelta.x;
+            float windowHeight = windowObj.GetComponent<RectTransform>().sizeDelta.y;
+            if (UIx >= windowTopLeftPositionFromScreenCenter.x && UIx <= windowTopLeftPositionFromScreenCenter.x + windowWidth)
+            {
+                if (UIy <= windowTopLeftPositionFromScreenCenter.y && UIy >= windowTopLeftPositionFromScreenCenter.y - windowHeight)
+                {
+                    return true;
+                }
+            }
+            if (UIx < -WindowsManager.UIResolutionX / 2 && WindowOnLeftEdge() || UIx > WindowsManager.UIResolutionX / 2 && WindowOnRightEdge())
+                return true;
+
+            return false;
+        }
+
+        public bool WindowOnLeftEdge()
+        {
+            return windowObj.transform.localPosition.x <= -WindowsManager.UIResolutionX / 2 + WindowsManager.windowEdgeJudgeDistance;
+        }
+
+        public bool WindowOnRightEdge()
+        {
+            return windowObj.transform.localPosition.x + windowObj.GetComponent<RectTransform>().sizeDelta.x >= WindowsManager.UIResolutionX / 2 - WindowsManager.windowEdgeJudgeDistance;
+        }
 
         /// <summary>
         /// 刷新主界面的所有产物

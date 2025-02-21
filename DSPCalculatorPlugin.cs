@@ -27,7 +27,7 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.3.0";
+        public const string VERSION = "0.3.2";
 
         // ---------------------------------------------------------------------------
         public static bool developerMode = false; //           发布前修改             |
@@ -40,6 +40,7 @@ namespace DSPCalculator
         public static ConfigEntry<bool> EditableTitle;
         public static ConfigEntry<bool> RoundUpAssemblerNum;
         public static ConfigEntry<bool> SingleWindow;
+        public static ConfigEntry<int> MaxWindowsReservedAfterClose;
 
         //public static ConfigEntry<bool> assemblerNumberKMG; // 生产设施是否用使用最大千分位符号
         //public static ConfigEntry<int> assemblerNumberDecimalPlaces; // 生产设施数量显示的小数位数，-1表示默认3位有效数字，正数表示恒定保留x位小数
@@ -59,6 +60,7 @@ namespace DSPCalculator
             EditableTitle = Config.Bind<bool>("config", "EditTitle", false, "将此项置为true可以使计算器的窗口标题可以被编辑。Set this to true will allow you to edit the calculator window's title in game.");
             RoundUpAssemblerNum = Config.Bind<bool>("config", "RoundUpAssemblerNum", true, "生产设施数量显示是否自动向上取整。Is the display of the number of production facilities automatically rounded up.");
             SingleWindow = Config.Bind<bool>("config", "SingleWindow", false, "单窗口模式启用时，打开和关闭窗口都将使用打开窗口的那个快捷键。这会使你无法开启多个窗口，除非你同时按住Ctrl+Shift+Alt。  When single window mode is enabled, both opening and closing calculator window will use the same shortcut key (i.e. the open the window hot key). But if you want to open multiple windows in this mode, you must hold down Ctrl+Shift+Alt at the same time.");
+            MaxWindowsReservedAfterClose = Config.Bind<int>("config", "MaxWindowsReservedAfterClose", 5, "最后被关闭的几个窗口可以仍在后台保留其计算结果和玩家设置，而不被销毁或重置。若设置为0，则所有关闭的窗口都不会被销毁（不推荐）。The last few closed windows can still retain their calculation results and player settings in the background without being destroyed or reset. If set to 0, all closed windows will not be destroyed (not recommended).");
 
             Harmony.CreateAndPatchAll(typeof(DSPCalculatorPlugin));
             Harmony.CreateAndPatchAll(typeof(RecipePickerPatcher));
@@ -94,6 +96,7 @@ namespace DSPCalculator
         [HarmonyPatch(typeof(GameData), "Import")]
         public static void OnLoadGame()
         {
+            WindowsManager.InitUIResolution();
             CalcDB.TryInit();
             BpDB.Init();
         }
@@ -108,7 +111,6 @@ namespace DSPCalculator
                 bool flag2 = VFInput.escKey.onDown || VFInput.escape || VFInput.delayedEscape; // 没有捕获 VFInput.rtsCancel.onDown
                 if (flag && flag2)
                 {
-                    VFInput.UseEscape();
                     WindowsManager.CloseTopWindow();
                     return true;
                 }

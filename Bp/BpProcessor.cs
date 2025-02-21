@@ -41,6 +41,7 @@ namespace DSPCalculator.BP
         //  0 ---------------                  0 不存在这条带子
         public bool doubleRow; // 是否双行工程蓝图
         public int cargoCount; // 共有几种货物
+        public bool share3Belts; // 是否可以共享三条带子
         public List<int> insufficientSorterItems; // 由于科技限制，单个分拣器运力不足的那些物品们
         public bool resourceGenCoater { get { return recipeInfo.incLevel > 0 && solution.userPreference.bpResourceCoater >= 0 || solution.userPreference.bpResourceCoater == 1; } } // 原材料有喷涂机
         public bool productGenCoater { get { return solution.userPreference.bpProductCoater; } } // 产物有喷涂机
@@ -59,6 +60,7 @@ namespace DSPCalculator.BP
             buildings = new List<BlueprintBuilding>();
             blueprintData = BpBuilder.CreateEmpty();
             PLSs = new List<int>();
+            share3Belts = false;
         }
 
         public BpProcessor(RecipeInfo recipeInfo, SolutionTree solution)
@@ -68,6 +70,7 @@ namespace DSPCalculator.BP
             cargoCount = recipeInfo.recipeNorm.oriProto.Items.Length + recipeInfo.recipeNorm.oriProto.Results.Length;
             doubleRow = solution.userPreference.bpRowCount == 2 && cargoCount < 6; // cargoCount == 6一定不能做双行的
             insufficientSorterItems = new List<int>();
+            share3Belts = false;
             PreProcess();
         }
 
@@ -102,46 +105,96 @@ namespace DSPCalculator.BP
 
                 if (cargoCount == 2)
                 {
-                    // 如果只有两种货物，且一种小于另一种的一半，则采用0、2号带的方式，即中间共用
-                    if (cargoInfoDescending[1].maxSupportAssemblerCount >= 2 * cargoInfoDescending[0].maxSupportAssemblerCount && cargoInfoDescending[1].maxSorterDistance >= 2)
+                    // 三带共享优先级判断
+                    if (cargoInfoDescending[0].maxSorterDistance >= 2 && cargoInfoDescending[1].maxSorterDistance >= 2)
                     {
+                        share3Belts = true;
                         cargoInfoOrderByNorm[2] = cargoInfoDescending[1];
                     }
-                    else if (cargoInfoDescending[1].maxSupportAssemblerCount >= recipeInfo.assemblerCount && solution.sortersAvailable.Last().grade >= 4) // 或者如果分拣器速度无限制，并且单条带能支持整个全部的产线，也可以共享
+                    else
                     {
-                        cargoInfoOrderByNorm[2] = cargoInfoDescending[1];
+                        share3Belts = false;
+                        // 如果只有两种货物，且一种小于另一种的一半，则采用0、2号带的方式，即中间共用
+                        if (cargoInfoDescending[1].maxSupportAssemblerCount >= 2 * cargoInfoDescending[0].maxSupportAssemblerCount && cargoInfoDescending[1].maxSorterDistance >= 2)
+                        {
+                            cargoInfoOrderByNorm[2] = cargoInfoDescending[1];
+                        }
+                        else if (cargoInfoDescending[1].maxSupportAssemblerCount >= recipeInfo.assemblerCount && solution.sortersAvailable.Last().grade >= 4) // 或者如果分拣器速度无限制，并且单条带能支持整个全部的产线，也可以共享
+                        {
+                            cargoInfoOrderByNorm[2] = cargoInfoDescending[1];
+                        }
+                        else // 否则，不共用，每个都是用最贴近的单带
+                        {
+                            cargoInfoOrderByNorm[1] = cargoInfoDescending[1];
+                        }
+
                     }
-                    else // 否则，不共用，每个都是用最贴近的单带
-                    {
-                        cargoInfoOrderByNorm[1] = cargoInfoDescending[1];
-                    }
+
                 }
                 else if (cargoCount == 3)
                 {
-                    cargoInfoOrderByNorm[1] = cargoInfoDescending[1];
-                    cargoInfoOrderByNorm[2] = cargoInfoDescending[2]; // 共享排序最末的那个，防止在共享带上
+                    // 三带共享要求分拣器可以支持2个三距离和一个2距离
+                    if (cargoInfoDescending[0].maxSorterDistance >= 2 && cargoInfoDescending[1].maxSorterDistance >= 3 && cargoInfoDescending[2].maxSorterDistance >= 3 && BpDB.assemblerInfos[recipeInfo.assemblerItemId].DragDistanceX >= 4) // 最后一个是能保证工厂在两行错开时，可以共享三条带而分拣器不碰撞。主要针对的是熔炉（钛合金产线），如果密铺共享三条带是会碰撞的
+                    {
+                        share3Belts = true;
+                        cargoInfoOrderByNorm[0] = cargoInfoDescending[1]; // 1和3距离，可用分拣器必须满足最远的3距离
+                        cargoInfoOrderByNorm[2] = cargoInfoDescending[0]; // 中间2距离
+                        cargoInfoOrderByNorm[5] = cargoInfoDescending[2]; // 1和3距离，可用分拣器必须满足最远的3距离
+                    }
+                    else
+                    {
+                        share3Belts = false;
+                        cargoInfoOrderByNorm[1] = cargoInfoDescending[1];
+                        cargoInfoOrderByNorm[2] = cargoInfoDescending[2]; // 共享排序最末的那个，防止在共享带上
+                    }
                 }
                 else if (cargoCount == 4)
                 {
-                    cargoInfoOrderByNorm[1] = cargoInfoDescending[1];
-                    cargoInfoOrderByNorm[2] = cargoInfoDescending[3]; // 共享排序最末的那个，防止在共享带上
-                    cargoInfoOrderByNorm[3] = cargoInfoDescending[2];
+                    // 三带共享
+                    if (cargoInfoDescending[1].maxSorterDistance >= 2 && cargoInfoDescending[2].maxSorterDistance >= 3 && cargoInfoDescending[3].maxSorterDistance >= 3 && BpDB.assemblerInfos[recipeInfo.assemblerItemId].DragDistanceX >= 4)
+                    {
+                        share3Belts = true;
+                        cargoInfoOrderByNorm[0] = cargoInfoDescending[2]; // 1和3距离，可用分拣器必须满足最远的3距离
+                        cargoInfoOrderByNorm[2] = cargoInfoDescending[1]; // 中间2距离
+                        cargoInfoOrderByNorm[5] = cargoInfoDescending[3]; // 1和3距离，可用分拣器必须满足最远的3距离
+                        cargoInfoOrderByNorm[1] = cargoInfoDescending[0]; // 1距离，两行都有各自的
+                    }
+                    else
+                    {
+                        share3Belts = false;
+                        cargoInfoOrderByNorm[1] = cargoInfoDescending[1];
+                        cargoInfoOrderByNorm[2] = cargoInfoDescending[3]; // 共享排序最末的那个，防止在共享带上
+                        cargoInfoOrderByNorm[3] = cargoInfoDescending[2];
+                    }
                 }
                 else if (cargoCount == 5)
                 {
-                    cargoInfoOrderByNorm[1] = cargoInfoDescending[1];
-
-                    if (cargoInfoDescending[3].maxSorterDistance >= 3) // 这意味着原本按顺序只需要放置在距离2的那条货物，分拣器的可用水平可以支持其放置在距离3的带子上
+                    if (cargoInfoDescending[1].maxSorterDistance >= 2 && cargoInfoDescending[2].maxSorterDistance >= 2 && cargoInfoDescending[3].maxSorterDistance >= 3 && cargoInfoDescending[4].maxSorterDistance >= 3 && BpDB.assemblerInfos[recipeInfo.assemblerItemId].DragDistanceX >= 4)
                     {
-                        cargoInfoOrderByNorm[2] = cargoInfoDescending[4]; // 则将最末尾速度最慢的那个货物作为共享带
-                        cargoInfoOrderByNorm[3] = cargoInfoDescending[2];
-                        cargoInfoOrderByNorm[4] = cargoInfoDescending[3]; // 也就是这条，支持三距离，那么放置在orderByNorm的index4上
+                        share3Belts = true;
+                        cargoInfoOrderByNorm[1] = cargoInfoDescending[0];
+                        cargoInfoOrderByNorm[3] = cargoInfoDescending[1];
+                        cargoInfoOrderByNorm[2] = cargoInfoDescending[2];
+                        cargoInfoOrderByNorm[0] = cargoInfoDescending[3];
+                        cargoInfoOrderByNorm[5] = cargoInfoDescending[4];
                     }
-                    else // 否则，将那个货物Descending[3]放置在距离3的带子（norm[4]）会导致因为分拣器效率不够而使得工厂跑不满，只能将按速度降序排序的index3放置在共享带上了
+                    else
                     {
-                        cargoInfoOrderByNorm[2] = cargoInfoDescending[3]; // 共享带正常选取
-                        cargoInfoOrderByNorm[3] = cargoInfoDescending[2];
-                        cargoInfoOrderByNorm[4] = cargoInfoDescending[4];
+                        share3Belts = false;
+                        cargoInfoOrderByNorm[1] = cargoInfoDescending[1];
+
+                        if (cargoInfoDescending[3].maxSorterDistance >= 3) // 这意味着原本按顺序只需要放置在距离2的那条货物，分拣器的可用水平可以支持其放置在距离3的带子上
+                        {
+                            cargoInfoOrderByNorm[2] = cargoInfoDescending[4]; // 则将最末尾速度最慢的那个货物作为共享带
+                            cargoInfoOrderByNorm[3] = cargoInfoDescending[2];
+                            cargoInfoOrderByNorm[4] = cargoInfoDescending[3]; // 也就是这条，支持三距离，那么放置在orderByNorm的index4上
+                        }
+                        else // 否则，将那个货物Descending[3]放置在距离3的带子（norm[4]）会导致因为分拣器效率不够而使得工厂跑不满，只能将按速度降序排序的index3放置在共享带上了
+                        {
+                            cargoInfoOrderByNorm[2] = cargoInfoDescending[3]; // 共享带正常选取
+                            cargoInfoOrderByNorm[3] = cargoInfoDescending[2];
+                            cargoInfoOrderByNorm[4] = cargoInfoDescending[4];
+                        }
                     }
                 }
                 else
@@ -160,21 +213,27 @@ namespace DSPCalculator.BP
 
             // 然后处理单个蓝图可以支持的工厂数
             supportAssemblerCount = int.MaxValue;
-            if(doubleRow)
+            if (doubleRow)
             {
                 for (int i = 0; i < cargoInfoOrderByNorm.Count; i++)
                 {
                     if (cargoInfoOrderByNorm[i] == null)
                         continue;
-
-                    supportAssemblerCount = Math.Min(supportAssemblerCount, cargoInfoOrderByNorm[i].maxSupportAssemblerCount * (i == 2 ? 1 : 2)); // i==2是共享带，不能乘2来计算货物支持的工厂数，其他带子因为在双行蓝图中都有两条带子，所以工厂数乘2
+                    bool wontDoubleBecauseShared = i == 2 || ((i == 0 || i == 5) && share3Belts);
+                    // 共享带，不能乘2来计算货物支持的工厂数，其他带子因为在双行蓝图中都有两条带子，所以工厂数乘2
+                    supportAssemblerCount = (int)Math.Min(supportAssemblerCount, cargoInfoOrderByNorm[i].maxSupportAssemblerCount * (wontDoubleBecauseShared ? 1 : 2));
+                    if (supportAssemblerCount < 0)
+                        supportAssemblerCount = int.MaxValue;
                 }
+
             }
             else
             {
                 for (int i = 0; i < cargoInfoDescending.Count; i++)
                 {
-                    supportAssemblerCount = Math.Min(supportAssemblerCount, cargoInfoDescending[i].maxSupportAssemblerCount);
+                    supportAssemblerCount = (int)Math.Min(supportAssemblerCount, cargoInfoDescending[i].maxSupportAssemblerCount);
+                    if (supportAssemblerCount < 0)
+                        supportAssemblerCount = int.MaxValue;
                 }
             }
 
@@ -204,7 +263,8 @@ namespace DSPCalculator.BP
                 else
                     c.beltSpeedRequiredPerAssembler = recipeInfo.GetOutputSpeedOriProto(i, recipeInfo.count) / recipeInfo.assemblerCount;
 
-                c.maxSupportAssemblerCount = (int)(solution.beltsAvailable.Last().speedPerMin / c.beltSpeedRequiredPerAssembler);
+                c.maxSupportAssemblerCount = (long)(solution.beltsAvailable.Last().speedPerMin / c.beltSpeedRequiredPerAssembler);
+                
 
                 if (sorterMk4Available)
                     c.maxSorterDistance = 3;
@@ -213,7 +273,7 @@ namespace DSPCalculator.BP
 
                 if (DSPCalculatorPlugin.developerMode)
                 {
-                    //Utils.logger.LogInfo($"item{c.itemId.GetItemName()} spd per factory {c.beltSpeedRequiredPerAssembler} maxC{c.maxSupportAssemblerCount} sorter max distance{c.maxSorterDistance}.");
+                    Utils.logger.LogInfo($"item{c.itemId.GetItemName()} spd per factory {c.beltSpeedRequiredPerAssembler} maxC{c.maxSupportAssemblerCount} sorter max distance{c.maxSorterDistance}.");
                 }
                 cargoInfoDescending.Add(c);
             }
@@ -224,18 +284,19 @@ namespace DSPCalculator.BP
                 c.index = i;
                 c.isResource = true;
                 c.beltSpeedRequiredPerAssembler = recipeInfo.GetInputSpeedOriProto(i, recipeInfo.count) / recipeInfo.assemblerCount / solution.userPreference.bpStack;
-                c.maxSupportAssemblerCount = (int)(solution.beltsAvailable.Last().speedPerMin / c.beltSpeedRequiredPerAssembler);
+                c.maxSupportAssemblerCount = (long)(solution.beltsAvailable.Last().speedPerMin / c.beltSpeedRequiredPerAssembler);
                 if (solution.sortersAvailable.Last().grade >= 4)
                     c.maxSorterDistance = 3;
                 else
                     c.maxSorterDistance = (int)(solution.sortersAvailable.Last().speedPerMin / c.beltSpeedRequiredPerAssembler);
                 if (DSPCalculatorPlugin.developerMode)
                 {
-                    //Utils.logger.LogInfo($"item{c.itemId.GetItemName()} spd per factory{c.beltSpeedRequiredPerAssembler} maxC{c.maxSupportAssemblerCount} sorter max distance{c.maxSorterDistance}.");
+                    Utils.logger.LogInfo($"item{c.itemId.GetItemName()} spd per factory{c.beltSpeedRequiredPerAssembler} maxC{c.maxSupportAssemblerCount} sorter max distance{c.maxSorterDistance}.");
                 }
                 cargoInfoDescending.Add(c);
             }
             cargoInfoDescending = cargoInfoDescending.OrderByDescending(x => x.beltSpeedRequiredPerAssembler).ToList(); // 需求量最大的放在第一格
+
         }
         public bool GenerateBlueprint(int genLevel)
         {
@@ -255,7 +316,6 @@ namespace DSPCalculator.BP
             int groupCount = (int)Math.Ceiling(supportAssemblerCount * 1.0 / maxLevel);
             if (!isLab)
                 maxLevel = 1;
-
             // 创建第一行工厂，第一行工厂y为0
             int assemblerCountFirstRow = doubleRow ? (int)Math.Ceiling(supportAssemblerCount*1.0 / 2) : supportAssemblerCount; // 每行工厂的数量，如果是单行蓝图则就等于support
             int assemblerCountSecondRow = supportAssemblerCount - assemblerCountFirstRow;
@@ -297,7 +357,8 @@ namespace DSPCalculator.BP
                     BpCargoInfo cargoInfo = cargoInfoOrderByNorm[i];
                     if (cargoInfo != null)
                     {
-                        int assemblerCountOnThisBelt = i == 2 ? supportAssemblerCount : assemblerCountFirstRow;
+                        bool isSharedBelt = i == 2 || ((i == 0 || i == 5) && share3Belts);
+                        int assemblerCountOnThisBelt = isSharedBelt ? supportAssemblerCount : assemblerCountFirstRow;
                         int beltId = -1;
                         if (solution.userPreference.bpBeltHighest) // 如果用户配置为总是使用最高级
                         {
@@ -398,7 +459,7 @@ namespace DSPCalculator.BP
             if (doubleRow)
             {
                 // 处理第二行工厂
-                int assemblerX2 = 0;
+                int assemblerX2 = 1; // 错开一格
                 int assemblerY2 = GetAssemblerY(false, assemblerInfo);
                 if (!isLab)
                 {
@@ -422,10 +483,12 @@ namespace DSPCalculator.BP
 
                     int beltLeftX = GetBeltLeftX(assemblerInfo);
                     int rightExtend = assemblerInfo.slotConnectBeltXPositions.Max() + 1; // 最右格子对应的传送带坐标，再额外延长一格
-                    int beltRightX = (assemblerCountFirstRow - 1) * assemblerInfo.DragDistanceX + rightExtend;
+                    int beltRightX = (assemblerCountSecondRow - 1) * assemblerInfo.DragDistanceX + rightExtend; // +1是因为第二行会右移一格
                     for (int i = 0; i < cargoInfoOrderByNorm.Count; i++)
                     {
                         if (i == 2) // 共享带子不能重复创建
+                            continue;
+                        if (share3Belts && (i == 0 || i == 5))
                             continue;
                         BpCargoInfo cargoInfo = cargoInfoOrderByNorm[i];
                         if (cargoInfo != null)
@@ -453,8 +516,11 @@ namespace DSPCalculator.BP
                             }
 
                             // 将带子端点信息记录
-                            if (i != 2)
+                            if (i == 0 && cargoInfoOrderByNorm[2] == null)// 说明中间不是三带，则第二行工厂的0号新带位置应该是4而非5（5来自于BpDB.cargoInfoNormIndexToBeltPosIndexMap_SecondRow[i]）
+                                cargoBeltPoses[4] = new BpCargoBeltPos(cargoInfo, beltLeftX, Y);
+                            else if (i != 2)
                                 cargoBeltPoses[BpDB.cargoInfoNormIndexToBeltPosIndexMap_SecondRow[i]] = new BpCargoBeltPos(cargoInfo, beltLeftX, Y);
+                            
 
                             // 创建喷涂机
                             if (resourceGenCoater && cargoInfo.isResource || productGenCoater && !cargoInfo.isResource)
@@ -463,7 +529,7 @@ namespace DSPCalculator.BP
                             }
                         }
                     }
-                    // ------然后创建爪子
+                    // ------然后创建爪子，如果是3共享，必须专门判断每一个爪子id、filter和位置
                     for (int i = 0; i < assemblersSecondRow.Count; i++)
                     {
                         int assemblerBuildingIndex = assemblersSecondRow[i];
@@ -472,8 +538,67 @@ namespace DSPCalculator.BP
                             BpCargoInfo cargoInfo = cargoInfoOrderByNorm[c];
                             if (cargoInfo != null)
                             {
+                                bool isResource = cargoInfo.isResource;
+                                int cargoItemId = cargoInfo.itemId;
+                                int sorterId = cargoInfo.useSorterItemId;
+                                int mappedCargoIndex = c; // 如果3带共享，具体是什么cargo需要映射过去
+                                if(share3Belts) // 3共享的带子，不能直接读cargoInfoOrderByNorm的属性，因为和第一行不一样，是倒着的
+                                {
+                                    if(c == 0)
+                                    {
+                                        if (cargoInfoOrderByNorm[5] != null)
+                                        {
+                                            mappedCargoIndex = 5;
+                                        }
+                                        else if (cargoInfoOrderByNorm[2] != null)
+                                        {
+                                            mappedCargoIndex = 2;
+                                        }
+                                    }
+                                    else if (c == 2 && cargoInfoOrderByNorm[5] == null) // 这种特殊情况是只有两条带子共享
+                                    {
+                                        mappedCargoIndex = 0;
+                                    }
+                                    else if (c == 5)
+                                    {
+                                        mappedCargoIndex = 0;
+                                    }
+                                    isResource = cargoInfoOrderByNorm[mappedCargoIndex].isResource;
+                                    cargoItemId = cargoInfoOrderByNorm[mappedCargoIndex].itemId;
+
+                                    // 要独立计算分拣器使用！，既不能用
+                                    if (solution.userPreference.bpSorterHighest || (solution.sortersAvailable.Last().grade >= 4 && !isResource))
+                                    {
+                                        sorterId = solution.sortersAvailable.Last().itemId;
+                                    }
+                                    else  // 否则尽可能使用便宜的
+                                    {
+                                        int distance = c / 2 + 1;
+                                        for (int s = 0; s < solution.sortersAvailable.Count; s++)
+                                        {
+                                            if (solution.sortersAvailable[s].Satisfy(cargoInfoOrderByNorm[mappedCargoIndex].beltSpeedRequiredPerAssembler * (isLab ? maxLevel : 1), distance))
+                                            {
+                                                sorterId = solution.sortersAvailable[s].itemId;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (sorterId < 0) // 最快的一个可用爪子（但是会受限于科技）都不能满足一个工厂的进料
+                                    {
+                                        sorterId = BpDB.sortersAscending.Last().itemId; // 直接使用集装分拣器
+                                        if(!insufficientSorterItems.Contains(cargoItemId))
+                                            insufficientSorterItems.Add(cargoItemId); // 将这个配方记录为分拣器无法满足，需要用户自行调整（比如换成两个低级爪子）
+                                    }
+                                }
                                 int slot = assemblerInfo.cargoNormIndex2SlotMap_SecondRow[c];
-                                this.AssemblerConnectToBelt(assemblerBuildingIndex, slot, cargoInfo.useSorterItemId, 1 + c / 2, cargoInfo.isResource, cargoInfo.isResource ? 0 : cargoInfo.itemId, cargoInfo.isResource);
+                                if(share3Belts && onlyShare2Belts) // 只共享了两条袋子的话，用三条带子的slot分配会冲突，要全部右移一格
+                                {
+                                    if(c == 0)
+                                        slot = assemblerInfo.cargoNormIndex2SlotMap_SecondRow[2];
+                                    else if (c == 2)
+                                        slot = assemblerInfo.cargoNormIndex2SlotMap_SecondRow[5];
+                                }
+                                this.AssemblerConnectToBelt(assemblerBuildingIndex, slot, sorterId, 1 + c / 2, isResource, isResource ? 0 : cargoItemId, isResource);
                             }
                         }
                     }
@@ -481,7 +606,8 @@ namespace DSPCalculator.BP
             }
             if (genLevel > 0)
                 GenerateAndConnectPLS();
-
+            if (insufficientSorterItems.Count > 0)
+                UIRealtimeTip.Popup("分拣器科技不足警告".Translate());
             PostProcess();
             return true;
         }
@@ -546,6 +672,7 @@ namespace DSPCalculator.BP
                         bool status = this.SetOrGetPLSStorage(PLSIndex, beltPos.cargoItemId, beltPos.isResource, out storageIndex); // 设置PLS的物流塔信息
                         if (!status && storageIndex >= 0) // 说明有冲突
                             storageConflicts = true;
+                        Utils.logger.LogInfo($"i = {i}, slot = {beltPosesIndexToPLSSlotMap[i]}");
                         if(storageIndex >= 0)
                             this.ConnectPLSToBelt(PLSIndex, beltPosesIndexToPLSSlotMap[i], beltPos.isResource ? storageIndex : -1, gridMap.GetBuilding(beltPos.x, beltPos.y)); // 连接物流塔
                     }
@@ -574,6 +701,8 @@ namespace DSPCalculator.BP
                     }
                 }
                 coaterBeginY -= 1;
+                if (coaterBeginY > -2)
+                    coaterBeginY = -2;
                 if(coaterEndY > coaterBeginY)
                 {
                     this.AddBelts(solution.beltsAvailable.Last().itemId, coaterSlotPosX, coaterBeginY, 0, coaterSlotPosX, coaterEndY, 1);
@@ -717,8 +846,11 @@ namespace DSPCalculator.BP
                 return 0;
 
             int y = assemblerInfo.centerDistanceTop + assemblerInfo.centerDistanceBottom + 1;
-            if (cargoInfoOrderByNorm[2] != null) // 中间多插了一条共享带
-                y++;
+            if (cargoInfoOrderByNorm[2] != null) // 单共享时，中间多插了一条共享带，或者三共享为true时，实际上不是2共享（也就是5号位有货）
+            {
+                if (cargoInfoOrderByNorm[5]!=null || !share3Belts)
+                    y++;
+            }
             return y;
         }
 
@@ -789,6 +921,14 @@ namespace DSPCalculator.BP
             //if (!genCoater)
             //    reserveForCoater = 0;
         }
+
+        public bool onlyShare2Belts
+        {
+            get
+            {
+                return share3Belts && cargoInfoOrderByNorm[5] == null;
+            }
+        }
     }
 
     public class BpCargoInfo
@@ -797,7 +937,7 @@ namespace DSPCalculator.BP
         public int index;
         public bool isResource; // 是配方的输入材料true，是配方的产物false
         public double beltSpeedRequiredPerAssembler; // 每个设施每分钟的需求的带速，对于进料要将物品的速度除以stack，对于出料则取决于能否用集装分拣器，能用则除以4，否则不除。如果集装分拣器可用，无论怎么设置，出货口一定用集装分拣器
-        public int maxSupportAssemblerCount; // 最高级可用传送带，单带可支持的工厂数量
+        public long maxSupportAssemblerCount; // 最高级可用传送带，单带可支持的工厂数量
         public int maxSorterDistance; // 最高级可用分拣器的最远距离（可以支持设施不间断运行）
         // 以下在初次实例化时并未赋值，创建蓝图时才会赋值
         public int useBeltItemId; // 使用的传送带ItemId

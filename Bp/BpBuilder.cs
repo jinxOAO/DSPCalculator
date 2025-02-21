@@ -87,7 +87,7 @@ namespace DSPCalculator.BP
                 }
                 endX -= bumpX; // 把末尾的移到下一个坐标移回来
             }
-            if(bumpY != 0)
+            if (bumpY != 0)
             {
                 int count = (int)((startY - endY) / bumpY);
                 if (bumpX == 0) // 只包括垂直方向的时候，垂直带也要构建尾部最后一个。而水平垂直方向都有带子的时候，垂直带不需要最尾部的带子，反而是连接已经构造好的尾部带子（在水平方向上最后一个构建的）
@@ -196,9 +196,11 @@ namespace DSPCalculator.BP
                 }
                 endZ -= bumpZ;
             }
-            if(beginIcon > 0)
+            if (list.Count <= 0)
+                Utils.logger.LogInfo("list count is 0");
+            if (beginIcon > 0 && list.Count > 0)
                 list[list.Count - 1].parameters = new int[] { beginIcon, 0 };
-            if (inputFromBelt > 0)
+            if (inputFromBelt >= 0 && list.Count > 0)
             {
                 list[inputFromBelt].outputToSlot = 1;
                 list[inputFromBelt].outputObj = list[list.Count - 1];

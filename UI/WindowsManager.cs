@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using MathNet.Numerics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +13,8 @@ namespace DSPCalculator.UI
     {
         // 存储所有窗口实例
         public static List<UICalcWindow> windows;
-        public static UICalcWindow lastClosedWindow;
+        //public static UICalcWindow lastClosedWindow;
+        public static List<UICalcWindow> closedWindows;
 
         //public static GameObject calcWindowGroupObj;
         public static bool hasOpenedWindow;
@@ -22,13 +24,20 @@ namespace DSPCalculator.UI
 
         public static bool temporaryCloseBecausePasteBp = false; // 由于粘贴蓝图，而暂时关闭了计算器窗口，会在粘贴完成后（退出蓝图粘贴窗口时）自动打开
 
+        public static float UIResolutionX = 1920;
+        public static float UIResolutionY = 1080;
+        public static float UIResolutionRatio = 1f;
+        public static float windowHideOnEdgeSpeed = 30;
+        public static float windowEdgeJudgeDistance = 20;
+        public static float windowEdgeDockingWidth = 20;
+
         /// <summary>
         /// mod加载时初始化
         /// </summary>
         public static void OnStart()
         {
             windows = new List<UICalcWindow>();
-
+            closedWindows = new List<UICalcWindow>();
             // 创建所有window的父级obj
             //GameObject parentWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows");
             //calcWindowGroupObj = new GameObject();
@@ -38,6 +47,13 @@ namespace DSPCalculator.UI
             //calcWindowGroupObj.transform.localPosition = Vector3.zero;
             hasOpenedWindow = false;
             inGameWindows = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows").transform;
+        }
+
+        public static void InitUIResolution()
+        {
+            UIResolutionRatio = DSPGame.globalOption.uiLayoutHeight * 1.0f / DSPGame.globalOption.resolution.height;
+            UIResolutionX = DSPGame.globalOption.resolution.width * DSPGame.globalOption.uiLayoutHeight / DSPGame.globalOption.resolution.height;
+            UIResolutionY = DSPGame.globalOption.uiLayoutHeight;
         }
 
         public static void OnUpdate()
@@ -130,10 +146,12 @@ namespace DSPCalculator.UI
             UIPauseBarPatcher.Init();
             temporaryCloseBecausePasteBp = false;
 
-            if (lastClosedWindow != null && !forceNewWindow)
+            if (closedWindows.Count > 0 && !forceNewWindow)
             {
-                lastClosedWindow.OpenWindow();
-                return lastClosedWindow;
+                UICalcWindow lastWindow = closedWindows.Last();
+                lastWindow.OpenWindow();
+                windows.Add(lastWindow);
+                return lastWindow; // 这里不能return closedWindows.Last()，因为在open完这个last之后，这个last就会被从数组中移除，你return的就不是这个last了，而是别的甚至因为数组空了导致调用Last报异常
             }
             else
             {
@@ -148,12 +166,14 @@ namespace DSPCalculator.UI
             UIPauseBarPatcher.Init();
             temporaryCloseBecausePasteBp = false;
 
-            if (lastClosedWindow != null && !forceNewWindow)
+            if (closedWindows.Count > 0 && !forceNewWindow)
             {
-                lastClosedWindow.OpenWindow();
-                Vector3 oriPos = lastClosedWindow.windowObj.transform.localPosition;
-                lastClosedWindow.windowObj.transform.localPosition = new Vector3(oriPos.x + offsetX, oriPos.y + offsetY, oriPos.z);
-                return lastClosedWindow;
+                UICalcWindow lastWindow = closedWindows.Last();
+                lastWindow.OpenWindow();
+                windows.Add(lastWindow);
+                Vector3 oriPos = lastWindow.windowObj.transform.localPosition;
+                lastWindow.windowObj.transform.localPosition = new Vector3(oriPos.x + offsetX, oriPos.y + offsetY, oriPos.z);
+                return lastWindow;
             }
             else
             {
@@ -171,9 +191,10 @@ namespace DSPCalculator.UI
             {
                 for (int i = 0; i < windows.Count; i++)
                 {
-                    if (windows[i].isTopAndActive)
+                    if (windows[i].isTopAndActive && !windows[i].WindowOnLeftEdge() && !windows[i].WindowOnRightEdge())
                     {
                         windows[i].CloseWindow();
+                        VFInput.UseEscape();
                         return;
                     }
                 }
@@ -189,6 +210,23 @@ namespace DSPCalculator.UI
                 OpenOne();
                 temporaryCloseBecausePasteBp = false;
             }
+        }
+
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UIWindowDrag), "Update")]
+        public static bool UIWindowDragUpdateBlocker(ref UIWindowDrag __instance)
+        {
+            if(__instance.dragTrans?.gameObject != null)
+            {
+                string[] nameArray = __instance.dragTrans.gameObject.name.Split(' ');
+                if (nameArray.Length > 0 && nameArray[0] == "calc-window")
+                {
+                    __instance.moving = false;
+                }
+            }
+
+            return true;
         }
     }
 }
