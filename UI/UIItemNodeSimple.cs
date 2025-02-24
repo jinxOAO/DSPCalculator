@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace DSPCalculator.UI
 {
-    public class UIItemNodeSimple
+    public class UIItemNodeSimple : UINode
     {
         // 一些公共资源
         public static Sprite backgroundSprite = null;
@@ -31,11 +31,11 @@ namespace DSPCalculator.UI
         public static Vector3 recipeGroupLocalPosition = new Vector3(0, 20, 0);
 
         // 对象资源
-        public GameObject obj;
+        //public GameObject obj;
         public Image backgroundImg;
 
         public int ID;
-        public UICalcWindow parentCalcWindow;
+        //public UICalcWindow parentCalcWindow;
         public ItemNode itemNode;
         public RecipeInfo mainRecipeInfo;
         public bool isProliferatorDemand;
@@ -59,7 +59,7 @@ namespace DSPCalculator.UI
 
         public RecipeInfo lastFocusedRecipe; // 仅用于，手动点击一个溢出产物时，如果该产物是由多个配方溢出的，则多次点击会在这些配方间循环聚焦
 
-        public UIItemNodeSimple(ItemNode node, bool isResources ,UICalcWindow calcWindow, bool isProliferatorDemand = false, bool isMixBeltInfo = false)
+        public UIItemNodeSimple(ItemNode node, bool isResources, UICalcWindow calcWindow, bool isProliferatorDemand = false, bool isMixBeltInfo = false)
         {
             // 如果公共资源尚未被初始化，则初始化
             if (backgroundSprite == null)
@@ -133,15 +133,15 @@ namespace DSPCalculator.UI
                     }
                 }
                 outputText.text = finalSpeedStr;
-                if(isMixBeltInfo)
+                if (isMixBeltInfo)
                     outputText.text = itemNode.satisfiedSpeed.ToString() + " " + "条calc".Translate();
-                if(isProliferatorDemand) // 如果是专门用于显示额外增产剂需求的
+                if (isProliferatorDemand) // 如果是专门用于显示额外增产剂需求的
                 {
                     outputText.fontSize = 16;
                     //int oriCount = LDB.items.Select(itemId).HpMax;
                     //int ability = CalcDB.proliferatorAbilitiesMap[itemId];
                     //int proliferatedCount = (int)(oriCount * (1.0 + Utils.GetIncMilli(ability, parentCalcWindow.solution.userPreference)));
-                    if(parentCalcWindow.solution.proliferatorCount[itemId] > parentCalcWindow.solution.proliferatorCountSelfSprayed[itemId]) 
+                    if (parentCalcWindow.solution.proliferatorCount[itemId] > parentCalcWindow.solution.proliferatorCountSelfSprayed[itemId])
                         outputText.text += $"\n({Utils.KMG(parentCalcWindow.solution.proliferatorCountSelfSprayed[itemId])})";
                 }
 
@@ -177,7 +177,7 @@ namespace DSPCalculator.UI
                     calcInNewWindowButtonObj.transform.SetParent(obj.transform, false);
                     calcInNewWindowButtonObj.transform.localScale = Vector3.one;
                     calcInNewWindowButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(100, 17, 0);
-                    if(isProliferatorDemand)
+                    if (isProliferatorDemand)
                         calcInNewWindowButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 17, 0);
                     calcInNewWindowButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(16, 16);
                     calcInNewWindowButtonObj.GetComponent<Image>().sprite = UICalcWindow.arrowInBoxSprite;
@@ -241,7 +241,7 @@ namespace DSPCalculator.UI
         }
 
 
-        public void OnUpdate(bool isMoving)
+        public override void OnUpdate(bool isMoving)
         {
             if (!isMoving)
             {
@@ -274,7 +274,7 @@ namespace DSPCalculator.UI
         public void FocusTargetNode(int itemId)
         {
             bool canLocateAndIsMainProduct = false; // 这个判断条件说明，溢出产物本身是某种主产物，是生产线中必须要输入的一种，并且有其主要配方，因此要定位到主要配方上
-            if(parentCalcWindow.uiItemNodeOrders.ContainsKey(itemId) && parentCalcWindow.solution.itemNodes.ContainsKey(itemId))
+            if (parentCalcWindow.uiItemNodeOrders.ContainsKey(itemId) && parentCalcWindow.solution.itemNodes.ContainsKey(itemId))
             {
                 if (parentCalcWindow.solution.itemNodes[itemId].mainRecipe != null && parentCalcWindow.solution.itemNodes[itemId].mainRecipe.count > 0.001f)
                     canLocateAndIsMainProduct = true;
@@ -325,7 +325,7 @@ namespace DSPCalculator.UI
                     }
                     else
                     {
-                        if(recipeInfoData.Value.recipeNorm.products.Contains(itemId))
+                        if (recipeInfoData.Value.recipeNorm.products.Contains(itemId))
                         {
                             for (int i = 0; i < recipeInfoData.Value.recipeNorm.products.Length; i++)
                             {
@@ -373,7 +373,7 @@ namespace DSPCalculator.UI
             UICalcWindow calcWindow = WindowsManager.OpenOne(true);
             int itemId = itemNode.itemId;
             long requiredSpeed = (long)Math.Ceiling(itemNode.speedFromOre);
-            if(isProliferatorDemand)
+            if (isProliferatorDemand)
                 requiredSpeed = (long)Math.Ceiling(parentCalcWindow.solution.proliferatorCountSelfSprayed[itemId]);
 
             // 打开新窗口后，该物品必须默认不被视为原矿，否则对于默认视为原矿的材料没有意义

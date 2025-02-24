@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace DSPCalculator
 {
@@ -162,6 +163,50 @@ namespace DSPCalculator
                 return recipeProto.name;
             else
                 return "null";
+        }
+
+        public static GameObject CreateEmptyGameObject(this GameObject parentObj, string name)
+        {
+            GameObject obj = new GameObject(name);
+            obj.transform.SetParent(parentObj.transform, false);
+            obj.transform.localScale = Vector3.one;
+            obj.transform.localPosition = Vector3.zero;
+            return obj;
+        }
+
+        public static GameObject CreateEmptyGameObject(this Transform parent, string name)
+        {
+            GameObject obj = new GameObject(name);
+            obj.transform.SetParent(parent, false);
+            obj.transform.localScale = Vector3.one;
+            obj.transform.localPosition = Vector3.zero;
+            return obj;
+        }
+
+        public static UIButton AddUIButtonForImage(this GameObject obj)
+        {
+            UIButton uibtn = obj.AddComponent<UIButton>();
+            uibtn.tips = new UIButton.TipSettings();
+            if(obj.GetComponent<Button>() != null)
+            {
+                uibtn.button = obj.GetComponent<Button>();
+            }
+            uibtn.transitions = new UIButton.Transition[1];
+            uibtn.transitions[0] = CreateUIButtonTransition(obj.GetComponent<Image>());
+            return uibtn;
+        }
+
+        public static UIButton.Transition CreateUIButtonTransition(Graphic target)
+        {
+            UIButton.Transition trans = new UIButton.Transition();
+            trans.target = target;
+            trans.damp = 0.3f;
+            trans.highlightAlphaMultiplier = 1.0f;
+            trans.highlightColorMultiplier = 1.0f;
+            trans.highlightSizeMultiplier = 1.0f;
+            trans.mouseoverSize = 1;
+            trans.pressedSize = 1;
+            return trans;
         }
     }
 }

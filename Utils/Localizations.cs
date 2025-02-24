@@ -13,6 +13,7 @@ namespace DSPCalculator
         {
             LocalizationModule.RegisterTranslation("量化计算器", "Calculator", "量化计算器", "Calculator");
             LocalizationModule.RegisterTranslation("设置目标产物", "Target Product", "设置目标产物", "Target Product");
+            LocalizationModule.RegisterTranslation("目标产物", "Target Products", "目标产物", "Target Products");
 
             LocalizationModule.RegisterTranslation("来自calc", "> From ", "> 来自", "- From ");
             LocalizationModule.RegisterTranslation("实际需求calc", "- Actual demand  ", "- 实际需求  ", "- Actual demand  ");
@@ -32,9 +33,17 @@ namespace DSPCalculator
 
             LocalizationModule.RegisterTranslation("不再视为原矿标题", "Remove From Raw Ore", "不再视为原矿", "Remove From Raw Ore");
             LocalizationModule.RegisterTranslation("不再视为原矿说明", "No longer treat this item as directly obtainable raw material.", "不再将该物品视为可直接获得的原矿。", "No longer treat this item as directly obtainable raw material.");
+            LocalizationModule.RegisterTranslation("移除目标产物标题", "Remove", "移除", "Remove");
+            LocalizationModule.RegisterTranslation("移除目标产物说明", "Remove this target product and recalculate the production line.", "将此目标产物移除，然后重新计算生产线。", "Remove this target product and recalculate the production line.");
 
-            LocalizationModule.RegisterTranslation("在新窗口中计算标题", "Calculate In New Window", "在新窗口中计算", "Calculate In New Window");
+            LocalizationModule.RegisterTranslation("添加新目标产物标题", "Add New Target Product", "添加新目标产物", "Add New Target Product");
+            LocalizationModule.RegisterTranslation("添加新目标产物说明", "Add new target products and recalculate the total production line after completing the product and speed settings.", "添加新的目标产物，在完成产物和速度设定后，重新计算总生产线。", "Add new target products and recalculate the total production line after completing the product and speed settings.");
+
+            LocalizationModule.RegisterTranslation("在新窗口中计算标题", "Calculate in New Window", "在新窗口中计算", "Calculate in New Window");
             LocalizationModule.RegisterTranslation("在新窗口中计算说明", "Open a new quantification calculator window and calculate the production line for this item in the new window.", "打开一个新的量化计算器窗口，在该窗口中计算此物品的生产线。", "Open a new quantification calculator window and calculate the production line for this item in the new window.");
+
+            LocalizationModule.RegisterTranslation("移除并在新窗口中计算标题", "Remove and Calculate in New Window", "移除并在新窗口中计算", "Remove and Calculate in New Window");
+            LocalizationModule.RegisterTranslation("移除并在新窗口中计算说明", "<color=#FD965EC0>Remove this item</color> from target products, then open a new quantification calculator window and calculate the production line for this item in the new window.\n\n<color=#FD965EC0>Holding Shift will retain this target product</color> instead of removing it.", "<color=#FD965EC0>移除此目标产物</color>，并打开一个新的量化计算器窗口，在该窗口中计算此物品的生产线。\n\n<color=#FD965EC0>按住Shift</color>还会在当前计算器中<color=#FD965EC0>保留此目标产物</color>。", "<color=#FD965EC0>Remove this item</color> from target products, then open a new quantification calculator window and calculate the production line for this item in the new window.\n\n<color=#FD965EC0>Holding Shift will retain this target product</color> instead of removing it.");
 
             LocalizationModule.RegisterTranslation("还原默认配置标题", "Reset All Configuration", "还原默认配置", "Reset All Configuration");
             LocalizationModule.RegisterTranslation("还原默认配置说明", "All preferred production buildings, proliferator settings, raw ore settings, etc. will be restored to default configurations.", "所有首选生产建筑、增产、原矿等设置将被还原为默认配置。", "All preferred production buildings, proliferator settings, raw ore settings, etc. will be restored to default configurations.");

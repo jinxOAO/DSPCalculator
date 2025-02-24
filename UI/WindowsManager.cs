@@ -79,7 +79,7 @@ namespace DSPCalculator.UI
                 for (int i = 0; i < windows.Count; i++)
                 {
                     windows[i].OnUpdate();
-                    hasOpenedWindow = hasOpenedWindow || windows[i].windowObj.activeSelf;
+                    hasOpenedWindow = hasOpenedWindow || (windows[i].windowObj.activeSelf && !windows[i].hideOutsideTheEdge);
                 }
             }
 
@@ -106,7 +106,7 @@ namespace DSPCalculator.UI
                                 {
                                     continue;
                                 }
-                                else if (windows[i].windowObj.activeSelf)
+                                else if (windows[i].windowObj.activeSelf && !windows[i].WindowOnLeftEdge() && !windows[i].WindowOnRightEdge())
                                 {
                                     hasOpenedWindow = true;
                                     windows[i].CloseWindow();
@@ -128,6 +128,8 @@ namespace DSPCalculator.UI
                 else
                 {
                     UIPauseBarPatcher.pauseBarObj.SetActive(false);
+                    if (GameMain.instance != null) // 关闭暂停顶条的时候，取消暂停状态
+                        GameMain.instance._fullscreenPaused = false;
                 }
             }
             //if (Input.GetKeyDown(KeyCode.L))

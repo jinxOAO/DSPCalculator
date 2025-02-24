@@ -14,22 +14,22 @@ using UnityEngine.UI;
 
 namespace DSPCalculator.UI
 {
-    public class UIItemNode
+    public class UIItemNode : UINode
     {
         // 一些公共资源
         public static Color backgroundImageColor = new Color(0f, 0.811f, 1f, 0.072f);
-        public static Color iconButtonHighLightColor = new Color(0.737f, 0.802f,1f, 0.362f);
+        public static Color iconButtonHighLightColor = new Color(0.737f, 0.802f, 1f, 0.362f);
         public static Color backgroundImageFinishedColor = new Color(0.5f, 0.5f, 0.5f, 0.28f);
         // public static Color inserterOrangeColor = new Color(0.9906f, 0.5897f, 0.3691f, 1f);
         public static int buttonCountPerRow = 3; // 一行几个带图标的按钮
         public static Vector3 recipeGroupLocalPosition = new Vector3(0, 20, 0);
 
         // 对象资源
-        public GameObject obj;
+        //public GameObject obj;
         public Image backgroundImg;
 
         public int ID;
-        public UICalcWindow parentCalcWindow;
+        //public UICalcWindow parentCalcWindow;
         public ItemNode itemNode;
         public BpProcessor bpProcessor;
 
@@ -58,7 +58,7 @@ namespace DSPCalculator.UI
         public Image cbFinishedMark;
         public GameObject GenBpButtonObj; // 生成蓝图按钮
 
-        public UIItemNode(ItemNode node, UICalcWindow calcWindow) 
+        public UIItemNode(ItemNode node, UICalcWindow calcWindow)
         {
             // 如果公共资源尚未被初始化，则初始化
 
@@ -86,15 +86,15 @@ namespace DSPCalculator.UI
             backgroundImg.sprite = UICalcWindow.backgroundSprite;
             backgroundImg.type = Image.Type.Sliced;
             backgroundImg.color = backgroundImageColor;
-            backObj.GetComponent<RectTransform>().sizeDelta = new Vector2(UICalcWindow.cellWidth - UICalcWindow.cellDistance, UICalcWindow.cellHeight - UICalcWindow.cellDistance/2);
-            
+            backObj.GetComponent<RectTransform>().sizeDelta = new Vector2(UICalcWindow.cellWidth - UICalcWindow.cellDistance, UICalcWindow.cellHeight - UICalcWindow.cellDistance / 2);
+
             // 产物图标
             GameObject iconObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
             iconObj.name = "icon";
             iconObj.transform.SetParent(obj.transform, false);
             iconObj.transform.localScale = Vector3.one;
             iconObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(20, 0, 0);
-            if(BP.BpProcessor.enabled)
+            if (BP.BpProcessor.enabled)
                 iconObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(35, 0, 0);
 
             // 产出速度文本
@@ -121,7 +121,7 @@ namespace DSPCalculator.UI
             overflowNoteTextObj.name = "overflow-note";
             overflowNoteTextObj.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 0.5f);
             overflowNoteTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(40, -25, 0);
-            if (BP.BpProcessor.enabled) 
+            if (BP.BpProcessor.enabled)
                 overflowNoteTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(55, -25, 0);
             overflowNoteTextObj.GetComponent<Text>().text = "产出过量标签".Translate();
             overflowNoteTextObj.GetComponent<Text>().color = UICalcWindow.TextWarningColor;
@@ -150,9 +150,9 @@ namespace DSPCalculator.UI
                 string speedDetails = "";
                 if (itemNode.byProductRecipes.Count > 0) // 说明产出有多个来源
                 {
-                    if (itemNode.mainRecipe != null) 
+                    if (itemNode.mainRecipe != null)
                     {
-                        if(mainRecipeActive)
+                        if (mainRecipeActive)
                             speedDetails += "来自calc".Translate() + "当前配方".Translate() + " " + Utils.KMG(itemNode.mainRecipe.GetOutputSpeedByItemId(itemId));
                     }
                     foreach (var recipeInfo in itemNode.byProductRecipes)
@@ -163,9 +163,9 @@ namespace DSPCalculator.UI
                         speedDetails += "来自calc".Translate() + recipeInfo.recipeNorm.oriProto.name + " " + Utils.KMG(recipeInfo.GetOutputSpeedByItemId(itemId));
                     }
                 }
-                
 
-                if(itemNode.satisfiedSpeed - itemNode.needSpeed > 0.001f && parentCalcWindow.solution.CanShowOverflow(itemId)) // 说明有溢出
+
+                if (itemNode.satisfiedSpeed - itemNode.needSpeed > 0.001f && parentCalcWindow.solution.CanShowOverflow(itemId)) // 说明有溢出
                 {
                     overflowNoteTextObj.SetActive(true); // 溢出提示要显示出来
                     if (speedDetails.Length > 0)
@@ -281,7 +281,7 @@ namespace DSPCalculator.UI
                                 iconButton.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(i % 3 * 25, 12f - 25 * (i / 3), 0);
                                 iconButton.GetComponent<RectTransform>().sizeDelta = new Vector2(20, 20);
                                 UIButton uibtn = iconButton.GetComponent<UIButton>();
-                                if(i > 0)
+                                if (i > 0)
                                     uibtn.tips.tipTitle = $"特化{i}介绍标题".Translate();
                                 else
                                     uibtn.tips.tipTitle = $"无特化".Translate();
@@ -378,7 +378,7 @@ namespace DSPCalculator.UI
                     uibtnTrans.mouseoverColor = new Color(0.5f, 0.5f, 0.8f, 1);
                     uibtnTrans.mouseoverSize = 1f;
                     uibtnTrans.damp = oriTrans.damp;
-                    
+
                     treatAsOreButtonObj.GetComponent<UIButton>().transitions = treatAsOreButtonObj.GetComponent<UIButton>().transitions.AddItem(uibtnTrans).ToArray();
 
                     // 生成配方显示
@@ -394,7 +394,7 @@ namespace DSPCalculator.UI
                     int posXDelta = 40;
                     int iconSize = 40;
                     int totalCount = recipeProto.Results.Length + recipeProto.Items.Length;
-                    if(totalCount >= 7) // 过长配方，图标变小
+                    if (totalCount >= 7) // 过长配方，图标变小
                     {
                         posXDelta = 32;
                         iconSize = 32;
@@ -464,7 +464,7 @@ namespace DSPCalculator.UI
                     isInc = isInc && itemNode.mainRecipe.recipeNorm.productive;
                     if (itemNode.mainRecipe.useIA)
                         isInc = itemNode.mainRecipe.isInc;
-                    if(isInc)
+                    if (isInc)
                     {
                         incToggleThumb.GetComponent<RectTransform>().anchoredPosition = new Vector2(-10, 0);
                         incText.text = "额外产出calc".Translate();
@@ -477,7 +477,7 @@ namespace DSPCalculator.UI
                         incText.text = "生产加速calc".Translate();
                         incText.color = UICalcWindow.accModeTextColor;
                         incToggleObj.transform.Find("inc-switch").GetComponent<Image>().color = UICalcWindow.accModeImageColor;
-                        if(!itemNode.mainRecipe.recipeNorm.productive)
+                        if (!itemNode.mainRecipe.recipeNorm.productive)
                             incToggleObj.transform.Find("inc-switch").GetComponent<Button>().interactable = false;
                     }
                     incToggleObj.SetActive(true);
@@ -678,24 +678,24 @@ namespace DSPCalculator.UI
             RefreshBpProcessor();
         }
 
-        public void OnUpdate(bool isMoving)
+        public override void OnUpdate(bool isMoving)
         {
             if (!isMoving)
             {
                 Color targetColor = backgroundImageColor;
-                if(itemNode.mainRecipe != null)
+                if (itemNode.mainRecipe != null)
                 {
                     if (parentCalcWindow.solution.userPreference.finishedRecipes.ContainsKey(itemNode.mainRecipe.ID))
                     {
                         targetColor = backgroundImageFinishedColor;
                     }
-                    if (backgroundImg.color.a > targetColor.a)
-                    {
-                        float targetAlpha = backgroundImg.color.a - 0.02f;
-                        if (targetAlpha < targetColor.a)
-                            targetAlpha = targetColor.a;
-                        backgroundImg.color = new Color(targetColor.r, targetColor.g, targetColor.b, targetAlpha);
-                    }
+                }
+                if (backgroundImg.color.a > targetColor.a)
+                {
+                    float targetAlpha = backgroundImg.color.a - 0.02f;
+                    if (targetAlpha < targetColor.a)
+                        targetAlpha = targetColor.a;
+                    backgroundImg.color = new Color(targetColor.r, targetColor.g, targetColor.b, targetAlpha);
                 }
             }
 
@@ -733,7 +733,7 @@ namespace DSPCalculator.UI
                     assemblerIconObj.GetComponent<Image>().sprite = LDB.items.Select(UICalcWindow.IAIconItemId)?.iconSprite;
                     assemblerIconObj.GetComponent<UIButton>().tips.tipTitle = "星际组装厂".Translate();
                     assemblerIconObj.GetComponent<UIButton>().tips.itemId = 0;
-                    assemblerIconObj.GetComponent<UIButton>().tips.corner = 3; 
+                    assemblerIconObj.GetComponent<UIButton>().tips.corner = 3;
                     assemblerIconObj.GetComponent<UIButton>().tips.delay = 0.1f;
                     assemblerCountTextObj.SetActive(false);
                     if (IASpecializationIconGroup != null)
@@ -741,7 +741,7 @@ namespace DSPCalculator.UI
                     // 处理切换特化的按钮
                     for (int i = 0; i < IASpecUIButtons.Count; i++)
                     {
-                        if(recipeInfo.IASpecializationType == i)
+                        if (recipeInfo.IASpecializationType == i)
                             IASpecUIButtons[i].highlighted = true;
                         else
                             IASpecUIButtons[i].highlighted = false;
@@ -758,7 +758,7 @@ namespace DSPCalculator.UI
                     assemblerIconObj.GetComponent<UIButton>().tips.delay = 0.1f; // 有tip的图标才能写
                     // 设置工厂数量显示
                     assemblerCountTextObj.SetActive(true);
-                    if(IASpecializationIconGroup != null)
+                    if (IASpecializationIconGroup != null)
                         IASpecializationIconGroup.SetActive(false);
                     double finalCount = recipeInfo.count / assemblerData.speed / 60; // 除以60是因为计算都是以每s计算的，最终转换成工厂数量等都要按min，所以都是60分之一。
                     if (!itemNode.mainRecipe.isInc && itemNode.mainRecipe.incLevel >= 0 && itemNode.mainRecipe.incLevel < Cargo.accTableMilli.Length)
@@ -810,7 +810,7 @@ namespace DSPCalculator.UI
                 {
                     preference.recipeConfigs[recipeId] = new RecipeConfig(recipeInfo);
                 }
-                if(assemblerId > 0)
+                if (assemblerId > 0)
                 {
                     preference.recipeConfigs[recipeId].forceUseIA = false;
                     preference.recipeConfigs[recipeId].assemblerItemId = assemblerId;
@@ -839,7 +839,7 @@ namespace DSPCalculator.UI
 
         public void OnRecipePickerReturn(RecipeProto recipeProto)
         {
-            if(recipeProto != null)
+            if (recipeProto != null)
             {
                 UserPreference preference = parentCalcWindow.solution.userPreference;
                 if (!preference.itemConfigs.ContainsKey(itemNode.itemId))
@@ -896,7 +896,7 @@ namespace DSPCalculator.UI
             }
             else
             {
-                if(preference.recipeConfigs[recipeId].forceIncMode >= 0)
+                if (preference.recipeConfigs[recipeId].forceIncMode >= 0)
                 {
                     targetInc = !(preference.recipeConfigs[recipeId].forceIncMode == 1);
                 }
@@ -957,18 +957,18 @@ namespace DSPCalculator.UI
                     if (preference.recipeConfigs[recipeId].forceIncMode >= 0)
                         isInc = preference.recipeConfigs[recipeId].forceIncMode == 1;
                     RefreshIncLevelDisplay();
-                    if (!isInc) 
+                    if (!isInc)
                     {
                         parentCalcWindow.nextFrameRecalc = true;
                     }
-                    else 
+                    else
                     {
                         parentCalcWindow.nextFrameRecalc = true;
                     }
                 }
             }
         }
-        
+
         public void RefreshIncLevelDisplay()
         {
             if (itemNode.mainRecipe != null)
@@ -998,13 +998,13 @@ namespace DSPCalculator.UI
         public void OnSpecializationIconClick(int type)
         {
             RecipeInfo recipeInfo = itemNode.mainRecipe;
-            if(recipeInfo != null)
+            if (recipeInfo != null)
             {
                 if (type != recipeInfo.IASpecializationType)
                 {
                     int recipeId = recipeInfo.ID;
                     UserPreference preference = parentCalcWindow.solution.userPreference;
-                    if(!preference.recipeConfigs.ContainsKey(recipeId))
+                    if (!preference.recipeConfigs.ContainsKey(recipeId))
                     {
                         preference.recipeConfigs[recipeId] = new RecipeConfig(recipeInfo);
                     }
@@ -1019,7 +1019,7 @@ namespace DSPCalculator.UI
         /// </summary>
         public void OnFinishedMarkCheckboxClick()
         {
-            if(itemNode.mainRecipe != null && itemNode.mainRecipe.count > 0.001f)
+            if (itemNode.mainRecipe != null && itemNode.mainRecipe.count > 0.001f)
             {
                 if (parentCalcWindow.solution.userPreference.finishedRecipes.ContainsKey(itemNode.mainRecipe.ID))
                     parentCalcWindow.solution.userPreference.finishedRecipes.Remove(itemNode.mainRecipe.ID);
@@ -1038,7 +1038,7 @@ namespace DSPCalculator.UI
         /// </summary>
         public void RefreshFinishedMark()
         {
-            if(itemNode.mainRecipe != null && cbFinishedMark != null)
+            if (itemNode.mainRecipe != null && cbFinishedMark != null)
             {
                 if (parentCalcWindow.solution.userPreference.finishedRecipes.ContainsKey(itemNode.mainRecipe.ID))
                 {
@@ -1059,20 +1059,20 @@ namespace DSPCalculator.UI
         /// <param name="itemId"></param>
         public void FocusTargetNode(int itemId)
         {
-            if(parentCalcWindow.uiItemNodeOrders.ContainsKey(itemId))
+            if (parentCalcWindow.uiItemNodeOrders.ContainsKey(itemId))
             {
                 int order = parentCalcWindow.uiItemNodeOrders[itemId];
                 int totalCount = parentCalcWindow.uiItemNodeOrders.Count;
                 if (order >= 0 && order < parentCalcWindow.uiItemNodeOrders.Count)
                 {
                     // 跳转到目标位置，小于8不需要跳转
-                    if(totalCount >= 8)
+                    if (totalCount >= 8)
                     {
                         int calcOrder = order - 3;
                         int calcTotal = totalCount - 7;
-                        if(calcOrder < 0)
+                        if (calcOrder < 0)
                             calcOrder = 0;
-                        if(calcOrder > calcTotal)
+                        if (calcOrder > calcTotal)
                             calcOrder = calcTotal;
                         float vPos = 1f - (1.0f * calcOrder / calcTotal);
                         parentCalcWindow.targetVerticalPosition = vPos;
@@ -1085,7 +1085,7 @@ namespace DSPCalculator.UI
                     targetNode.backgroundImg.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f); // 让他闪烁一次
                 }
             }
-            if(parentCalcWindow.uiItemSimplesByItemId.ContainsKey(itemId))
+            if (parentCalcWindow.uiItemSimplesByItemId.ContainsKey(itemId))
             {
                 UIItemNodeSimple targetNodeSimple = parentCalcWindow.uiItemSimplesByItemId[itemId];
                 Color oldColor = targetNodeSimple.backgroundImg.color;
@@ -1115,7 +1115,7 @@ namespace DSPCalculator.UI
                         }
                     }
 
-                    if(!itemNode.mainRecipe.canInc) // 无法增产的配方不能设置增产剂，无效的
+                    if (!itemNode.mainRecipe.canInc) // 无法增产的配方不能设置增产剂，无效的
                     {
                         foreach (var item in proliferatorUsedButtons)
                         {
@@ -1182,7 +1182,7 @@ namespace DSPCalculator.UI
                 return;
             }
 
-            if(bpProcessor !=null)
+            if (bpProcessor != null)
             {
                 int genLevel = 0;
                 if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))

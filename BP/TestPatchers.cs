@@ -410,7 +410,7 @@ namespace DSPCalculator.BP
         public static bool BPBuildingExportTest(ref BlueprintBuilding __instance)
         {
             Debug.Log($"\n---Building {__instance.index}---");
-            if (!(__instance.itemId >= 2001 && __instance.itemId <= 2004) && true)
+            if (!(__instance.itemId >= 2001 && __instance.itemId <= 2004) || true)
             {
                 foreach (FieldInfo fieldInfo in __instance.GetType().GetFields())
                 {

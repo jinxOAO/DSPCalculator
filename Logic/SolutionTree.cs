@@ -18,13 +18,14 @@ namespace DSPCalculator.Logic
     /// </summary>
     public class SolutionTree
     {
-        public int targetItem { get; private set; } // 需要计算的最终产物
-        public double targetSpeed; // 最终产物需要的速度（/s)
-        public double displaySpeedRatio; // 允许玩家随时修改targetSpeed而不重新计算整个树，则通过最后所有显示都追加一个系数来实现
+        //public int targetItem { get; private set; } // 需要计算的最终产物
+        //public double targetSpeed; // 最终产物需要的速度（/s)
+        //public double displaySpeedRatio; // 允许玩家随时修改targetSpeed而不重新计算整个树，则通过最后所有显示都追加一个系数来实现
 
         public UserPreference userPreference; // 用户规定的，比如：某些物品需要用特定配方生产、某些物品的配方需要几级增产剂等等
 
-        public ItemNode root;
+        public List<ItemTarget> targets;
+        public List<ItemNode> root;
         public Dictionary<int, ItemNode> itemNodes; // 用于储存节点状态与信息，并不代表最终的树里有这个节点。一旦这里存储了一个solved的节点，这个物品就永远安全了，用它作为原材料不用担心它成环
         // itemNodes还用于在最终量化计算阶段存储对应产物的所有产出和需求量
 
@@ -44,20 +45,20 @@ namespace DSPCalculator.Logic
 
         public SolutionTree() 
         {
-            targetItem = 0;
+            targets = new List<ItemTarget>();
+            root = new List<ItemNode>();
             itemNodes = new Dictionary<int, ItemNode>();
             recipeInfos = new Dictionary<int, RecipeInfo>();
             nodeStack = new List<ItemNode>();
             proliferatorCount = new Dictionary<int, double>();
             proliferatorCountSelfSprayed = new Dictionary<int, double>();
             userPreference = new UserPreference();
-            targetSpeed = 3600;
-            displaySpeedRatio = 1;
             tempNotShrinkRoot = false;
         }
 
         public void ClearTree()
         {
+            root.Clear();
             itemNodes.Clear();
             recipeInfos.Clear();
             nodeStack.Clear();
@@ -70,40 +71,96 @@ namespace DSPCalculator.Logic
             userPreference = new UserPreference();
         }
 
-        public bool SetTargetItemAndBeginSolve(int targetItem)
+        public bool SetTargetItem0AndBeginSolve(int targetItem)
         {
             ClearTree();
-            this.targetItem = targetItem;
+            if (targets.Count <= 0)
+                targets.Add(new ItemTarget(targetItem, 360));
+            else
+                targets[0].itemId = targetItem;
             userPreference.ClearWhenChangeTarget();
             tempNotShrinkRoot = false;
             return Solve();
         }
 
-        public bool ChangeTargetSpeedAndSolve(double targetSpeed)
+        public bool ChangeTargetSpeed0AndSolve(double targetSpeed)
         {
-            this.targetSpeed = targetSpeed;
+            if (targets.Count <= 0)
+                targets.Add(new ItemTarget(0, 360));
+            else
+                targets[0].speed = targetSpeed;
             ClearTree();
             userPreference.ClearWhenChangeTarget();
             tempNotShrinkRoot = false;
             return Solve();
         }
 
-        public bool SetTargetAndSolve(int targetItem, double targetSpeed)
+        public bool SetTargetAndSolve(int index, int targetItem, double targetSpeed)
         {
-            ClearTree();
-            this.targetItem = targetItem;
-            this.targetSpeed = targetSpeed;
-            userPreference.ClearWhenChangeTarget();
-            tempNotShrinkRoot = false;
-            return Solve();
+            if(AddOrUpdateTarget(index,targetItem,targetSpeed))
+            {
+                ClearTree();
+                userPreference.ClearWhenChangeTarget();
+                tempNotShrinkRoot = false;
+                return Solve();
+            }
+            else
+            {
+                return false;
+            }
         }
+
+        public bool AddOrUpdateTarget(int index, int targetItem, double targetSpeed)
+        {
+            if (targets.Count > index)
+            {
+                targets[index].itemId = targetItem;
+                targets[index].speed = targetSpeed;
+            }
+            else if (index == targets.Count)
+            {
+                targets.Add(new ItemTarget(targetItem, targetSpeed));
+            }
+            else
+            {
+                Utils.logger.LogWarning("试图新增目标产物，但是新增的index不在targets列表末尾。");
+                return false;
+            }
+            return true;
+        }
+        
+        public void MergeDuplicateTargets()
+        {
+            if(targets.Count > 1)
+            {
+                Dictionary<int, int> targetsIndices = new Dictionary<int, int>();
+                List<ItemTarget> newTargets = new List<ItemTarget>();
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    int itemId = targets[i].itemId;
+                    double speed = targets[i].speed;
+                    if (!targetsIndices.ContainsKey(itemId))
+                    {
+                        targetsIndices[itemId] = newTargets.Count;
+                        newTargets.Add(new ItemTarget(itemId, speed));
+                    }
+                    else
+                    {
+                        int index = targetsIndices[itemId];
+                        newTargets[index].speed += speed;
+                    }
+                }
+                targets = newTargets;
+            }
+        }
+
 
         public bool ReSolve(double forceSpeed)
         {
             ClearTree();
-            if(forceSpeed > 0)
+            if(forceSpeed > 0 && targets.Count > 0)
             {
-                targetSpeed = forceSpeed;
+                targets[0].speed = forceSpeed;
             }
             tempNotShrinkRoot = false;
             return Solve();
@@ -112,14 +169,16 @@ namespace DSPCalculator.Logic
         public bool ReSolveForRootShrinking(double newTargetSpeed)
         {
             ClearTree();
-            this.targetSpeed = newTargetSpeed;
+            targets[0].speed = newTargetSpeed;
+            //this.targetSpeed = newTargetSpeed;
             tempNotShrinkRoot = true;
             return Solve();
         }
 
         public bool Solve()
         {
-            if (targetItem > 0)
+            MergeDuplicateTargets();
+            if (targets.Count > 0)
             {
                 RefreshBlueprintDicts(); // 根据userPreference生成后续节点蓝图生成所需的相关字典信息
 
@@ -133,9 +192,23 @@ namespace DSPCalculator.Logic
                     }
                 }
                 // 将root放在栈顶（其实放在栈底也没影响，但是这会使得：当root就是增产剂时，且增产剂并入产线计算，那么在Calc的时候，root本身只能作为signNode，且其与itemNodes里面存储的同Id的ItemNode不是同一个对象）
-                root = new ItemNode(targetItem, targetSpeed, this);
-                ItemNode node = root;
-                Push(node);
+                //root = new ItemNode(targetItem, targetSpeed, this);
+                //ItemNode node = root;
+                //Push(node);
+
+                root.Clear();
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    if (targets[i].itemId > 0)
+                    {
+                        ItemNode node = new ItemNode(targets[i].itemId, targets[i].speed, this);
+                        root.Add(node);
+                        Push(node);
+                    }
+                }
+
+                if (root.Count <= 0)
+                    return false;
 
                 if (SolvePath())
                 {
@@ -144,7 +217,7 @@ namespace DSPCalculator.Logic
                     double recalcRatio = RemoveOverflow();
                     if(recalcRatio>0)
                     {
-                        return ReSolveForRootShrinking(targetSpeed * recalcRatio);
+                        return ReSolveForRootShrinking(targets[0].speed * recalcRatio);
                     }
                     CalcProliferator();
 
@@ -165,6 +238,11 @@ namespace DSPCalculator.Logic
         /// </summary>
         public bool SolvePath()
         {
+            Dictionary<int,int> rootItems = new Dictionary<int, int>();
+            for (int i = 0; i < targets.Count; i++)
+            {
+                rootItems[targets[i].itemId] = 1;
+            }
             while (unsolved)
             {
                 // 出栈！对这个节点进行处理。注意：出栈时这个节点虽然已经连接入
@@ -182,6 +260,10 @@ namespace DSPCalculator.Logic
                         if (cur.parents.Count > 0)
                         {
                             cur.parents[0].SolveOne();
+                        }
+                        else if (rootItems.ContainsKey(cur.itemId)) // 多需求配方
+                        {
+                            itemNodes[cur.itemId].needSpeed += cur.needSpeed;
                         }
                         else if (CalcDB.proliferatorItemIds.Contains(cur.itemId) && cur.needSpeed == 0 || itemNodes[cur.itemId].needSpeed == 0) // 这是可预见的，在将增产剂生产并入当前产线时可能会产生的情况
                         {
@@ -355,8 +437,16 @@ namespace DSPCalculator.Logic
             Stack<ItemNode> stack = new Stack<ItemNode>();
             if (proliferatorId <= 0) // 如果是默认参数，代表是为了计算root而非增产剂
             {
-                root.needSpeed = targetSpeed;
-                stack.Push(root);
+                if(root.Count != targets.Count)
+                {
+                    Utils.logger.LogError("Error when ClacTree, root count does not match the targes count.");
+                    return;
+                }
+                for (int i = 0; i < root.Count; i++)
+                {
+                    root[i].needSpeed = targets[i].speed;
+                    stack.Push(root[i]);
+                }
             }
             else
             {
@@ -475,7 +565,7 @@ namespace DSPCalculator.Logic
             Dictionary<int, int> neverShrinkThisBecauseLoop = new Dictionary<int, int>(); // 一旦检测到环，将交叉点录入这个字典，并且不再检查
             if(tempNotShrinkRoot) // 说明经过了一次暴力乘系数
             {
-                root.needSpeed = root.satisfiedSpeed; // 那么将needSpeed修正
+                root[0].needSpeed = root[0].satisfiedSpeed; // 那么将needSpeed修正
             }
             //if (proliferatorId <= 0)
             //{
@@ -605,7 +695,7 @@ namespace DSPCalculator.Logic
                                 {
                                     minShrinkCount = 0;
                                 }
-                                if(root.itemId == itemId)
+                                if(root.Count == 1 && root[0].itemId == itemId) // 如果是单产物
                                 {
                                     if (!tempNotShrinkRoot)
                                     {
@@ -743,15 +833,7 @@ namespace DSPCalculator.Logic
         }
 
 
-        /// <summary>
-        /// 成比例地修改所有物品的生产和需求速度
-        /// </summary>
-        /// <param name="ratio"></param>
-        public void ChangeAllSpeedRatio(double ratio)
-        {
-            displaySpeedRatio = ratio;
-            // Refresh 一些显示？ 应该由调用此方法的UI执行！
-        }
+       
 
         public void RefreshBlueprintDicts()
         {
@@ -813,8 +895,9 @@ namespace DSPCalculator.Logic
                 SolutionTree solutionProlif = new SolutionTree();
                 solutionProlif.userPreference = userPreference.ShallowCopy();
                 solutionProlif.userPreference.solveProliferators = false; // 必须要！否则无限递归了
-                solutionProlif.targetSpeed = 1;
-                solutionProlif.SetTargetItemAndBeginSolve(itemId);
+                //solutionProlif.targetSpeed = 1;
+                //solutionProlif.SetTargetItem0AndBeginSolve(itemId);
+                solutionProlif.SetTargetAndSolve(0, itemId, 1);
                 foreach (var pConsume in solutionProlif.proliferatorCountSelfSprayed)
                 {
                     int index = CalcDB.proliferatorItemIds.IndexOf(pConsume.Key);
@@ -906,7 +989,7 @@ namespace DSPCalculator.Logic
             double recalcRatio = RemoveOverflow();
             if (recalcRatio > 0)
             {
-                return ReSolveForRootShrinking(targetSpeed * recalcRatio);
+                return ReSolveForRootShrinking(targets[0].speed * recalcRatio);
             }
 
             return true;
@@ -920,114 +1003,126 @@ namespace DSPCalculator.Logic
         /// <returns></returns>
         public bool CanShowOverflow(int itemId)
         {
-            if (itemId == root.itemId && tempNotShrinkRoot)
+            if (root.Count == 1 && itemId == root[0].itemId && tempNotShrinkRoot)
                 return false;
             else
                 return true;
         }
 
-        public void TestLog()
-        {
-            if (DSPCalculatorPlugin.developerMode)
-            {
-                List<ItemNode> stack = new List<ItemNode>();
-                List<int> levelStack = new List<int>();
-                stack.Add(root);
-                levelStack.Add(0);
-                while(stack.Count > 0)
-                {
-                    ItemNode curNode = stack[stack.Count - 1];
-                    stack.RemoveAt(stack.Count - 1);
-                    int curLevel = levelStack[levelStack.Count - 1];
-                    levelStack.RemoveAt(levelStack.Count - 1);
+        //public void TestLog()
+        //{
+        //    if (DSPCalculatorPlugin.developerMode)
+        //    {
+        //        List<ItemNode> stack = new List<ItemNode>();
+        //        List<int> levelStack = new List<int>();
+        //        stack.Add(root);
+        //        levelStack.Add(0);
+        //        while(stack.Count > 0)
+        //        {
+        //            ItemNode curNode = stack[stack.Count - 1];
+        //            stack.RemoveAt(stack.Count - 1);
+        //            int curLevel = levelStack[levelStack.Count - 1];
+        //            levelStack.RemoveAt(levelStack.Count - 1);
 
-                    string log = "";
-                    for (int i = 0; i < curLevel; i++)
-                    {
-                        log += "|  ";
-                    }
-                    log += $"|--- {LDB.items.Select(curNode.itemId).name}";
-                    Debug.Log(log);
+        //            string log = "";
+        //            for (int i = 0; i < curLevel; i++)
+        //            {
+        //                log += "|  ";
+        //            }
+        //            log += $"|--- {LDB.items.Select(curNode.itemId).name}";
+        //            Debug.Log(log);
 
-                    //if (!itemNodes.ContainsKey(curNode.itemId))
-                    //    Debug.LogWarning("Not contains");
-                    //if(curNode.unsolvedCount != 0)
-                    //{
-                    //    Debug.LogWarning($"not zero {curNode.itemId} is {curNode.unsolvedCount}");
-                    //}
-                    //else
-                    //{
-                    //    Debug.Log("ok");
-                    //}
+        //            //if (!itemNodes.ContainsKey(curNode.itemId))
+        //            //    Debug.LogWarning("Not contains");
+        //            //if(curNode.unsolvedCount != 0)
+        //            //{
+        //            //    Debug.LogWarning($"not zero {curNode.itemId} is {curNode.unsolvedCount}");
+        //            //}
+        //            //else
+        //            //{
+        //            //    Debug.Log("ok");
+        //            //}
 
-                    for (int i = 0; i < curNode.children.Count; i++)
-                    {
-                        stack.Add(curNode.children[i]);
-                        levelStack.Add(curLevel+1);
-                    }
-                }
-            }
-        }
+        //            for (int i = 0; i < curNode.children.Count; i++)
+        //            {
+        //                stack.Add(curNode.children[i]);
+        //                levelStack.Add(curLevel+1);
+        //            }
+        //        }
+        //    }
+        //}
 
-        public void TestLog2()
-        {
-            if (DSPCalculatorPlugin.developerMode)
-            {
-                List<ItemNode> stack = new List<ItemNode>();
-                stack.Add(root);
-                Dictionary<int, ItemNode> visitedNodes = new Dictionary<int,ItemNode>();
-                while (stack.Count > 0)
-                {
-                    ItemNode oriNode = stack[stack.Count - 1];
-                    ItemNode curNode = itemNodes[oriNode.itemId];
-                    if(!visitedNodes.ContainsKey(curNode.itemId))
-                    {
-                        visitedNodes.Add(curNode.itemId, curNode);
+        //public void TestLog2()
+        //{
+        //    if (DSPCalculatorPlugin.developerMode)
+        //    {
+        //        List<ItemNode> stack = new List<ItemNode>();
+        //        stack.Add(root);
+        //        Dictionary<int, ItemNode> visitedNodes = new Dictionary<int,ItemNode>();
+        //        while (stack.Count > 0)
+        //        {
+        //            ItemNode oriNode = stack[stack.Count - 1];
+        //            ItemNode curNode = itemNodes[oriNode.itemId];
+        //            if(!visitedNodes.ContainsKey(curNode.itemId))
+        //            {
+        //                visitedNodes.Add(curNode.itemId, curNode);
 
-                        // 输出
-                        string log = "";
-                        if (curNode.mainRecipe != null)
-                        {
-                            log = $"{LDB.items.Select(curNode.itemId).name} 需求{curNode.needSpeed}  产出{curNode.satisfiedSpeed}    主要配方：{curNode.mainRecipe.recipeNorm.oriProto.name}  + {curNode.mainRecipe.GetOutputSpeedByChangedCount(curNode.itemId, curNode.mainRecipe.count)}\n";
-                            for (int i = 0; i < curNode.byProductRecipes.Count; i++)
-                            {
-                                RecipeInfo rInfo = curNode.byProductRecipes[i];
-                                log += $"    来自配方{rInfo.recipeNorm.oriProto.name} +{rInfo.GetOutputSpeedByChangedCount(curNode.itemId, rInfo.count)}\n";
-                            }
-                        }
-                        else
-                        {
-                            log = $"{LDB.items.Select(curNode.itemId).name} 原矿 需求{curNode.needSpeed}  产出{curNode.satisfiedSpeed}\n";
-                        }
-                        Debug.Log(log);
-                    }
-                    stack.RemoveAt(stack.Count - 1);
+        //                // 输出
+        //                string log = "";
+        //                if (curNode.mainRecipe != null)
+        //                {
+        //                    log = $"{LDB.items.Select(curNode.itemId).name} 需求{curNode.needSpeed}  产出{curNode.satisfiedSpeed}    主要配方：{curNode.mainRecipe.recipeNorm.oriProto.name}  + {curNode.mainRecipe.GetOutputSpeedByChangedCount(curNode.itemId, curNode.mainRecipe.count)}\n";
+        //                    for (int i = 0; i < curNode.byProductRecipes.Count; i++)
+        //                    {
+        //                        RecipeInfo rInfo = curNode.byProductRecipes[i];
+        //                        log += $"    来自配方{rInfo.recipeNorm.oriProto.name} +{rInfo.GetOutputSpeedByChangedCount(curNode.itemId, rInfo.count)}\n";
+        //                    }
+        //                }
+        //                else
+        //                {
+        //                    log = $"{LDB.items.Select(curNode.itemId).name} 原矿 需求{curNode.needSpeed}  产出{curNode.satisfiedSpeed}\n";
+        //                }
+        //                Debug.Log(log);
+        //            }
+        //            stack.RemoveAt(stack.Count - 1);
 
-                    //string log = "";
-                    //log += $"|--- {LDB.items.Select(curNode.itemId).name}";
-                    //Debug.Log(log);
+        //            //string log = "";
+        //            //log += $"|--- {LDB.items.Select(curNode.itemId).name}";
+        //            //Debug.Log(log);
 
-                    //if (!itemNodes.ContainsKey(curNode.itemId))
-                    //    Debug.LogWarning("Not contains");
-                    //if(curNode.unsolvedCount != 0)
-                    //{
-                    //    Debug.LogWarning($"not zero {curNode.itemId} is {curNode.unsolvedCount}");
-                    //}
-                    //else
-                    //{
-                    //    Debug.Log("ok");
-                    //}
+        //            //if (!itemNodes.ContainsKey(curNode.itemId))
+        //            //    Debug.LogWarning("Not contains");
+        //            //if(curNode.unsolvedCount != 0)
+        //            //{
+        //            //    Debug.LogWarning($"not zero {curNode.itemId} is {curNode.unsolvedCount}");
+        //            //}
+        //            //else
+        //            //{
+        //            //    Debug.Log("ok");
+        //            //}
 
-                    for (int i = 0; i < curNode.children.Count; i++)
-                    {
-                        stack.Add(curNode.children[i]);
-                    }
-                }
-            }
-        }
+        //            for (int i = 0; i < curNode.children.Count; i++)
+        //            {
+        //                stack.Add(curNode.children[i]);
+        //            }
+        //        }
+        //    }
+        //}
+
     }
 
-    
+
+    public class ItemTarget
+    {
+        public int itemId;
+        public double speed;
+
+        public ItemTarget(int itemId, double speed)
+        {
+            this.itemId = itemId;
+            this.speed = speed;
+        }
+    }
 
     // 以下情况的附产物溢出问题，不进行解决。
     // 举例: D的配方：1D←1C，还有0.1D+0.2C+1B←1A；C的配方是1C←1B。

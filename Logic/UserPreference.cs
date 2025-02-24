@@ -105,6 +105,32 @@ namespace DSPCalculator.Logic
             return copied;
         }
 
+        /// <summary>
+        /// 未完成！必须修改！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+        /// </summary>
+        /// <returns></returns>
+        public UserPreference SemiDeepCopy()
+        {
+            UserPreference copied = new UserPreference(); 
+            copied.recipeConfigs = recipeConfigs;
+            copied.itemConfigs = itemConfigs;
+            copied.finishedRecipes = finishedRecipes;
+            copied.globalIncLevel = globalIncLevel;
+            copied.globalIsInc = globalIsInc;
+            copied.bluebuff = bluebuff;
+            copied.energyBurst = energyBurst;
+            copied.dirac = dirac;
+            copied.inferior = inferior;
+            copied.customizeIncMilli = customizeIncMilli;
+            copied.customizeAccMilli = customizeAccMilli;
+            copied.solveProliferators = solveProliferators;
+            copied.showMixBeltInfo = showMixBeltInfo;
+            copied.incMilliOverride = incMilliOverride;
+            copied.accMilliOverride = accMilliOverride;
+            copied.globalAssemblerIdByType = globalAssemblerIdByType;
+            return copied;
+        }
+
         public int bpStack
         {
             get

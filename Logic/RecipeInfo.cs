@@ -390,12 +390,12 @@ namespace DSPCalculator.Logic
             }
             if (result < 0 && changedCount >= 0)
             {
-                Debug.LogWarning($"GetInputSpeedByChangedCount({itemId}, {changedCount})试图在changedCount非负时，返回负数");
+                //Debug.LogWarning($"GetInputSpeedByChangedCount({itemId}, {changedCount})试图在changedCount非负时，返回负数");
                 result = 0;
             }
             else if (result > 0 && changedCount < 0)
             {
-                Debug.LogWarning($"GetInputSpeedByChangedCount({itemId}, {changedCount})试图在changedCount非正时，返回正数");
+                //Debug.LogWarning($"GetInputSpeedByChangedCount({itemId}, {changedCount})试图在changedCount非正时，返回正数");
                 result = 0;
             }
 

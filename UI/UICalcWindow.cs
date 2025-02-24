@@ -64,6 +64,7 @@ namespace DSPCalculator.UI
         public static GameObject imageButtonObj; // 只有图片的按钮
         public static GameObject incTogglePrefabObj; // 增产切换按钮
         public static GameObject checkBoxObj;
+        public static Sprite itemNotSelectedSprite;
         public static Sprite leftTriangleSprite;
         public static Sprite rightTriangleSprite;
         public static Sprite backgroundSprite = null;
@@ -101,7 +102,7 @@ namespace DSPCalculator.UI
         public Image targetProductIcon;
         public UIButton targetProductIconUIBtn;
         public List<UIItemNode> uiItemNodes;
-        public List<UIItemNodeSimple> uiSideItemNodes;
+        public List<UINode> uiSideItemNodes;
         public ScrollRect contentScrollRect; // 可滚动的rect
         public Transform contentTrans; // 用于放置UIItemNode的GameObject的父级物体的transform
         public GameObject targetProductIconObj;
@@ -154,6 +155,7 @@ namespace DSPCalculator.UI
         public bool isTopAndActive;
         public bool nextFrameRecalc;
         public int sideInfoPanelIndex;
+        public bool hideOutsideTheEdge;
 
         /// <summary>
         /// 创建新窗口
@@ -164,7 +166,7 @@ namespace DSPCalculator.UI
 
             solution = new SolutionTree();
             uiItemNodes = new List<UIItemNode>();
-            uiSideItemNodes = new List<UIItemNodeSimple>();
+            uiSideItemNodes = new List<UINode>();
             proliferatorUsedButtons = new Dictionary<int, UIButton>();
             assemblerUsedButtons = new Dictionary<int, Dictionary<int, UIButton>>();
             assemblersDemandObjs = new List<GameObject>();
@@ -176,6 +178,7 @@ namespace DSPCalculator.UI
             isLargeWindow = true;
             nextFrameRecalc = false;
             targetVerticalPosition = -1;
+            hideOutsideTheEdge = false;
 
             GameObject oriWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser");
             GameObject parentWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows"); // (-----/Calc Window Group");
@@ -912,7 +915,7 @@ namespace DSPCalculator.UI
                 checkBoxObj.GetComponent<Button>().onClick.RemoveAllListeners();
                 checkBoxObj.transform.Find("text").GetComponent<Text>().color = Color.white;
 
-
+                itemNotSelectedSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/controlpanel-icon-40");
                 leftTriangleSprite = Resources.Load<Sprite>("ui/textures/sprites/test/last-icon");
                 rightTriangleSprite = Resources.Load<Sprite>("ui/textures/sprites/test/next-icon");
                 backgroundSprite = Resources.Load<Sprite>("ui/textures/sprites/sci-fi/window-content-3");
@@ -1339,6 +1342,10 @@ namespace DSPCalculator.UI
             {
                 targetWindowWidth = smallWindowWidth;
             }
+            else
+            {
+                hideOutsideTheEdge = false;
+            }
 
             float oriWidth = windowObj.GetComponent<RectTransform>().sizeDelta.x;
             float curWidth = oriWidth;
@@ -1395,6 +1402,12 @@ namespace DSPCalculator.UI
             if (nextFrameRecalc)
             {
                 nextFrameRecalc = false;
+                if(solution.targets.Count > 0)
+                {
+                    targetProductIcon.sprite = LDB.items.Select(solution.targets[0].itemId)?.iconSprite;
+                    speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString();
+                }
+
                 solution.ReSolve(Convert.ToDouble(speedInputObj.GetComponent<InputField>().text));
                 RefreshAll();
             }
@@ -1492,6 +1505,14 @@ namespace DSPCalculator.UI
                     if (onLeftEdge || onRightEdge)
                     {
                         windowObj.transform.SetAsFirstSibling(); // 避免抢占isTopAndActive位置
+                        if (CursorInWindow())
+                            hideOutsideTheEdge = false;
+                        else
+                            hideOutsideTheEdge = true;
+                    }
+                    else
+                    {
+                        hideOutsideTheEdge = false;
                     }
                 }
             }
@@ -1541,6 +1562,12 @@ namespace DSPCalculator.UI
             windowObj.transform.SetAsFirstSibling(); // 将其不再占用最top的UI，防止其占用其他窗口的isTopAndActive
             windowObj.SetActive(false);
 
+            RefreshPauseBarStatus();
+
+        }
+
+        public void RefreshPauseBarStatus()
+        {
             if (UIPauseBarPatcher.pauseBarObj != null)
             {
                 bool hasOpenedWindow = false;
@@ -1548,7 +1575,7 @@ namespace DSPCalculator.UI
                 {
                     for (int i = 0; i < WindowsManager.windows.Count; i++)
                     {
-                        if(WindowsManager.windows[i].windowObj.activeSelf)
+                        if (WindowsManager.windows[i].windowObj.activeSelf && !WindowsManager.windows[i].hideOutsideTheEdge)
                         {
                             hasOpenedWindow = true;
                             break;
@@ -1556,14 +1583,13 @@ namespace DSPCalculator.UI
                     }
                 }
 
-                if(!hasOpenedWindow)
+                if (!hasOpenedWindow)
                 {
                     UIPauseBarPatcher.pauseBarObj.SetActive(false);
-                    if (GameMain.instance != null)
+                    if (GameMain.instance != null) // 关闭暂停顶条的时候，取消暂停状态
                         GameMain.instance._fullscreenPaused = false;
                 }
             }
-
         }
 
         public void SwitchWindowSize()
@@ -1587,7 +1613,10 @@ namespace DSPCalculator.UI
         public void OnTargetProductIconClick()
         {
             UIItemPicker.showAll = true;
-            UIItemPicker.Popup(windowObj.GetComponent<RectTransform>().anchoredPosition + new Vector2(300f, -200f), OnTargetProductChange);
+            if (windowObj.GetComponent<RectTransform>().anchoredPosition.x > -150 && !isLargeWindow)
+                UIItemPicker.Popup(new Vector2(-300f, 100f), OnTargetProductChange);
+            else
+                UIItemPicker.Popup(windowObj.GetComponent<RectTransform>().anchoredPosition + new Vector2(300f, -200f), OnTargetProductChange);
         }
 
         public void OnTargetProductChange(ItemProto item)
@@ -1600,7 +1629,7 @@ namespace DSPCalculator.UI
                 targetProductIconUIBtn.tips.itemId = item.ID;
                 targetProductIconUIBtn.tips.delay = 0.1f;
                 double newTargetSpeed = Convert.ToDouble(speedInputObj.GetComponent<InputField>().text);
-                solution.SetTargetAndSolve(item.ID, newTargetSpeed);
+                solution.SetTargetAndSolve(0, item.ID, newTargetSpeed);
                 //solution.SetTargetItemAndBeginSolve(item.ID);
                 RefreshAll();
             }
@@ -1611,7 +1640,7 @@ namespace DSPCalculator.UI
             try
             {
                 double newTargetSpeed = Convert.ToDouble(num);
-                solution.ChangeTargetSpeedAndSolve(newTargetSpeed);
+                solution.ChangeTargetSpeed0AndSolve(newTargetSpeed);
                 RefreshAll();
             }
             catch (Exception)
@@ -1648,6 +1677,8 @@ namespace DSPCalculator.UI
 
         public void RefreshAll()
         {
+            if (solution.targets.Count == 0)
+                targetProductIcon.sprite = itemNotSelectedSprite;
             RefreshProductContent();
             RefreshResourceNeedAndByProductContent();
             RefreshFinalInfoText();
@@ -1685,12 +1716,12 @@ namespace DSPCalculator.UI
 
         public bool WindowOnLeftEdge()
         {
-            return windowObj.transform.localPosition.x <= -WindowsManager.UIResolutionX / 2 + WindowsManager.windowEdgeJudgeDistance;
+            return !isLargeWindow && (windowObj.transform.localPosition.x <= -WindowsManager.UIResolutionX / 2 + WindowsManager.windowEdgeJudgeDistance);
         }
 
         public bool WindowOnRightEdge()
         {
-            return windowObj.transform.localPosition.x + windowObj.GetComponent<RectTransform>().sizeDelta.x >= WindowsManager.UIResolutionX / 2 - WindowsManager.windowEdgeJudgeDistance;
+            return !isLargeWindow && (windowObj.transform.localPosition.x + windowObj.GetComponent<RectTransform>().sizeDelta.x >= WindowsManager.UIResolutionX / 2 - WindowsManager.windowEdgeJudgeDistance);
         }
 
         /// <summary>
@@ -1706,11 +1737,14 @@ namespace DSPCalculator.UI
             ClearNodes();
             int nodeOrder = 0;
 
-            if (solution.targetItem > 0 && solution.root != null && !solution.userPreference.solveProliferators)
+            if (solution.root.Count > 0 && !solution.userPreference.solveProliferators)
             {
                 // 下面创建UI子节点
                 List<ItemNode> stack = new List<ItemNode>();
-                stack.Add(solution.root);
+                for (int i = solution.root.Count - 1; i >= 0; i--)
+                {
+                    stack.Add(solution.root[i]);
+                }
                 Dictionary<int, ItemNode> visitedNodes = new Dictionary<int, ItemNode>();
                 while (stack.Count > 0)
                 {
@@ -1744,7 +1778,7 @@ namespace DSPCalculator.UI
                     }
                 }
             }
-            if(solution.targetItem > 0 && solution.root != null && solution.userPreference.solveProliferators)
+            if(solution.root.Count > 0 && solution.userPreference.solveProliferators)
             {
                 Dictionary<int, ItemNode> visitedNodes = new Dictionary<int, ItemNode>();
                 for (int n = CalcDB.proliferatorItemIds.Count; n >= 0; n--)
@@ -1752,7 +1786,10 @@ namespace DSPCalculator.UI
                     List<ItemNode> stack = new List<ItemNode>();
                     if (n == CalcDB.proliferatorItemIds.Count)
                     {
-                        stack.Add(solution.root);
+                        for (int i = solution.root.Count - 1; i >= 0; i--)
+                        {
+                            stack.Add(solution.root[i]);
+                        }
                     }
                     else
                     {
@@ -1813,7 +1850,44 @@ namespace DSPCalculator.UI
                 return;
             }
 
-            // 首先显示原矿需求
+            int count = 0;
+            // 首先显示最终需求产物
+            UIItemNodeSimple label0 = new UIItemNodeSimple("目标产物".Translate(), this);
+            uiSideItemNodes.Add(label0);
+            for (int i = 1; i < sideCellCountPerRow; i++)
+            {
+                UIItemNodeSimple empty0 = new UIItemNodeSimple("", this); // 是因为一行有多个元素，所以需要空来占位
+                uiSideItemNodes.Add(empty0);
+            }
+
+            for (int i = 0; i < solution.targets.Count; i++)
+            {
+                //if(node.Value.IsOre(solution.userPreference) && node.Value.needSpeed > 0.001f)
+                if (solution.targets[i].itemId > 0 && solution.targets[i].speed > 0)
+                {
+                    int index = i;
+                    UIItemNodeTarget uiTargetNode = new UIItemNodeTarget(index, solution.targets[i].itemId, solution.targets[i].speed, this);
+                    uiSideItemNodes.Add(uiTargetNode);
+                    count++;
+                }
+            }
+            // 附加一个增加需求产物的块
+            UIItemNodeTarget uiTargetNodeEmpty = new UIItemNodeTarget(solution.targets.Count, 0, 0, this);
+            uiSideItemNodes.Add(uiTargetNodeEmpty);
+            count++;
+
+            if (count % sideCellCountPerRow != 0) // 不足一行的用空填满
+            {
+                int unfilled = sideCellCountPerRow - count % sideCellCountPerRow;
+                for (int i = 0; i < unfilled; i++)
+                {
+                    UIItemNodeSimple emptyEnd = new UIItemNodeSimple("", this);
+                    uiSideItemNodes.Add(emptyEnd);
+                }
+            }
+
+            // 然后显示原矿需求
+            count = 0;
             UIItemNodeSimple label1 = new UIItemNodeSimple("原矿需求".Translate(), this);
             uiSideItemNodes.Add(label1);
             for (int i = 1; i < sideCellCountPerRow; i++)
@@ -1821,7 +1895,6 @@ namespace DSPCalculator.UI
                 UIItemNodeSimple empty1 = new UIItemNodeSimple("", this); // 是因为一行有多个元素，所以需要空来占位
                 uiSideItemNodes.Add(empty1);
             }
-            int count = 0;
             foreach (var node in solution.itemNodes)
             {
                 //if(node.Value.IsOre(solution.userPreference) && node.Value.needSpeed > 0.001f)
@@ -1964,6 +2037,23 @@ namespace DSPCalculator.UI
             uiSideItemNodes.Clear();
             uiItemSimplesByItemId.Clear();
         }
+
+        public bool AddOrUpdateTargetThenResolve(int index, int targetItem, double targetSpeed)
+        {
+            if(solution.AddOrUpdateTarget(index, targetItem, targetSpeed))
+            {
+                solution.MergeDuplicateTargets();
+                speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString(); // 这里不能直接用targetSpeed因为有可能merge之后这个速度变了
+                
+                nextFrameRecalc = true;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
 
         public void RefreshSideInfoPanels()
         {
