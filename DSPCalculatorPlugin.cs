@@ -27,7 +27,7 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.4.0";
+        public const string VERSION = "0.4.1";
 
         // ---------------------------------------------------------------------------
         public static bool developerMode = false; //           发布前修改             |
@@ -41,6 +41,7 @@ namespace DSPCalculator
         public static ConfigEntry<bool> RoundUpAssemblerNum;
         public static ConfigEntry<bool> SingleWindow;
         public static ConfigEntry<int> MaxWindowsReservedAfterClose;
+        public static ConfigEntry<bool> ClickToSwitchRecipeMode;
 
         //public static ConfigEntry<bool> assemblerNumberKMG; // 生产设施是否用使用最大千分位符号
         //public static ConfigEntry<int> assemblerNumberDecimalPlaces; // 生产设施数量显示的小数位数，-1表示默认3位有效数字，正数表示恒定保留x位小数
@@ -61,6 +62,7 @@ namespace DSPCalculator
             RoundUpAssemblerNum = Config.Bind<bool>("config", "RoundUpAssemblerNum", true, "生产设施数量显示是否自动向上取整。Is the display of the number of production facilities automatically rounded up.");
             SingleWindow = Config.Bind<bool>("config", "SingleWindow", false, "单窗口模式启用时，打开和关闭窗口都将使用打开窗口的那个快捷键。这会使你无法开启多个窗口，除非你同时按住Ctrl+Shift+Alt。  When single window mode is enabled, both opening and closing calculator window will use the same shortcut key (i.e. the open the window hot key). But if you want to open multiple windows in this mode, you must hold down Ctrl+Shift+Alt at the same time.");
             MaxWindowsReservedAfterClose = Config.Bind<int>("config", "MaxWindowsReservedAfterClose", 5, "最后被关闭的几个窗口可以仍在后台保留其计算结果和玩家设置，而不被销毁或重置。若设置为0，则所有关闭的窗口都不会被销毁（不推荐）。The last few closed windows can still retain their calculation results and player settings in the background without being destroyed or reset. If set to 0, all closed windows will not be destroyed (not recommended).");
+            ClickToSwitchRecipeMode = Config.Bind<bool>("config", "ClickToSwitchRecipeMode", false, "切换配方选取的模式会使用“点击循环切换”而非“点击然后选取配方”的模式。The mode for switching recipe selection will use the \"click loop switch\" instead of the \"click and select recipe\" mode.");
 
             Harmony.CreateAndPatchAll(typeof(DSPCalculatorPlugin));
             Harmony.CreateAndPatchAll(typeof(RecipePickerPatcher));

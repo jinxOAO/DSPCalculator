@@ -23,9 +23,11 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("溢出或副产物", "Overflow / By-product", "溢出/副产物", "Overflow / By-product");
             LocalizationModule.RegisterTranslation("产出calc", "Total Output", "总产出", "Total Output");
             LocalizationModule.RegisterTranslation("存在环路警告", "There is a no solution loop in the recipe solving process! \nThe changes will not take effect, please try reset all configurations.", "配方求解过程出现环路！\n更改将不会生效，请尝试还原默认配置。", "There is a no solution loop in the recipe solving process! \nThe changes will not take effect, please try reset all configurations.");
+            LocalizationModule.RegisterTranslation("配方成环切换到下一个配方", "New recipe will cause a loop, skipping that recipe and continuing to switch to the next recipe to try.", "切换的新配方会导致环路，跳过该配方并继续切换到下一个配方尝试。", "New recipe will cause a loop, skipping that recipe and continuing to switch to the next recipe to try.");
 
             LocalizationModule.RegisterTranslation("更改配方标题", "Change Recipe", "更改配方", "Change Recipe");
             LocalizationModule.RegisterTranslation("更改配方说明", "Click to specify the recipe for producing this item. This setting will remain in effect for this item until the rule is cleared.", "点击以指定生产此物品的配方。在清除规则前，该设定将一直对此物品生效。", "Click to specify the recipe for producing this item. This setting will remain in effect for this item until the rule is cleared.");
+            LocalizationModule.RegisterTranslation("切换配方说明", "Click to switch the recipe for producing this item. This setting will remain in effect for this item until the rule is cleared.", "点击以切换生产此物品的配方。在清除规则前，该设定将一直对此物品生效。", "Click to switch the recipe for producing this item. This setting will remain in effect for this item until the rule is cleared.");
             LocalizationModule.RegisterTranslation("清除配方设定标题", "Clear Recipe Specification", "清除强制指定的配方", "Clear Recipe Specification");
             LocalizationModule.RegisterTranslation("清除配方设定说明", "No longer specifying that this item must use a certain recipe, it can be selected by the calculator itself.", "不再指定此物品必须使用某个配方，可由计算器自由选取。", "No longer specifying that this item must use a certain recipe, it can be selected by the calculator itself.");
             LocalizationModule.RegisterTranslation("视为原矿标题", "Treat as Raw Ore", "视为原矿", "Treat as Raw Ore");

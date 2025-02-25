@@ -315,6 +315,11 @@ namespace DSPCalculator.UI
                         recipeChangeButtonObj.GetComponent<UIButton>().tips.tipTitle = "更改配方标题".Translate();
                         recipeChangeButtonObj.GetComponent<UIButton>().tips.tipText = "更改配方说明".Translate();
                         recipeChangeButtonObj.GetComponent<UIButton>().tips.corner = 3;
+                        if (DSPCalculatorPlugin.ClickToSwitchRecipeMode.Value)
+                        {
+                            recipeChangeButtonObj.GetComponent<UIButton>().tips.tipText = "切换配方说明".Translate();
+                            recipeChangeButtonObj.GetComponent<UIButton>().tips.corner = 9;
+                        }
                         recipeChangeButtonObj.GetComponent<UIButton>().tips.width = 200;
                         Navigation n = new Navigation();
                         n.mode = Navigation.Mode.None;
@@ -834,7 +839,50 @@ namespace DSPCalculator.UI
 
         public void OnRecipeChangeButtonClick()
         {
-            UIRecipePicker.Popup(new Vector2(100f, 200f), OnRecipePickerReturn, (ERecipeType)(-itemNode.itemId));
+            if (DSPCalculatorPlugin.ClickToSwitchRecipeMode.Value)
+            {
+                if (itemNode.mainRecipe != null && CalcDB.itemDict.ContainsKey(itemNode.itemId))
+                {
+                    List<NormalizedRecipe> recipes = CalcDB.itemDict[itemNode.itemId].recipes;
+                    if(recipes != null && recipes.Count > 1)
+                    {
+                        int oriRecipeId = itemNode.mainRecipe.ID;
+                        int index = 0;
+                        for (; index < recipes.Count; index++)
+                        {
+                            if (recipes[index].ID == oriRecipeId)
+                            {
+                                break;
+                            }
+                        }
+                        index = (index + 1) % recipes.Count;
+
+                        UserPreference preference = parentCalcWindow.solution.userPreference;
+                        if (!preference.itemConfigs.ContainsKey(itemNode.itemId))
+                            preference.itemConfigs[itemNode.itemId] = new ItemConfig(itemNode.itemId);
+
+                        RecipeProto proto = recipes[index].oriProto;
+                        preference.itemConfigs[itemNode.itemId].recipeID = proto.ID;
+                        while(!parentCalcWindow.solution.ReSolve(Convert.ToDouble(parentCalcWindow.speedInputObj.GetComponent<InputField>().text))) // 如果成环，则继续循环下一个配方，直到循环到原本的配方，那么终止
+                        {
+                            UIRealtimeTip.Popup("配方成环切换到下一个配方".Translate());
+                            index = (index + 1) % recipes.Count;
+                            proto = recipes[index].oriProto;
+                            preference.itemConfigs[itemNode.itemId].recipeID = proto.ID;
+                            if (proto.ID == oriRecipeId)
+                            {
+                                parentCalcWindow.solution.ReSolve(Convert.ToDouble(parentCalcWindow.speedInputObj.GetComponent<InputField>().text));
+                                break;
+                            }
+                        }
+                        parentCalcWindow.RefreshAll();
+                    }
+                }
+            }
+            else
+            {
+                UIRecipePicker.Popup(new Vector2(100f, 200f), OnRecipePickerReturn, (ERecipeType)(-itemNode.itemId));
+            }
         }
 
         public void OnRecipePickerReturn(RecipeProto recipeProto)
