@@ -1133,6 +1133,7 @@ namespace DSPCalculator.UI
             long requiredSpeed = (long)Math.Ceiling(itemNode.satisfiedSpeed);
 
             // 打开新窗口后，该物品必须默认不被视为原矿，否则对于默认视为原矿的材料没有意义
+            calcWindow.solution.userPreference = parentCalcWindow.solution.userPreference.DeepCopy();
             UserPreference thatPreference = calcWindow.solution.userPreference;
             if (!thatPreference.itemConfigs.ContainsKey(itemNode.itemId))
                 thatPreference.itemConfigs[itemNode.itemId] = new ItemConfig(itemNode.itemId);

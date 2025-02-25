@@ -26,7 +26,7 @@ namespace DSPCalculator.Logic
             Array.Clear(__instance.indexArray, 0, __instance.indexArray.Length);
             Array.Clear(__instance.protoArray, 0, __instance.protoArray.Length);
             IconSet iconSet = GameMain.iconSet;
-            List< NormalizedRecipe> recipes = CalcDB.itemDict[itemId].recipes;
+            List<NormalizedRecipe> recipes = CalcDB.itemDict[itemId].recipes;
             for (int i = 0; i < recipes.Count; i++)
             {
                 RecipeProto recipeProto = recipes[i].oriProto;

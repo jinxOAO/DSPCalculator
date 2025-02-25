@@ -105,16 +105,25 @@ namespace DSPCalculator.Logic
             return copied;
         }
 
-        /// <summary>
-        /// 未完成！必须修改！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
-        /// </summary>
-        /// <returns></returns>
-        public UserPreference SemiDeepCopy()
+
+        public UserPreference DeepCopy()
         {
-            UserPreference copied = new UserPreference(); 
-            copied.recipeConfigs = recipeConfigs;
-            copied.itemConfigs = itemConfigs;
-            copied.finishedRecipes = finishedRecipes;
+            UserPreference copied = new UserPreference();
+            copied.recipeConfigs = new Dictionary<int, RecipeConfig>();
+            foreach(var recipeConfig in recipeConfigs)
+            {
+                copied.recipeConfigs[recipeConfig.Key] = new RecipeConfig(recipeConfig.Value);
+            }
+            copied.itemConfigs = new Dictionary<int, ItemConfig>();
+            foreach(var itemConfig in itemConfigs)
+            {
+                copied.itemConfigs[itemConfig.Key] = new ItemConfig(itemConfig.Value);
+            }
+            copied.finishedRecipes = new Dictionary<int, int>();
+            foreach(var finishedRecipe in finishedRecipes)
+            {
+                copied.finishedRecipes[finishedRecipe.Key] = finishedRecipe.Value;
+            }
             copied.globalIncLevel = globalIncLevel;
             copied.globalIsInc = globalIsInc;
             copied.bluebuff = bluebuff;
@@ -127,7 +136,11 @@ namespace DSPCalculator.Logic
             copied.showMixBeltInfo = showMixBeltInfo;
             copied.incMilliOverride = incMilliOverride;
             copied.accMilliOverride = accMilliOverride;
-            copied.globalAssemblerIdByType = globalAssemblerIdByType;
+            copied.globalAssemblerIdByType = new Dictionary<int, int>();
+            foreach(var globalAssemblerId in globalAssemblerIdByType)
+            {
+                copied.globalAssemblerIdByType[globalAssemblerId.Key] = globalAssemblerId.Value;
+            }
             return copied;
         }
 
@@ -230,6 +243,15 @@ namespace DSPCalculator.Logic
             forceUseIA = false;
             IAType = -1;
         }
+        public RecipeConfig(RecipeConfig ori)
+        {
+            ID = ori.ID;
+            incLevel = ori.incLevel;
+            forceIncMode = ori.forceIncMode;
+            assemblerItemId = ori.assemblerItemId;
+            forceUseIA = ori.forceUseIA;
+            IAType = ori.IAType;
+        }
     }
 
     public class ItemConfig
@@ -245,6 +267,14 @@ namespace DSPCalculator.Logic
             recipeID = 0;
             consideredAsOre = false;
             forceNotOre = false;
+        }
+
+        public ItemConfig(ItemConfig ori)
+        {
+            ID = ori.ID;
+            recipeID = ori.recipeID;
+            consideredAsOre = ori.consideredAsOre;
+            forceNotOre = ori.forceNotOre;
         }
     }
 }
