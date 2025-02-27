@@ -82,7 +82,7 @@ namespace DSPCalculator.BP
                     }
                     list.Add(b);
                     if (b.localOffset_z == 0)
-                        gridMap.SetBuilding((int)b.localOffset_x, (int)b.localOffset_y, b.index);
+                        gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                     endX += bumpX;
                 }
                 endX -= bumpX; // 把末尾的移到下一个坐标移回来
@@ -131,7 +131,7 @@ namespace DSPCalculator.BP
                     }
                     list.Add(b);
                     if (b.localOffset_z == 0)
-                        gridMap.SetBuilding((int)b.localOffset_x, (int)b.localOffset_y, b.index);
+                        gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                     endY += bumpY;
                 }
                 endY -= bumpY;
@@ -191,7 +191,7 @@ namespace DSPCalculator.BP
 
                     list.Add(b);
                     if (b.localOffset_z == 0)
-                        gridMap.SetBuilding((int)b.localOffset_x, (int)b.localOffset_y, b.index);
+                        gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                     endZ += bumpZ;
                 }
                 endZ -= bumpZ;
@@ -348,10 +348,10 @@ namespace DSPCalculator.BP
         /// </summary>
         public static void ConnectPLSToBelt(this BpProcessor processor, int PLSBuildingIndex, int PLSSlot, int storageIndex, int beltIndex)
         {
-            int PLSX = (int)processor.buildings[PLSBuildingIndex].localOffset_x;
-            int PLSY = (int)processor.buildings[PLSBuildingIndex].localOffset_y;
-            int endX = (int)processor.buildings[beltIndex].localOffset_x;
-            int endY = (int)processor.buildings[beltIndex].localOffset_y;
+            int PLSX = (int)Math.Round(processor.buildings[PLSBuildingIndex].localOffset_x);
+            int PLSY = (int)Math.Round(processor.buildings[PLSBuildingIndex].localOffset_y);
+            int endX = (int)Math.Round(processor.buildings[beltIndex].localOffset_x);
+            int endY = (int)Math.Round(processor.buildings[beltIndex].localOffset_y);
             short beltItemId = processor.buildings[beltIndex].itemId;
             short beltModelIndex = processor.buildings[beltIndex].modelIndex;
             bool isOutput = storageIndex >= 0;

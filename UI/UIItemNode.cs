@@ -1198,7 +1198,9 @@ namespace DSPCalculator.UI
 
         public string GenBPTipText()
         {
-            if (bpProcessor != null && bpProcessor.bpCountToSatisfy > 1)
+            if (bpProcessor != null && bpProcessor.supportAssemblerCount == 0 && bpProcessor.processorGB != null)
+                return "GB无法生成蓝图说明".Translate();
+            else if (bpProcessor != null && bpProcessor.bpCountToSatisfy > 1 && bpProcessor.supportAssemblerCount > 0)
                 return "生成蓝图0说明calc".Translate() + String.Format("蓝图补充说明".Translate(), bpProcessor.supportAssemblerCount, Utils.KMG(bpProcessor.bpCountToSatisfy));
             else
                 return "生成蓝图0说明calc".Translate();

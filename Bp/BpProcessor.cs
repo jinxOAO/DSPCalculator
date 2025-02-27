@@ -1,4 +1,6 @@
-﻿using DSPCalculator.Logic;
+﻿using DSPCalculator.Bp;
+using DSPCalculator.Compatibility;
+using DSPCalculator.Logic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +16,8 @@ namespace DSPCalculator.BP
         public static bool enabled = true;
 
         public RecipeInfo recipeInfo;
-        public bool canGenerate { get { return !recipeInfo.useIA && BpDB.assemblerInfos.ContainsKey(recipeInfo.assemblerItemId) && cargoCount <= 6; } } // 返回是否可以生成蓝图，也决定着蓝图生成按钮是否显示
+        public bool canGenerate { get { return !recipeInfo.useIA && ((BpDB.assemblerInfos.ContainsKey(recipeInfo.assemblerItemId) && cargoCount <= 6) || isGBMega); } }// 返回是否可以生成蓝图，也决定着蓝图生成按钮是否显示
+        public bool isGBMega { get { return CompatManager.GB && BpDB.GBMegas.ContainsKey(recipeInfo.assemblerItemId) && cargoCount <= 6; } }
         public SolutionTree solution;
         public int supportAssemblerCount; // 可支持的工厂数量
         public double bpCountToSatisfy; // 蓝图的数量
@@ -54,6 +57,7 @@ namespace DSPCalculator.BP
 
         public BlueprintData blueprintData;
 
+        public BpProcessorGB processorGB;
         public BpProcessor() 
         {
             gridMap = new Dictionary<int, Dictionary<int, int>>();
@@ -86,6 +90,13 @@ namespace DSPCalculator.BP
 
             if (!canGenerate)
                 return;
+
+            if(isGBMega)
+            {
+                processorGB = new BpProcessorGB(this);
+                processorGB.PreProcess();
+                return;
+            }
 
             InitCargoInfos();
 
@@ -303,11 +314,19 @@ namespace DSPCalculator.BP
             if (!canGenerate)
                 return false;
 
+
             gridMap = new Dictionary<int, Dictionary<int, int>>();
             buildings = new List<BlueprintBuilding>();
             cargoBeltPoses = new List<BpCargoBeltPos> { null, null, null, null, null, null, null, null, null };
             blueprintData = BpBuilder.CreateEmpty();
             insufficientSorterItems = new List<int>();
+            if (isGBMega)
+            {
+                if (processorGB != null)
+                    return processorGB.GenerateBlueprints(genLevel);
+
+                return false;
+            }
 
             bool isLab = LDB.items.Select(recipeInfo.assemblerItemId).prefabDesc.isLab;//recipeInfo.recipeNorm.oriProto.Type == ERecipeType.Research;
             int maxLevel = solution.userPreference.labMaxLevel;
@@ -617,7 +636,7 @@ namespace DSPCalculator.BP
             PLSs = new List<int>();
             // 首先生成PLS
             int totalItemCount = cargoCount; // 所有物品数量决定要几个pls，超过4个就要俩pls
-            if (solution.userPreference.bpStationProlifSlot && genCoater)
+            if (PLSProvideProliferator && genCoater)
                 totalItemCount++;
             int assemblerId = recipeInfo.assemblerItemId;
             BpAssemblerInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
@@ -672,14 +691,14 @@ namespace DSPCalculator.BP
                         bool status = this.SetOrGetPLSStorage(PLSIndex, beltPos.cargoItemId, beltPos.isResource, out storageIndex); // 设置PLS的物流塔信息
                         if (!status && storageIndex >= 0) // 说明有冲突
                             storageConflicts = true;
-                        Utils.logger.LogInfo($"i = {i}, slot = {beltPosesIndexToPLSSlotMap[i]}");
+                        //Utils.logger.LogInfo($"i = {i}, slot = {beltPosesIndexToPLSSlotMap[i]}");
                         if(storageIndex >= 0)
                             this.ConnectPLSToBelt(PLSIndex, beltPosesIndexToPLSSlotMap[i], beltPos.isResource ? storageIndex : -1, gridMap.GetBuilding(beltPos.x, beltPos.y)); // 连接物流塔
                     }
                 }
             }
             // 物流塔供给增产剂
-            if(solution.userPreference.bpStationProlifSlot && genCoater)
+            if(PLSProvideProliferator && genCoater)
             {
                 int coaterSlotPosX = GetBeltLeftX(assemblerInfo) + BpDB.coaterOffsetX - 1;
                 int coaterBeginY = 999;

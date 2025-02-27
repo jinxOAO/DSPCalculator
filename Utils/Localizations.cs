@@ -108,6 +108,7 @@ namespace DSPCalculator
 
 
             LocalizationModule.RegisterTranslation("蓝图补充说明", "\n\nDue to tech or conveyor belt speed limitations, one blueprint can only support up to <color=#FD965EC0>{0}</color> production facilities, so you need to paste a total of <color=#FD965EC0>{1}</color> blueprints.", "\n\n由于科技或传送带最大速度限制，单个蓝图最多支持<color=#FD965EC0>{0}</color>个生产设施，因此你需要粘贴共<color=#FD965EC0>{1}</color>次蓝图。", "\n\nDue to tech or conveyor belt speed limitations, one blueprint can only support up to <color=#FD965EC0>{0}</color> production facilities, so you need to paste a total of <color=#FD965EC0>{1}</color> blueprints.");
+            LocalizationModule.RegisterTranslation("GB无法生成蓝图说明", "<color=#FD965EC0>Due to the low level of conveyor belt and stacking technology, a single belt cannot support a minimum of one production facility, therefore blueprint cannot be generated.</color>", "<color=#FD965EC0>由于传送带和堆叠科技过低，单带无法支持最低1台生产设施，无法生成蓝图。</color>", "<color=#FD965EC0>Due to the low level of conveyor belt and stacking technology, a single belt cannot support a minimum of one production facility, therefore blueprint cannot be generated.</color>");
 
             LocalizationModule.RegisterTranslation("蓝图行数", "Number of Rows", "优先行数", "Number of Rows");
             LocalizationModule.RegisterTranslation("蓝图行数单行", "Single", "单行", "Single");
@@ -149,6 +150,11 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("不在行星上无法粘贴蓝图警告", "You must be on a planet to paste blueprints!", "你必须处在行星上才能粘贴蓝图！", "You must be on a planet to paste blueprints!");
 
             LocalizationModule.RegisterTranslation("分拣器科技不足警告", "Warning! Due to the low level of sorter technology, the sorter speed of some materials cannot support the factory's full speed. Therefore, the blueprint used  unlocked sorters to identify these locations. Please handle them manually.", "警告！由于分拣器科技水平过低，部分材料的抓取速度无法支持工厂满速运行，因此使用了你未解锁的分拣器进行标识，请手动处理这些位置。", "Warning! Due to the low level of sorter technology, the sorter speed of some materials cannot support the factory's full speed. Therefore, the blueprint used  unlocked sorters to identify these locations. Please handle them manually.");
+
+
+            LocalizationModule.RegisterTranslation("传送带比例BpGB", "Belt Routes Count: ", "传送带线路数：", "Belt Routes Count: ");
+            LocalizationModule.RegisterTranslation("入BpGB", "(in)", "(入)", "(in)");
+            LocalizationModule.RegisterTranslation("出BpGB", "(out)", "(出)", "(out)");
 
         }
     }

@@ -513,31 +513,31 @@ namespace DSPCalculator.BP
 
             //// bp.PostProcess(buildings);
             
-            BpProcessor p = new BpProcessor();
-            p.AddBelts(2001, 0, 0, 0, 10, 0, 0, -1, -1, 1101);
-            p.AddBelts(2001, 0, 4, 0, 10, 4, 0,-1,-1,0, 1301);
-            p.AddBelts(2001, -6, 5, 0, 10, 5, 0,-1, -1,1102);
-            p.AddBelts(2002, -7, 6, 0, 10, 8, 3, -1, -1, 1102);
-            p.AddBelts(2002, 20, -4, 0, -8, -5, 0);
-            p.AddPLS(-7, 0);
-            p.SetPLSStorage(p.PLSs[0], 0, 1301, true);
-            p.ConnectPLSToBelt(p.PLSs[0], 1, 0, p.gridMap.GetBuilding(-7, 6));
-            p.ConnectPLSToBelt(p.PLSs[0], 6, -1, p.gridMap.GetBuilding(-8, -5));
-            int beginX = 1;
-            int dist = BpDB.assemblerInfos[2304].DragDistanceX;
-            int beginY = 0 + BpDB.assemblerInfos[2304].centerDistanceBottom;
-            for (int i = 0; i < 3; i++)
-            {
-                int x = beginX + dist * i;
-                int y = beginY;
-                int index = p.AddAssembler(2304, 50, x, y, 0,0,true);
-                p.AssemblerConnectToBelt(index, 0, 2012, 1, false, 1301);
-                p.AssemblerConnectToBelt(index, 1, 2012, 2, true, 0);
-                p.AssemblerConnectToBelt(index, 8, 2012, -1, true, 0);
-            }
-            p.PostProcess();
+            //BpProcessor p = new BpProcessor();
+            //p.AddBelts(2001, 0, 0, 0, 10, 0, 0, -1, -1, 1101);
+            //p.AddBelts(2001, 0, 4, 0, 10, 4, 0,-1,-1,0, 1301);
+            //p.AddBelts(2001, -6, 5, 0, 10, 5, 0,-1, -1,1102);
+            //p.AddBelts(2002, -7, 6, 0, 10, 8, 3, -1, -1, 1102);
+            //p.AddBelts(2002, 20, -4, 0, -8, -5, 0);
+            //p.AddPLS(-7, 0);
+            //p.SetPLSStorage(p.PLSs[0], 0, 1301, true);
+            //p.ConnectPLSToBelt(p.PLSs[0], 1, 0, p.gridMap.GetBuilding(-7, 6));
+            //p.ConnectPLSToBelt(p.PLSs[0], 6, -1, p.gridMap.GetBuilding(-8, -5));
+            //int beginX = 1;
+            //int dist = BpDB.assemblerInfos[2304].DragDistanceX;
+            //int beginY = 0 + BpDB.assemblerInfos[2304].centerDistanceBottom;
+            //for (int i = 0; i < 3; i++)
+            //{
+            //    int x = beginX + dist * i;
+            //    int y = beginY;
+            //    int index = p.AddAssembler(2304, 50, x, y, 0,0,true);
+            //    p.AssemblerConnectToBelt(index, 0, 2012, 1, false, 1301);
+            //    p.AssemblerConnectToBelt(index, 1, 2012, 2, true, 0);
+            //    p.AssemblerConnectToBelt(index, 8, 2012, -1, true, 0);
+            //}
+            //p.PostProcess();
 
-            GameMain.mainPlayer.controller.OpenBlueprintPasteMode(p.blueprintData, GameConfig.blueprintFolder + "DSPCalcBPTemp.txt");
+            //GameMain.mainPlayer.controller.OpenBlueprintPasteMode(p.blueprintData, GameConfig.blueprintFolder + "DSPCalcBPTemp.txt");
         }
 
         public static void TestCreateSorter()

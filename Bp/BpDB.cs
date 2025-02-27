@@ -15,6 +15,7 @@ namespace DSPCalculator.BP
         public static Dictionary<int, BpSorterInfo> sorterInfos;
         public static List<BpBeltInfo> beltsAscending;
         public static List<BpSorterInfo> sortersAscending;
+        public static Dictionary<int, int> GBMegas;
 
         public static int stationParam320 = 1000000; // 最大充电功率
         public static int stationParam321 = -100000000;
@@ -49,6 +50,7 @@ namespace DSPCalculator.BP
             sorterInfos = new Dictionary<int, BpSorterInfo>();
             beltsAscending = new List<BpBeltInfo>();
             sortersAscending = new List<BpSorterInfo>();
+            GBMegas = new Dictionary<int, int>();
 
             BpAssemblerInfo assembler = new BpAssemblerInfo();
             assembler.centerDistanceBottom = 2;
@@ -159,6 +161,12 @@ namespace DSPCalculator.BP
                 assemblerInfos[6230] = smelter;
                 assemblerInfos[2319] = smelter;
                 assemblerInfos[2317] = chemical;
+                GBMegas[6257] = 1;
+                GBMegas[6258] = 1;
+                GBMegas[6259] = 1;
+                GBMegas[6260] = 1;
+                GBMegas[6264] = 1;
+                GBMegas[6265] = 1;
             }
             int slotMax = LDB.items.Select(2103).prefabDesc.stationMaxItemCount;
             if (slotMax > stationMaxItemCount)
