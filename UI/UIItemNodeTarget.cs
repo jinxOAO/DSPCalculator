@@ -193,9 +193,12 @@ namespace DSPCalculator.UI
                 Button btn = obj.transform.Find("bg").gameObject.AddComponent<Button>();
                 btn.onClick.AddListener(() => { OnAddButtonClick(); });
                 bgUIBtn = obj.transform.Find("bg").gameObject.AddUIButtonForImage();
-                UIButton.Transition uibtn0 = bgUIBtn.transitions[0];
+                bgUIBtn.tips.corner = 3;
+                bgUIBtn.tips.offset = new Vector2(-50, 10);
+                bgUIBtn.tips.tipTitle = "添加新目标产物标题".Translate();
+                UIButton.Transition uibtn0Trans = bgUIBtn.transitions[0];
                 bgUIBtn.transitions = new UIButton.Transition[2];
-                bgUIBtn.transitions[0] = uibtn0;
+                bgUIBtn.transitions[0] = uibtn0Trans;
 
                 addTextObj = GameObject.Instantiate(UICalcWindow.TextWithUITip);
                 addTextObj.name = "add";
@@ -208,9 +211,9 @@ namespace DSPCalculator.UI
                 addText.text = "+";
                 addText.raycastTarget = false;
 
-                uibtn0.normalColor = unfocusedBgColor;
-                uibtn0.pressedColor = unfocusedBgColor;
-                uibtn0.mouseoverColor = mouseOverBgColor;
+                uibtn0Trans.normalColor = unfocusedBgColor;
+                uibtn0Trans.pressedColor = unfocusedBgColor;
+                uibtn0Trans.mouseoverColor = mouseOverBgColor;
 
                 bgUIBtn.transitions[1] = Utils.CreateUIButtonTransition(addText);
                 bgUIBtn.transitions[1].normalColor = new Color(0.5f, 0.5f, 0.5f, 1f);
@@ -261,6 +264,7 @@ namespace DSPCalculator.UI
             bgUIBtn.transitions[0].normalColor = defaultBgColor;
             bgUIBtn.transitions[0].highlightColorOverride = defaultBgColor;
             bgUIBtn.transitions[0].pressedColor = defaultBgColor;
+            bgUIBtn.tips.tipTitle = "";
             addTextObj.SetActive(false);
             mainInfoGroupObj.SetActive(true);
             // 顺便帮玩家按下选择目标产物按钮

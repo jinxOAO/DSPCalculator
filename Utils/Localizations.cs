@@ -38,7 +38,7 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("移除目标产物标题", "Remove", "移除", "Remove");
             LocalizationModule.RegisterTranslation("移除目标产物说明", "Remove this target product and recalculate the production line.", "将此目标产物移除，然后重新计算生产线。", "Remove this target product and recalculate the production line.");
 
-            LocalizationModule.RegisterTranslation("添加新目标产物标题", "Add New Target Product", "添加新目标产物", "Add New Target Product");
+            LocalizationModule.RegisterTranslation("添加新目标产物标题", "Add New Target Product", "添加新的目标产物", "Add New Target Product");
             LocalizationModule.RegisterTranslation("添加新目标产物说明", "Add new target products and recalculate the total production line after completing the product and speed settings.", "添加新的目标产物，在完成产物和速度设定后，重新计算总生产线。", "Add new target products and recalculate the total production line after completing the product and speed settings.");
 
             LocalizationModule.RegisterTranslation("在新窗口中计算标题", "Calculate in New Window", "在新窗口中计算", "Calculate in New Window");
@@ -155,6 +155,10 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("传送带比例BpGB", "Belt Routes Count: ", "传送带线路数：", "Belt Routes Count: ");
             LocalizationModule.RegisterTranslation("入BpGB", "(in)", "(入)", "(in)");
             LocalizationModule.RegisterTranslation("出BpGB", "(out)", "(出)", "(out)");
+
+
+            LocalizationModule.RegisterTranslation("ttenyx白糖预制蓝图提示", "This blueprint is a <color=#FD965EC0>prefabricated blueprint</color>, so the output speed and building count may not match the calculated values. Please modify the number yourself.\nThe production speed of this blueprint is 11,250/min, with Proliferator MkIII.\n<color=#FF4020C0>You MUST NOT upgrade or downgrade any belt or sorter in this blueprint!!!</color>\n\n<color=#FD965EC0>This blueprint is from TTenYX</color>", "该蓝图为固定的<color=#FD965EC0>预制蓝图</color>，因此产量与计算器中的数值不一致，请自行修改建筑数量。\n单个蓝图的产量为11250/min，使用3级增产剂\n<color=#FF4020C0>绝不要升级或降级任何蓝图中的传送带或分拣器！！！</color>\n\n<color=#FD965EC0>此蓝图来自于TTenYX</color>", "This blueprint is a <color=#FD965EC0>prefabricated blueprint</color>, so the output speed and building count may not match the calculated values. Please modify the number yourself.\nThe production speed of this blueprint is 11,250/min, with Proliferator MkIII.\n<color=#FF4020C0>You MUST NOT upgrade or downgrade any belt or sorter in this blueprint!!!</color>\n\n<color=#FD965EC0>This blueprint is from TTenYX</color>");
+            LocalizationModule.RegisterTranslation("ttenyx白糖预制蓝图提示2901", "This blueprint is a <color=#FD965EC0>prefabricated blueprint</color>, so the output speed and building count may not match the calculated values. Please modify the number yourself.\nThe production speed of this blueprint is 3,750/min, with Proliferator MkIII.\n<color=#FF4020C0>You MUST NOT upgrade or downgrade any belt or sorter in this blueprint!!!</color>\n\n<color=#FD965EC0>This blueprint is from TTenYX</color>", "该蓝图为固定的<color=#FD965EC0>预制蓝图</color>，因此产量与计算器中的数值不一致，请自行修改建筑数量。\n单个蓝图的产量为3750/min，使用3级增产剂\n<color=#FF4020C0>绝不要升级或降级任何蓝图中的传送带或分拣器！！！</color>\n\n<color=#FD965EC0>此蓝图来自于TTenYX</color>", "This blueprint is a <color=#FD965EC0>prefabricated blueprint</color>, so the output speed and building count may not match the calculated values. Please modify the number yourself.\nThe production speed of this blueprint is 3,750/min, with Proliferator MkIII.\n<color=#FF4020C0>You MUST NOT upgrade or downgrade any belt or sorter in this blueprint!!!</color>\n\n<color=#FD965EC0>This blueprint is from TTenYX</color>");
 
         }
     }

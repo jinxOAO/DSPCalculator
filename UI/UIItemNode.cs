@@ -590,16 +590,7 @@ namespace DSPCalculator.UI
 
                         //genBp_1_Obj.GetComponent<UIButton>().transitions = genBp_1_Obj.GetComponent<UIButton>().transitions.AddItem(uibtnTrans_bpgen1).ToArray();
                     }
-                    //if(CompatManager.MMS && itemNode.mainRecipe.IASpecializationType == 2 && itemNode.mainRecipe.GetSpeckBuffLevel() > 0) // 化工厂一定享受满增产
-                    //{
-                    //    int recipeId = itemNode.mainRecipe.ID;
-                    //    if(!parentCalcWindow.solution.userPreference.recipeConfigs.ContainsKey(recipeId))
-                    //    {
-                    //        parentCalcWindow.solution.userPreference.recipeConfigs[recipeId] = new RecipeConfig(itemNode.mainRecipe);
-                    //    }
-                    //    parentCalcWindow.solution.userPreference.recipeConfigs[recipeId].forceIncMode = 1;
-                    //    parentCalcWindow.solution.userPreference.recipeConfigs[recipeId].incLevel = 4;
-                    //}
+                    
                 }
 
                 // 混带的分拣器信息
@@ -832,6 +823,7 @@ namespace DSPCalculator.UI
                 else
                 {
                     RefreshAssemblerDisplay();
+                    CallBpPreProcess(true);
                 }
             }
 
@@ -1198,20 +1190,47 @@ namespace DSPCalculator.UI
 
         public string GenBPTipText()
         {
-            if (bpProcessor != null && bpProcessor.supportAssemblerCount == 0 && bpProcessor.processorGB != null)
-                return "GB无法生成蓝图说明".Translate();
-            else if (bpProcessor != null && bpProcessor.bpCountToSatisfy > 1 && bpProcessor.supportAssemblerCount > 0)
-                return "生成蓝图0说明calc".Translate() + String.Format("蓝图补充说明".Translate(), bpProcessor.supportAssemblerCount, Utils.KMG(bpProcessor.bpCountToSatisfy));
+            if (bpProcessor.bpPrefabId > 0)
+            {
+                if (bpProcessor.bpPrefabId == 1)
+                {
+                    if(itemNode.mainRecipe != null && itemNode.mainRecipe.assemblerItemId == 2901)
+                        return "ttenyx白糖预制蓝图提示2901".Translate();
+                    else
+                        return "ttenyx白糖预制蓝图提示".Translate();
+                }
+
+                return "Unknown blueprint prefab";
+            }
             else
-                return "生成蓝图0说明calc".Translate();
+            {
+                if (bpProcessor != null && bpProcessor.supportAssemblerCount == 0 && bpProcessor.processorGB != null)
+                    return "GB无法生成蓝图说明".Translate();
+                else if (bpProcessor != null && bpProcessor.bpCountToSatisfy > 1 && bpProcessor.supportAssemblerCount > 0)
+                    return "生成蓝图0说明calc".Translate() + String.Format("蓝图补充说明".Translate(), bpProcessor.supportAssemblerCount, Utils.KMG(bpProcessor.bpCountToSatisfy));
+                else
+                    return "生成蓝图0说明calc".Translate();
+            }
+        }
+
+        public void CallBpPreProcess(bool forceInitNew = false)
+        {
+            if (itemNode.mainRecipe != null && !itemNode.mainRecipe.useIA && BpProcessor.enabled)
+            {
+                if (bpProcessor == null || forceInitNew)
+                    bpProcessor = new BpProcessor(itemNode.mainRecipe, parentCalcWindow.solution);
+            }
+            if (bpProcessor != null)
+                bpProcessor.PreProcess();
+
+            RefreshBpProcessor();
         }
 
         public void RefreshBpProcessor()
         {
-            if (itemNode.mainRecipe != null && !itemNode.mainRecipe.useIA && BpProcessor.enabled)
+            if (bpProcessor != null)
             {
-                bpProcessor = new BpProcessor(itemNode.mainRecipe, parentCalcWindow.solution);
-                if (bpProcessor.canGenerate && genBpUIBtn0 != null && GenBpButtonObj != null)
+                if (bpProcessor.canGenerate && bpProcessor.prePocessed && genBpUIBtn0 != null && GenBpButtonObj != null)
                 {
                     genBpUIBtn0.tips.tipText = GenBPTipText();
                     GenBpButtonObj.SetActive(true);
@@ -1219,7 +1238,7 @@ namespace DSPCalculator.UI
                 }
             }
 
-            // 能到这里就说明无法生成蓝图
+            // 能到这里就说明无法生成蓝图，或者蓝图生成器尚未完成预处理
             if (GenBpButtonObj != null)
                 GenBpButtonObj.SetActive(false);
 

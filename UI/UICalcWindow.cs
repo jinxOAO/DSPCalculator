@@ -156,6 +156,7 @@ namespace DSPCalculator.UI
         public bool nextFrameRecalc;
         public int sideInfoPanelIndex;
         public bool hideOutsideTheEdge;
+        public int refreshIndex; // 每帧刷新的子节点，当期index
 
         /// <summary>
         /// 创建新窗口
@@ -179,6 +180,7 @@ namespace DSPCalculator.UI
             nextFrameRecalc = false;
             targetVerticalPosition = -1;
             hideOutsideTheEdge = false;
+            refreshIndex = 0;
 
             GameObject oriWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser");
             GameObject parentWindowObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows"); // (-----/Calc Window Group");
@@ -1529,6 +1531,12 @@ namespace DSPCalculator.UI
                 SwitchWindowSize();
             }
 
+            if(refreshIndex < uiItemNodes.Count)
+            {
+                uiItemNodes[refreshIndex].CallBpPreProcess();
+                refreshIndex++;
+            }
+
         }
 
 
@@ -1688,6 +1696,7 @@ namespace DSPCalculator.UI
             RefreshProliferatorButtonDisplay();
             RefreshCheckBoxes();
             RefreshSideInfoPanels();
+            refreshIndex = 0;
         }
 
         public bool CursorInWindow()

@@ -16,7 +16,8 @@ namespace DSPCalculator.BP
         public static bool enabled = true;
 
         public RecipeInfo recipeInfo;
-        public bool canGenerate { get { return !recipeInfo.useIA && ((BpDB.assemblerInfos.ContainsKey(recipeInfo.assemblerItemId) && cargoCount <= 6) || isGBMega); } }// 返回是否可以生成蓝图，也决定着蓝图生成按钮是否显示
+        public bool prePocessed;
+        public bool canGenerate { get { return !recipeInfo.useIA && ((BpDB.assemblerInfos.ContainsKey(recipeInfo.assemblerItemId) && cargoCount <= 6) || isGBMega || bpPrefabId > 0); } }// 返回是否可以生成蓝图，也决定着蓝图生成按钮是否显示
         public bool isGBMega { get { return CompatManager.GB && BpDB.GBMegas.ContainsKey(recipeInfo.assemblerItemId) && cargoCount <= 6; } }
         public SolutionTree solution;
         public int supportAssemblerCount; // 可支持的工厂数量
@@ -45,6 +46,7 @@ namespace DSPCalculator.BP
         public bool doubleRow; // 是否双行工程蓝图
         public int cargoCount; // 共有几种货物
         public bool share3Belts; // 是否可以共享三条带子
+        public int bpPrefabId; // 预制
         public List<int> insufficientSorterItems; // 由于科技限制，单个分拣器运力不足的那些物品们
         public bool resourceGenCoater { get { return recipeInfo.incLevel > 0 && solution.userPreference.bpResourceCoater >= 0 || solution.userPreference.bpResourceCoater == 1; } } // 原材料有喷涂机
         public bool productGenCoater { get { return solution.userPreference.bpProductCoater; } } // 产物有喷涂机
@@ -65,6 +67,7 @@ namespace DSPCalculator.BP
             blueprintData = BpBuilder.CreateEmpty();
             PLSs = new List<int>();
             share3Belts = false;
+            bpPrefabId = 0;
         }
 
         public BpProcessor(RecipeInfo recipeInfo, SolutionTree solution)
@@ -75,7 +78,9 @@ namespace DSPCalculator.BP
             doubleRow = solution.userPreference.bpRowCount == 2 && cargoCount < 6; // cargoCount == 6一定不能做双行的
             insufficientSorterItems = new List<int>();
             share3Belts = false;
-            PreProcess();
+            bpPrefabId = 0;
+            prePocessed = false;
+            // PreProcess();
         }
 
         /// <summary>
@@ -83,12 +88,15 @@ namespace DSPCalculator.BP
         /// </summary>
         public void PreProcess()
         {
-            //if (recipeInfo.useIA)
-            //    return;
-            //if (cargoCount > 6)
-            //    return; // 超过六个货物的无法生成蓝图
+            if(prePocessed)
+                return;
 
-            if (!canGenerate)
+            prePocessed = true;
+
+            if (isVanilla6006())
+                bpPrefabId = 1; // 标记为预支蓝图 6006
+
+            if (!canGenerate || bpPrefabId > 0)
                 return;
 
             if(isGBMega)
@@ -311,7 +319,33 @@ namespace DSPCalculator.BP
         }
         public bool GenerateBlueprint(int genLevel)
         {
-            if (!canGenerate)
+            if(bpPrefabId == 1)
+            {
+                this.blueprintData = BpBuilder.CreateEmpty();
+                if (this.blueprintData.FromBase64String(BpPrefabs.universeMatrix) == BlueprintDataIOError.OK)
+                {
+                    if(recipeInfo.assemblerItemId == 2901)
+                    {
+                        short modelIndex = (short)LDB.items.Select(2901).prefabDesc.modelIndex;
+                        int len = blueprintData.buildings.Length;
+                        for (int i = 0; i < len; i++)
+                        {
+                            if(blueprintData.buildings[i].itemId == 2902)
+                            {
+                                blueprintData.buildings[i].itemId = 2901;
+                                blueprintData.buildings[i].modelIndex = modelIndex;
+                            }
+                        }
+                    }
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            if (!canGenerate || bpPrefabId > 0)
                 return false;
 
 
@@ -939,6 +973,28 @@ namespace DSPCalculator.BP
             //int reserveForCoater = BpDB.coaterBeltBackwardLen;
             //if (!genCoater)
             //    reserveForCoater = 0;
+        }
+
+        public bool isVanilla6006()
+        {
+            RecipeProto proto = recipeInfo.recipeNorm.oriProto;
+            if(proto.Results.Length == 1 && proto.Items.Length == 6)
+            {
+                if (proto.Results[0] == 6006 && proto.ResultCounts[0] == 1)
+                {
+                    int[] items = proto.Items;
+                    if (items[0] == 6001 && items[1] == 6002 && items[2] == 6003 && items[3] == 6004 && items[4] == 6005 && items[5] == 1122)
+                    {
+                        for (int i = 0; i < 6; i++)
+                        {
+                            if (proto.ItemCounts[i] != 1)
+                                return false;
+                        }
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         public bool onlyShare2Belts
