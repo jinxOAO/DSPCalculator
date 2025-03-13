@@ -1,4 +1,5 @@
 ﻿using CommonAPI;
+using DSPCalculator.Bp;
 using DSPCalculator.Compatibility;
 using DSPCalculator.Logic;
 using NGPT;
@@ -122,6 +123,8 @@ namespace DSPCalculator.UI
         public Image IABtnSpecializationImg; // 星际组装厂按钮特化图标
         public List<GameObject> sideInfoPanelObjs; // 右侧panel不同页的面板obj
         public List<UIButton> sideInfoPanelSwitchUIBtns; // 右侧panel切换按钮
+        public GameObject genBpButtonObj; // 生成黑盒蓝图的按钮Obj
+        public UIButton genBpUIBtn;
 
         public Image cbBluebuff;
         public Image cbEnergyBurst;
@@ -455,7 +458,7 @@ namespace DSPCalculator.UI
             float posYDelta = 0;
             if (CompatManager.GB)
             {
-                posXDelta = -45;
+                posXDelta = -35; // 原来是45
                 posYDelta = -10;
             }
             assemblerSelectionObj.transform.localPosition = new Vector3(-358 + posXDelta, 270 + posYDelta, 0);
@@ -547,6 +550,30 @@ namespace DSPCalculator.UI
                 assemblerUsedButtons[-1][-1] = aBtnObj.GetComponent<UIButton>();
                 btnCount++;
                 typeCount++;
+            }
+
+            // 生成黑盒蓝图按钮
+            if(true)
+            {
+                genBpButtonObj = GameObject.Instantiate(iconObj_ButtonTip, panelParent);
+                genBpButtonObj.name = "gen-bp";
+                genBpButtonObj.transform.localScale = Vector3.one;
+                genBpButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(0, 1);
+                genBpButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(0, 1);
+                genBpButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(250, -80, 0);
+                if(CompatManager.GB)
+                    genBpButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(240, -80, 0);
+                genBpButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 30);
+                genBpButtonObj.GetComponent<Image>().sprite = UICalcWindow.blueprintIconSprite;
+                genBpButtonObj.GetComponent<Button>().onClick.AddListener(() => { GenerateBlackboxBpAndPaste(); });
+                genBpUIBtn = genBpButtonObj.GetComponent<UIButton>();
+                genBpButtonObj.GetComponent<UIButton>().tips.tipTitle = "生成黑盒蓝图标题".Translate();
+                genBpButtonObj.GetComponent<UIButton>().tips.tipText = "生成黑盒蓝图描述".Translate();
+                genBpButtonObj.GetComponent<UIButton>().tips.corner = 3;
+                genBpButtonObj.GetComponent<UIButton>().tips.width = 270;
+                Navigation nvg_gbp0 = new Navigation();
+                nvg_gbp0.mode = Navigation.Mode.None;
+                genBpButtonObj.GetComponent<Button>().navigation = nvg_gbp0;
             }
 
             // 右侧信息面板的分页切换按钮
@@ -809,6 +836,7 @@ namespace DSPCalculator.UI
             //RefreshCheckBoxes();
             RefreshAssemblerButtonDisplay();
             RefreshProliferatorButtonDisplay();
+            RefreshBpGenButton();
         }
 
         public static void TryInitStaticPrefabs()
@@ -1373,6 +1401,8 @@ namespace DSPCalculator.UI
                 speedInputObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
                 oriX = perMinTextObj.GetComponent<RectTransform>().anchoredPosition.x;
                 perMinTextObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
+                oriX = genBpButtonObj.GetComponent<RectTransform>().anchoredPosition.x;
+                genBpButtonObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
 
             }
             else if(curWidth > targetWindowWidth && curWidth - targetWindowWidth > 0.01f)
@@ -1397,6 +1427,8 @@ namespace DSPCalculator.UI
                 speedInputObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
                 oriX = perMinTextObj.GetComponent<RectTransform>().anchoredPosition.x;
                 perMinTextObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
+                oriX = genBpButtonObj.GetComponent<RectTransform>().anchoredPosition.x;
+                genBpButtonObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
 
             }
 
@@ -1696,6 +1728,7 @@ namespace DSPCalculator.UI
             RefreshProliferatorButtonDisplay();
             RefreshCheckBoxes();
             RefreshSideInfoPanels();
+            RefreshBpGenButton();
             refreshIndex = 0;
         }
 
@@ -2276,6 +2309,8 @@ namespace DSPCalculator.UI
             nextFrameRecalc = true;
         }
 
+       
+
         public void RefreshIncToggle()
         {
             GameObject incToggleThumb = incToggleObj.transform.Find("inc-switch/switch-thumb").gameObject;
@@ -2532,6 +2567,29 @@ namespace DSPCalculator.UI
                 else
                     cbSolveProlifer.sprite= checkboxOffSprite;
                 txtSolveProlifer.text = "增产剂并入产线".Translate();
+            }
+        }
+
+        public void GenerateBlackboxBpAndPaste()
+        {
+
+        }
+
+        public void RefreshBpGenButton()
+        {
+            if(genBpButtonObj != null)
+            {
+                if(BpConnector.enabled)
+                {
+                    if (solution.targets.Count > 0)
+                        genBpButtonObj.SetActive(true);
+                    else
+                        genBpButtonObj.SetActive(false);
+                }
+                else
+                {
+                    genBpButtonObj.SetActive(false);
+                }
             }
         }
 

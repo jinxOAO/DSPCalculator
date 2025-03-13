@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace DSPCalculator.BP
+namespace DSPCalculator.Bp
 {
     public class TestPatchers
     {

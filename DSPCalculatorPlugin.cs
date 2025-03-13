@@ -9,7 +9,7 @@ using BepInEx.Logging;
 using CommonAPI;
 using CommonAPI.Systems;
 using CommonAPI.Systems.ModLocalization;
-using DSPCalculator.BP;
+using DSPCalculator.Bp;
 using DSPCalculator.Logic;
 using DSPCalculator.UI;
 using HarmonyLib;
@@ -27,7 +27,7 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.4.1";
+        public const string VERSION = "0.4.2";
 
         // ---------------------------------------------------------------------------
         public static bool developerMode = false; //           发布前修改             |

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using static UnityEngine.PostProcessing.ScreenSpaceReflectionComponent;
 
-namespace DSPCalculator.BP
+namespace DSPCalculator.Bp
 {
     public static class BpBuilder
     {
@@ -661,8 +661,8 @@ namespace DSPCalculator.BP
             bpa.areaSegments = 200;
             bpa.anchorLocalOffsetX = 0;
             bpa.anchorLocalOffsetY = 0;
-            bpa.width = 1;
-            bpa.height = 1;
+            bpa.width = 0;
+            bpa.height = 0;
             bp.buildings = new BlueprintBuilding[0];
             return bp;
         }

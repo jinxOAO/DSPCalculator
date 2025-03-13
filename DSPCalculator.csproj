@@ -91,6 +91,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bp\BpBuilder.cs" />
+    <Compile Include="Bp\BpConnector.cs" />
     <Compile Include="Bp\BpDB.cs" />
     <Compile Include="Bp\BpPrefabs.cs" />
     <Compile Include="Bp\BpProcessor.cs" />

@@ -1,4 +1,4 @@
-﻿using DSPCalculator.BP;
+﻿using DSPCalculator.Bp;
 using DSPCalculator.UI;
 using JetBrains.Annotations;
 using MathNet.Numerics.LinearAlgebra;

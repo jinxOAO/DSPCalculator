@@ -1,4 +1,4 @@
-﻿using DSPCalculator.BP;
+﻿using DSPCalculator.Bp;
 using DSPCalculator.Logic;
 using System;
 using System.Collections.Generic;
@@ -149,10 +149,16 @@ namespace DSPCalculator.Bp
                 }
                 if(!found) // 如果没有找到完美解，则依次将空余belt分配给瓶颈资源。注意，如果多个资源同时为瓶颈，则同时分配带子数量，如果不够都分配到，则都不分配，并停止继续寻找
                 {
-                    int freeBeltLineCount = 6 - processor.cargoCount;
+                    int freeBeltLineCount = 6;
+                    foreach (var ci in cargoInfos)
+                    {
+                        freeBeltLineCount -= ci.beltLineCount;
+
+                        Utils.logger.LogInfo($"cargo {LDB.items.Select(ci.itemId).name} already has {ci.beltLineCount}");
+                    }
                     while(freeBeltLineCount > 0)
                     {
-                        List<int> maxIndexes = new List<int>();
+                        List<int> maxIndexes = new List<int>(); // 瓶颈资源地址，所有瓶颈资源（只取最高的那一个，如果有相等瓶颈，则都存进来）
                         double maxValue = -1;
                         for (int ci = 0; ci < cargoInfos.Count; ci++)
                         {

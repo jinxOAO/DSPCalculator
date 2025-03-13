@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DSPCalculator.BP
+namespace DSPCalculator.Bp
 {
     public static class BpDB
     {

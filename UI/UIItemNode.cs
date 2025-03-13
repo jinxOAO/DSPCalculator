@@ -1,5 +1,5 @@
 ﻿using CommonAPI;
-using DSPCalculator.BP;
+using DSPCalculator.Bp;
 using DSPCalculator.Compatibility;
 using DSPCalculator.Logic;
 using HarmonyLib;
@@ -94,7 +94,7 @@ namespace DSPCalculator.UI
             iconObj.transform.SetParent(obj.transform, false);
             iconObj.transform.localScale = Vector3.one;
             iconObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(20, 0, 0);
-            if (BP.BpProcessor.enabled)
+            if (Bp.BpProcessor.enabled)
                 iconObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(35, 0, 0);
 
             // 产出速度文本
@@ -121,7 +121,7 @@ namespace DSPCalculator.UI
             overflowNoteTextObj.name = "overflow-note";
             overflowNoteTextObj.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 0.5f);
             overflowNoteTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(40, -25, 0);
-            if (BP.BpProcessor.enabled)
+            if (Bp.BpProcessor.enabled)
                 overflowNoteTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(55, -25, 0);
             overflowNoteTextObj.GetComponent<Text>().text = "产出过量标签".Translate();
             overflowNoteTextObj.GetComponent<Text>().color = UICalcWindow.TextWarningColor;
@@ -533,7 +533,7 @@ namespace DSPCalculator.UI
                     finishedMarkObj.GetComponent<UIButton>().tips.corner = 3;
 
                     // 生成蓝图按钮，生成带物流塔或不带的
-                    if (BP.BpProcessor.enabled)
+                    if (Bp.BpProcessor.enabled)
                     {
                         // 按钮0，生成不带物流塔的
                         GameObject genBp_0_Obj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);

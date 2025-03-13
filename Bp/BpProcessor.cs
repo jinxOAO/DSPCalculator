@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace DSPCalculator.BP
+namespace DSPCalculator.Bp
 {
     public class BpProcessor
     {
@@ -60,6 +60,12 @@ namespace DSPCalculator.BP
         public BlueprintData blueprintData;
 
         public BpProcessorGB processorGB;
+
+        public Dictionary<int, BlueprintBuilding> inputBelts; // 蓝图的某种物料从哪个带子输入
+        public Dictionary<int, BlueprintBuilding> outputBelts; // 蓝图的某种物料从哪个带子输出
+
+        public int width { get { return blueprintData != null ? blueprintData.areas[0].width : 0; } }
+        public int height { get { return blueprintData != null ? blueprintData.areas[0].height : 0; } }
         public BpProcessor() 
         {
             gridMap = new Dictionary<int, Dictionary<int, int>>();
@@ -354,6 +360,8 @@ namespace DSPCalculator.BP
             cargoBeltPoses = new List<BpCargoBeltPos> { null, null, null, null, null, null, null, null, null };
             blueprintData = BpBuilder.CreateEmpty();
             insufficientSorterItems = new List<int>();
+            inputBelts = new Dictionary<int, BlueprintBuilding>();
+            outputBelts = new Dictionary<int, BlueprintBuilding>();
             if (isGBMega)
             {
                 if (processorGB != null)
@@ -477,10 +485,14 @@ namespace DSPCalculator.BP
                             if (cargoInfo.isResource)
                             {
                                 this.AddBelts(cargoInfo.useBeltItemId, beltLeftX, Y, 0, beltRightX, Y, 0, -1, -1, cargoInfo.itemId, 0);
+                                SetInputBelt(cargoInfo.itemId, beltLeftX, Y);
+                                SetOutputBelt(cargoInfo.itemId, beltRightX, Y);
                             }
                             else
                             {
                                 this.AddBelts(cargoInfo.useBeltItemId, beltRightX, Y, 0, beltLeftX, Y, 0, -1, -1, 0, cargoInfo.itemId);
+                                SetInputBelt(cargoInfo.itemId, beltRightX, Y);
+                                SetOutputBelt(cargoInfo.itemId, beltLeftX, Y);
                             }
 
                             // 将带子端点信息记录
@@ -1003,6 +1015,26 @@ namespace DSPCalculator.BP
             {
                 return share3Belts && cargoInfoOrderByNorm[5] == null;
             }
+        }
+
+        public bool SetInputBelt(int itemId, int x, int y)
+        {
+            if (inputBelts == null)
+                return false;
+            if (inputBelts.ContainsKey(itemId))
+                Utils.logger.LogWarning($"物料{LDB.items.Select(itemId).name}的传送带入口端点被覆盖");
+            inputBelts[itemId] = buildings[gridMap.GetBuilding(x, y)];
+            return true;
+        }
+
+        public bool SetOutputBelt(int itemId, int x, int y) 
+        {
+            if(outputBelts == null)
+                return false;
+            if (outputBelts.ContainsKey(itemId))
+                Utils.logger.LogWarning($"物料{LDB.items.Select(itemId).name}的传送带出口端点被覆盖");
+            outputBelts[itemId] = buildings[gridMap.GetBuilding(x, y)];
+            return true;
         }
     }
 
