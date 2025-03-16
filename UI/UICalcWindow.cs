@@ -2248,10 +2248,13 @@ namespace DSPCalculator.UI
                     continue;
                 int assemblerItemId = recipeInfo.assemblerItemId;
                 long ceilingCount =(long) Math.Ceiling(recipeInfo.assemblerCount);
-                if (!counts.ContainsKey(assemblerItemId))
-                    counts[assemblerItemId] = ceilingCount;
-                else
-                    counts[assemblerItemId] += ceilingCount;
+                if (!solution.userPreference.finishedRecipes.ContainsKey(recipeInfo.ID) || !DSPCalculatorPlugin.OnlyCountUnfinishedFacilities.Value)
+                {
+                    if (!counts.ContainsKey(assemblerItemId))
+                        counts[assemblerItemId] = ceilingCount;
+                    else
+                        counts[assemblerItemId] += ceilingCount;
+                }
             }
 
             // 创建图标和数量文本
@@ -2572,7 +2575,14 @@ namespace DSPCalculator.UI
 
         public void GenerateBlackboxBpAndPaste()
         {
-
+            BpConnector connector = new BpConnector(this);
+            if (connector.succeeded)
+            {
+                // 暂时关闭窗口以便粘贴
+                CloseWindow();
+                WindowsManager.temporaryCloseBecausePasteBp = true;
+                GameMain.mainPlayer.controller.OpenBlueprintPasteMode(connector.blueprintData, GameConfig.blueprintFolder + "DSPCalcBPTemp.txt");
+            }
         }
 
         public void RefreshBpGenButton()

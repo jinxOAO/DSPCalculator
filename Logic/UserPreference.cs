@@ -144,6 +144,18 @@ namespace DSPCalculator.Logic
             return copied;
         }
 
+        public bool IsOre(int itemId)
+        {
+            bool isOre = CalcDB.itemDict[itemId].defaultAsOre || CalcDB.itemDict[itemId].recipes.Count == 0;
+            if (itemConfigs.ContainsKey(itemId)) // 查询用户是否指定了该物品的处理规则，是否视为原矿
+            {
+                isOre = itemConfigs[itemId].consideredAsOre || isOre;
+                if (itemConfigs[itemId].forceNotOre && CalcDB.itemDict[itemId].recipes.Count > 0)
+                    isOre = false;
+            }
+            return isOre;
+        }
+
         public int bpStack
         {
             get

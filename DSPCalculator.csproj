@@ -90,12 +90,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bp\BpBlockProcessor.cs" />
     <Compile Include="Bp\BpBuilder.cs" />
     <Compile Include="Bp\BpConnector.cs" />
     <Compile Include="Bp\BpDB.cs" />
     <Compile Include="Bp\BpPrefabs.cs" />
     <Compile Include="Bp\BpProcessor.cs" />
     <Compile Include="Bp\BpProcessorGB.cs" />
+    <Compile Include="Bp\Segment.cs" />
     <Compile Include="Bp\TestPatchers.cs" />
     <Compile Include="Compatibility\CompatManager.cs" />
     <Compile Include="Compatibility\GBCompat.cs" />

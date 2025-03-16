@@ -63,6 +63,7 @@ namespace DSPCalculator.Bp
             assembler.cargoNormIndex2SlotMap_FirstRow = new List<int> { 2, 8, 1, 7, 6, 0 };
             assembler.cargoNormIndex2SlotMap_SecondRow = new List<int> { 8, 0, 7, 1, 2, 6 }; 
             assembler.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1, 0, 0, 0 };
+            assembler.height = 3;
 
             BpAssemblerInfo smelter = new BpAssemblerInfo();
             smelter.centerDistanceBottom = 2;
@@ -74,6 +75,7 @@ namespace DSPCalculator.Bp
             smelter.cargoNormIndex2SlotMap_FirstRow = new List<int> { 2, 8, 1, 7, 6, 0 };
             smelter.cargoNormIndex2SlotMap_SecondRow = new List<int> { 8, 0, 7, 1, 2, 6 };
             smelter.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1, 0, 0, 0 };
+            smelter.height = 3;
 
             BpAssemblerInfo chemical = new BpAssemblerInfo();
             chemical.centerDistanceBottom = 2;
@@ -85,6 +87,7 @@ namespace DSPCalculator.Bp
             chemical.cargoNormIndex2SlotMap_FirstRow = new List<int> { 2, 6, 1, 5, 4, 0 };
             chemical.cargoNormIndex2SlotMap_SecondRow = new List<int> { 5, 1, 4, 2, 7, 3 };
             chemical.slotYDirection = new List<int> { 1, 1, 1, -1, -1, -1, -1, 1 };
+            chemical.height = 5;
 
             BpAssemblerInfo refinery = new BpAssemblerInfo();
             refinery.centerDistanceBottom = 2;
@@ -97,6 +100,7 @@ namespace DSPCalculator.Bp
             refinery.cargoNormIndex2SlotMap_FirstRow = new List<int> { 3, 0, 4, 1, 2, 5 };
             refinery.cargoNormIndex2SlotMap_SecondRow = new List<int> { 0, 5, 1, 4, 3, 2 };
             refinery.slotYDirection = new List<int> { -1, -1, -1, 1, 1, 1, 0, 0, 0 };
+            refinery.height = 7;
 
             BpAssemblerInfo collider = new BpAssemblerInfo();
             collider.centerDistanceBottom = 3;
@@ -109,6 +113,7 @@ namespace DSPCalculator.Bp
             collider.cargoNormIndex2SlotMap_SecondRow = new List<int> { 6, 2, 7, 1, 0, 8 };
             collider.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1 };
             collider.hitboxExtendX = 2;
+            collider.height = 9;
 
             BpAssemblerInfo lab = new BpAssemblerInfo();
             lab.centerDistanceBottom = 3;
@@ -124,6 +129,7 @@ namespace DSPCalculator.Bp
             lab.cargoNormIndex2SlotMap_FirstRow = new List<int> { 0, 6, 1, 7, 8, 2 };
             lab.cargoNormIndex2SlotMap_SecondRow = new List<int> { 6, 2, 7, 1, 0, 8 };
             lab.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1, 0, 0, 0 };
+            lab.height = 50;
 
             foreach (var building in CalcDB.assemblerDict)
             {
@@ -236,6 +242,7 @@ namespace DSPCalculator.Bp
         public List<int> cargoNormIndex2SlotMap_SecondRow; // 双行蓝图的第二行（上边那行），对应的norm的index获取slot的index
         public List<int> slotYDirection; // slot在工厂的哪个方向
         public int hitboxExtendX; // 由于建筑碰撞体积，需要PLS比平时离得更远一些，额外原理的距离
+        
 
         public BpAssemblerInfo()
         {

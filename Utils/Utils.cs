@@ -208,5 +208,32 @@ namespace DSPCalculator
             trans.pressedSize = 1;
             return trans;
         }
+
+        public static string ItemName(int itemId)
+        {
+            return LDB.items.Select(itemId)?.name;
+        }
+        public static string RecipeName(int recipeId)
+        {
+            return LDB.recipes.Select(recipeId)?.name;
+        }
+
+        public static float Cross(this Vector2 a, Vector2 b)
+        {
+            return a.x * b.y - a.y * b.x;
+        }
+
+        // 求点到直线的距离的平方
+        public static float DistanceSquare(this Vector2 p, float k, float b)
+        {
+            float yOnLine = k * p.x + b;
+            float yDis = p.y - yOnLine;
+            return yDis * yDis / (1 + k * k);
+        }
+
+        public static float Square(this float x)
+        {
+            return x * x;
+        }
     }
 }

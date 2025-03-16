@@ -66,15 +66,15 @@ namespace DSPCalculator.Bp
 
         public int width { get { return blueprintData != null ? blueprintData.areas[0].width : 0; } }
         public int height { get { return blueprintData != null ? blueprintData.areas[0].height : 0; } }
-        public BpProcessor() 
-        {
-            gridMap = new Dictionary<int, Dictionary<int, int>>();
-            buildings = new List<BlueprintBuilding>();
-            blueprintData = BpBuilder.CreateEmpty();
-            PLSs = new List<int>();
-            share3Belts = false;
-            bpPrefabId = 0;
-        }
+        //public BpProcessor() 
+        //{
+        //    gridMap = new Dictionary<int, Dictionary<int, int>>();
+        //    buildings = new List<BlueprintBuilding>();
+        //    blueprintData = BpBuilder.CreateEmpty();
+        //    PLSs = new List<int>();
+        //    share3Belts = false;
+        //    bpPrefabId = 0;
+        //}
 
         public BpProcessor(RecipeInfo recipeInfo, SolutionTree solution)
         {
@@ -82,6 +82,19 @@ namespace DSPCalculator.Bp
             this.recipeInfo = recipeInfo;
             cargoCount = recipeInfo.recipeNorm.oriProto.Items.Length + recipeInfo.recipeNorm.oriProto.Results.Length;
             doubleRow = solution.userPreference.bpRowCount == 2 && cargoCount < 6; // cargoCount == 6一定不能做双行的
+            insufficientSorterItems = new List<int>();
+            share3Belts = false;
+            bpPrefabId = 0;
+            prePocessed = false;
+            // PreProcess();
+        }
+
+        public BpProcessor(RecipeInfo recipeInfo, SolutionTree solution, int forceRowCount)
+        {
+            this.solution = solution;
+            this.recipeInfo = recipeInfo;
+            cargoCount = recipeInfo.recipeNorm.oriProto.Items.Length + recipeInfo.recipeNorm.oriProto.Results.Length;
+            doubleRow = forceRowCount == 2 && cargoCount < 6;
             insufficientSorterItems = new List<int>();
             share3Belts = false;
             bpPrefabId = 0;
@@ -898,8 +911,8 @@ namespace DSPCalculator.Bp
                 buildings[i].localOffset_y2 -= minY;
             }
 
-            blueprintData.dragBoxSize_x = (int)Math.Ceiling(maxX - minX);
-            blueprintData.dragBoxSize_y = (int)Math.Ceiling(maxY - minY);
+            blueprintData.dragBoxSize_x = (int)Math.Ceiling(maxX - minX) + 1;
+            blueprintData.dragBoxSize_y = (int)Math.Ceiling(maxY - minY) + 1;
             blueprintData.areas[0].width = blueprintData.dragBoxSize_x;
             blueprintData.areas[0].height = blueprintData.dragBoxSize_y;
             blueprintData.buildings = buildings.ToArray();
