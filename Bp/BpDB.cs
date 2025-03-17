@@ -10,7 +10,7 @@ namespace DSPCalculator.Bp
 {
     public static class BpDB
     {
-        public static Dictionary<int, BpAssemblerInfo> assemblerInfos;
+        public static Dictionary<int, BpAssemblerBuildingInfo> assemblerInfos; // key为assemblerId
         public static Dictionary<int, BpBeltInfo> beltInfos;
         public static Dictionary<int, BpSorterInfo> sorterInfos;
         public static List<BpBeltInfo> beltsAscending;
@@ -46,76 +46,76 @@ namespace DSPCalculator.Bp
 
         public static void Init()
         {
-            assemblerInfos = new Dictionary<int, BpAssemblerInfo>();
+            assemblerInfos = new Dictionary<int, BpAssemblerBuildingInfo>();
             beltInfos = new Dictionary<int, BpBeltInfo>();
             sorterInfos = new Dictionary<int, BpSorterInfo>();
             beltsAscending = new List<BpBeltInfo>();
             sortersAscending = new List<BpSorterInfo>();
             GBMegas = new Dictionary<int, int>();
 
-            BpAssemblerInfo assembler = new BpAssemblerInfo();
+            BpAssemblerBuildingInfo assembler = new BpAssemblerBuildingInfo();
             assembler.centerDistanceBottom = 2;
             assembler.centerDistanceTop = 2;
             assembler.DragDistanceX = 4;
             assembler.slotConnectBeltXPositions = new List<int> { -1, 0, 1, 0, 0, 0, 1, 0, -1, 0, 0, 0 };
             assembler.slotConnectBeltSorterOffsets = new List<int> { 4, -1, -4, 0, 0, 0, -4, 1, 4, 0, 0, 0 };
-            assembler.recipeType = ERecipeType.Assemble;
+            assembler.vanillaRecipeType = ERecipeType.Assemble;
             assembler.cargoNormIndex2SlotMap_FirstRow = new List<int> { 2, 8, 1, 7, 6, 0 };
             assembler.cargoNormIndex2SlotMap_SecondRow = new List<int> { 8, 0, 7, 1, 2, 6 }; 
             assembler.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1, 0, 0, 0 };
             assembler.height = 3;
 
-            BpAssemblerInfo smelter = new BpAssemblerInfo();
+            BpAssemblerBuildingInfo smelter = new BpAssemblerBuildingInfo();
             smelter.centerDistanceBottom = 2;
             smelter.centerDistanceTop = 2;
             smelter.DragDistanceX = 3;
             smelter.slotConnectBeltXPositions = new List<int> { -1, 0, 1, 0, 0, 0, 1, 0, -1, 0, 0, 0 };
             smelter.slotConnectBeltSorterOffsets = new List<int> { 4, -1, -4, 0, 0, 0, -4, 1, 4, 0, 0, 0 };
-            smelter.recipeType = ERecipeType.Smelt;
+            smelter.vanillaRecipeType = ERecipeType.Smelt;
             smelter.cargoNormIndex2SlotMap_FirstRow = new List<int> { 2, 8, 1, 7, 6, 0 };
             smelter.cargoNormIndex2SlotMap_SecondRow = new List<int> { 8, 0, 7, 1, 2, 6 };
             smelter.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1, 0, 0, 0 };
             smelter.height = 3;
 
-            BpAssemblerInfo chemical = new BpAssemblerInfo();
+            BpAssemblerBuildingInfo chemical = new BpAssemblerBuildingInfo();
             chemical.centerDistanceBottom = 2;
             chemical.centerDistanceTop = 3;
             chemical.DragDistanceX = 8; // 极其接近赤道时可以是7，但是稍微远一点就得是8
             chemical.slotConnectBeltXPositions = new List<int> { -1, 0, 1, 2, 1, 0, -1, 2 };
             chemical.slotConnectBeltSorterOffsets = new List<int> { 4, 0, -4, -9, -4, 0, 4, -9 };
-            chemical.recipeType = ERecipeType.Chemical;
+            chemical.vanillaRecipeType = ERecipeType.Chemical;
             chemical.cargoNormIndex2SlotMap_FirstRow = new List<int> { 2, 6, 1, 5, 4, 0 };
             chemical.cargoNormIndex2SlotMap_SecondRow = new List<int> { 5, 1, 4, 2, 7, 3 };
             chemical.slotYDirection = new List<int> { 1, 1, 1, -1, -1, -1, -1, 1 };
             chemical.height = 5;
 
-            BpAssemblerInfo refinery = new BpAssemblerInfo();
+            BpAssemblerBuildingInfo refinery = new BpAssemblerBuildingInfo();
             refinery.centerDistanceBottom = 2;
             refinery.centerDistanceTop = 2;
             refinery.DragDistanceX = 7;
             refinery.defaultYaw = 90;
             refinery.slotConnectBeltXPositions = new List<int> { -1, 0, 1, 1, 0, -1, 0, 0, 0 };
             refinery.slotConnectBeltSorterOffsets = new List<int> { 5, 0, -4, -4, 0, 5, 0, 0, 0 };
-            refinery.recipeType = ERecipeType.Refine;
+            refinery.vanillaRecipeType = ERecipeType.Refine;
             refinery.cargoNormIndex2SlotMap_FirstRow = new List<int> { 3, 0, 4, 1, 2, 5 };
             refinery.cargoNormIndex2SlotMap_SecondRow = new List<int> { 0, 5, 1, 4, 3, 2 };
             refinery.slotYDirection = new List<int> { -1, -1, -1, 1, 1, 1, 0, 0, 0 };
             refinery.height = 7;
 
-            BpAssemblerInfo collider = new BpAssemblerInfo();
+            BpAssemblerBuildingInfo collider = new BpAssemblerBuildingInfo();
             collider.centerDistanceBottom = 3;
             collider.centerDistanceTop = 3;
             collider.DragDistanceX = 10;
             collider.slotConnectBeltXPositions = new List<int> { -1, -2, -2, 0, 0, 0, -2, -2, -1 };
             collider.slotConnectBeltSorterOffsets = new List<int> { 4, 8, -9, 0, 0, 0, -9, 8, 4 };
-            collider.recipeType = ERecipeType.Particle;
+            collider.vanillaRecipeType = ERecipeType.Particle;
             collider.cargoNormIndex2SlotMap_FirstRow = new List<int> { 0, 6, 1, 7, 8, 2 };
             collider.cargoNormIndex2SlotMap_SecondRow = new List<int> { 6, 2, 7, 1, 0, 8 };
             collider.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1 };
             collider.hitboxExtendX = 2;
             collider.height = 9;
 
-            BpAssemblerInfo lab = new BpAssemblerInfo();
+            BpAssemblerBuildingInfo lab = new BpAssemblerBuildingInfo();
             lab.centerDistanceBottom = 3;
             lab.centerDistanceTop = 3;
             lab.DragDistanceX = 5;
@@ -125,11 +125,11 @@ namespace DSPCalculator.Bp
             lab.inputFromSlot = 15;
             lab.outputFromSlot = 15;
             lab.inputToSlot = 14;
-            lab.recipeType = ERecipeType.Research;
+            lab.vanillaRecipeType = ERecipeType.Research;
             lab.cargoNormIndex2SlotMap_FirstRow = new List<int> { 0, 6, 1, 7, 8, 2 };
             lab.cargoNormIndex2SlotMap_SecondRow = new List<int> { 6, 2, 7, 1, 0, 8 };
             lab.slotYDirection = new List<int> { 1, 1, 1, 0, 0, 0, -1, -1, -1, 0, 0, 0 };
-            lab.height = 50;
+            lab.height = 3;
 
             foreach (var building in CalcDB.assemblerDict)
             {
@@ -223,7 +223,7 @@ namespace DSPCalculator.Bp
         }
     }
 
-    public class BpAssemblerInfo
+    public class BpAssemblerBuildingInfo
     {
         public int centerDistanceBottom; // 下边紧贴的带子距离工厂中心的距离
         public int centerDistanceTop; // 上边紧贴的带子距离工厂中心的距离
@@ -236,7 +236,7 @@ namespace DSPCalculator.Bp
         public int outputFromSlot;
         public int inputToSlot;
         public int inputFromSlot;
-        public ERecipeType recipeType;
+        public ERecipeType vanillaRecipeType; // 这个type只代表模型在原版游戏中对应的配方类型，并不一定指代它实际处理的配方类型（主要是指在创世里）
         public int height;
         public List<int> cargoNormIndex2SlotMap_FirstRow; // 单行或第一行时，将对应index位置（cargoInfoOrderByNorm的index）需要使用生产设施的slot的index
         public List<int> cargoNormIndex2SlotMap_SecondRow; // 双行蓝图的第二行（上边那行），对应的norm的index获取slot的index
@@ -244,7 +244,7 @@ namespace DSPCalculator.Bp
         public int hitboxExtendX; // 由于建筑碰撞体积，需要PLS比平时离得更远一些，额外原理的距离
         
 
-        public BpAssemblerInfo()
+        public BpAssemblerBuildingInfo()
         {
             defaultYaw = 0;
             outputToSlot = 0;

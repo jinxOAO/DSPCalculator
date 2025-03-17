@@ -1438,7 +1438,8 @@ namespace DSPCalculator.UI
                 nextFrameRecalc = false;
                 if(solution.targets.Count > 0)
                 {
-                    targetProductIcon.sprite = LDB.items.Select(solution.targets[0].itemId)?.iconSprite;
+                    if (solution.targets[0].itemId > 0)
+                        targetProductIcon.sprite = LDB.items.Select(solution.targets[0].itemId)?.iconSprite;
                     speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString();
                 }
 
@@ -2591,7 +2592,7 @@ namespace DSPCalculator.UI
             {
                 if(BpConnector.enabled)
                 {
-                    if (solution.targets.Count > 0)
+                    if (solution.targets.Count > 0 && solution.targets[0].itemId > 0)
                         genBpButtonObj.SetActive(true);
                     else
                         genBpButtonObj.SetActive(false);

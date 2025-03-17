@@ -586,7 +586,7 @@ namespace DSPCalculator.Bp
         public static void AssemblerConnectToBelt(this BpProcessor processor, int assemblerIndex, int slot, int sorterId, int distance, bool isInput, int filter, bool beltDirectionEast = true)
         {
             int assemblerItemId = processor.buildings[assemblerIndex].itemId;
-            BpAssemblerInfo bpa = BpDB.assemblerInfos[assemblerItemId];
+            BpAssemblerBuildingInfo bpa = BpDB.assemblerInfos[assemblerItemId];
 
             int centerX = (int)processor.buildings[assemblerIndex].localOffset_x;
             int centerY = (int)processor.buildings[assemblerIndex].localOffset_y;

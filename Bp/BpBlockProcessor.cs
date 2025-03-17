@@ -13,6 +13,7 @@ namespace DSPCalculator.Bp
     public class BpBlockProcessor : BpProcessor
     {
         public BpConnector parentConnector;
+        public int leftTerminalX = 0;
 
         public BpBlockProcessor(RecipeInfo recipeInfo, SolutionTree solution, BpConnector parentConnector, int forceRowCount) : base(recipeInfo, solution, forceRowCount)
         {
@@ -82,7 +83,7 @@ namespace DSPCalculator.Bp
                 assemblerCountSecondRow = groupCount - assemblerCountFirstRow;
             }
             int assemblerId = recipeInfo.assemblerItemId;
-            BpAssemblerInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
+            BpAssemblerBuildingInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
 
             List<int> assemblersFirstRow = new List<int>(); // 暂存所有的第一排工厂的index
             List<int> assemblersSecondRow = new List<int>(); // 暂存所有的第二排工厂（如果有）的index
@@ -425,7 +426,13 @@ namespace DSPCalculator.Bp
                 if(type != ERecipeType.Smelt && type != ERecipeType.Assemble && type != ERecipeType.Research)
                 {
                     minX -= 2;
+                    leftTerminalX = 2;
                 }
+            }
+
+            if (BpDB.assemblerInfos.ContainsKey(recipeInfo.assemblerItemId) && BpDB.assemblerInfos[recipeInfo.assemblerItemId].vanillaRecipeType == ERecipeType.Particle)
+            {
+                maxX += 3;
             }
 
             for (int i = 0; i < buildings.Count; i++)

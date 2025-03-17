@@ -399,7 +399,7 @@ namespace DSPCalculator.Bp
                 assemblerCountSecondRow = groupCount - assemblerCountFirstRow;
             }
             int assemblerId = recipeInfo.assemblerItemId;
-            BpAssemblerInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
+            BpAssemblerBuildingInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
 
             List<int> assemblersFirstRow = new List<int>(); // 暂存所有的第一排工厂的index
             List<int> assemblersSecondRow = new List<int>(); // 暂存所有的第二排工厂（如果有）的index
@@ -698,7 +698,7 @@ namespace DSPCalculator.Bp
             if (PLSProvideProliferator && genCoater)
                 totalItemCount++;
             int assemblerId = recipeInfo.assemblerItemId;
-            BpAssemblerInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
+            BpAssemblerBuildingInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
             int x1;
             int y1;
             GetPLSPos(0, assemblerInfo, out x1, out y1);
@@ -918,7 +918,7 @@ namespace DSPCalculator.Bp
             blueprintData.buildings = buildings.ToArray();
         }
 
-        public int GetAssemblerY(bool isFirstAssemblerRow, BpAssemblerInfo assemblerInfo)
+        public int GetAssemblerY(bool isFirstAssemblerRow, BpAssemblerBuildingInfo assemblerInfo)
         {
             if (isFirstAssemblerRow)
                 return 0;
@@ -932,7 +932,7 @@ namespace DSPCalculator.Bp
             return y;
         }
 
-        public int GetCargoBeltY(int normIndex, BpAssemblerInfo assemblerInfo, bool isFirstAssemblerRow)
+        public int GetCargoBeltY(int normIndex, BpAssemblerBuildingInfo assemblerInfo, bool isFirstAssemblerRow)
         {
             int centerY = GetAssemblerY(isFirstAssemblerRow, assemblerInfo);
 
@@ -978,13 +978,13 @@ namespace DSPCalculator.Bp
             return 0;
         }
 
-        public void GetPLSPos(int PLSListIndex, BpAssemblerInfo assemblerInfo, out int x, out int y)
+        public void GetPLSPos(int PLSListIndex, BpAssemblerBuildingInfo assemblerInfo, out int x, out int y)
         {
             x = -7 - assemblerInfo.hitboxExtendX - (genCoater ? BpDB.coaterBeltBackwardLen : 0) - PLSListIndex * BpDB.PLSDistance; 
             y = GetCargoBeltY(2, assemblerInfo, true);
         }
 
-        public int GetBeltLeftX(BpAssemblerInfo assemblerInfo)
+        public int GetBeltLeftX(BpAssemblerBuildingInfo assemblerInfo)
         {
             int leftExtend = assemblerInfo.slotConnectBeltXPositions.Min() - 1; // 最左格子对应的传送带的坐标，再额外延长一格
             int reserveForCoater = BpDB.coaterBeltBackwardLen;

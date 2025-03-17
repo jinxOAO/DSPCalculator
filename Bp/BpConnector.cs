@@ -6,8 +6,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices.Expando;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace DSPCalculator.Bp
 {
@@ -16,10 +18,11 @@ namespace DSPCalculator.Bp
         public static bool enabled = true;
 
         public UICalcWindow calcWindow;
-        public SolutionTree solution; 
+        public SolutionTree solution;
         public BlueprintData blueprintData;
         public List<BpBlockProcessor> processors;
         public Dictionary<int, BpBlockProcessor> processorsMap; // recipeId到对应的processor映射
+        public List<BpBlockProcessor> labProcessors; // 所有使用可堆叠的研究站的蓝图，不放在processorMap里面，而是放在这里面，为了防止交叉走线穿过研究站（特别高），因此所有使用lab的蓝图要左端对齐，统一放在最右侧边缘，这样就会产生高架传送带穿过lab的情况
         public List<BlueprintBuilding> buildings;
         public Dictionary<int, BpItemSumInfo> itemSumInfos; // 存储每个Item所有配方的产出或者消耗总和，所需求的带速的最大值，表示潜在的单条带需要承担的最大运力
         public Dictionary<int, BpItemPathInfo> itemPathInfos; // 存储每个Item用于构造串联线路的信息
@@ -27,6 +30,12 @@ namespace DSPCalculator.Bp
         public List<BpBlockLineInfo> lines;
         public List<BpSegmentLayer> segLayers; // 所有架空连接的传送带所在层的信息
         public List<BpTerminalInfo> terminalInfos; // 所有向外连接的输出、输出接口的belt信息
+        public Dictionary<int, int> additionalInputItems; // 由于部分中间产物的蓝图无法生成（例如星际组装厂解决此配方），所有这个蓝图提供的物品都需要额外的输入口
+        public Dictionary<int, int> additionalOutputItems; //  由于部分中间产物的蓝图无法生成，所有这个蓝图需求的物品都要作为额外的输出口
+        public Vector2 labBlocksOriginPoint; // 所有lab蓝图集中放置的起始点坐标
+
+        public int genLevel;
+        public bool forcePortOnLeft; // 强制出入口放在左侧而不是上边
         public int width;
         public int height;
 
@@ -37,25 +46,31 @@ namespace DSPCalculator.Bp
         // 以下为静态量
         public static float minBeltDistance = 0.5f; // 两条带在同一高度时，允许的最近点的距离
 
-        public BpConnector(UICalcWindow calcWindow) 
+        public BpConnector(UICalcWindow calcWindow)
         {
             this.calcWindow = calcWindow;
             solution = calcWindow.solution;
             blueprintData = BpBuilder.CreateEmpty();
             processors = new List<BpBlockProcessor>();
             processorsMap = new Dictionary<int, BpBlockProcessor>();
+            labProcessors = new List<BpBlockProcessor>();
             buildings = new List<BlueprintBuilding>();
             itemSumInfos = new Dictionary<int, BpItemSumInfo>();
             itemPathInfos = new Dictionary<int, BpItemPathInfo>();
             lines = new List<BpBlockLineInfo>();
             segLayers = new List<BpSegmentLayer>();
             terminalInfos = new List<BpTerminalInfo>();
+            additionalInputItems = new Dictionary<int, int>();
+            additionalOutputItems = new Dictionary<int, int>();
+            labBlocksOriginPoint = Vector2.zero;
             succeeded = GenerateFullBlueprint();
         }
 
-        private bool GenerateFullBlueprint()
+        private bool GenerateFullBlueprint(int genLevel = 0, bool forcePortOnLeft = false)
         {
             Stopwatch timer = new Stopwatch();
+            this.genLevel = genLevel;
+            this.forcePortOnLeft = forcePortOnLeft;
 
             // 判断每种物品，单带运力是否足够
             timer.Start();
@@ -67,7 +82,7 @@ namespace DSPCalculator.Bp
 
             // 生成所有processor
             timer.Start();
-            if(!GenProcessors())
+            if (!GenProcessors())
                 return false;
             timer.Stop();
             Utils.logger.LogInfo($"生成processor过程耗时{timer.Elapsed.TotalMilliseconds}ms");
@@ -148,7 +163,7 @@ namespace DSPCalculator.Bp
             foreach (var sumInfoKV in itemSumInfos)
             {
                 BpItemSumInfo sumInfo = sumInfoKV.Value;
-                if(sumInfo.needBeltSpeed > solution.beltsAvailable.Last().speedPerMin)
+                if (sumInfo.needBeltSpeed > solution.beltsAvailable.Last().speedPerMin)
                 {
                     Utils.logger.LogInfo($"由于{Utils.ItemName(sumInfo.itemId)}速度过大{sumInfo.needBeltSpeed}>{solution.beltsAvailable.Last().speedPerMin}");
                     return false;
@@ -178,6 +193,7 @@ namespace DSPCalculator.Bp
         private bool GenProcessors()
         {
             processors.Clear();
+            labProcessors.Clear();
             processorsMap.Clear();
             itemPathInfos.Clear();
             foreach (var recipeInfoKV in solution.recipeInfos)
@@ -187,6 +203,7 @@ namespace DSPCalculator.Bp
                 {
                     BpBlockProcessor processor = new BpBlockProcessor(recipeInfo, solution, this, 1);
                     processor.PreProcess();
+                    bool hasBp = false; // 这个processor是否真的生成了蓝图
                     if (processor.bpCountToSatisfy > 1)
                     {
                         Utils.logger.LogWarning($"生成bp block 过程失败，由于配方{LDB.recipes.Select(recipeInfo.ID).name}的单个蓝图无法承载全部产出。");
@@ -194,9 +211,22 @@ namespace DSPCalculator.Bp
                     }
                     else
                     {
-                        if (processor.GenerateBlueprint(0))
+                        hasBp = processor.GenerateBlueprint(0);
+                        if (hasBp)
                         {
-                            processors.Add(processor);
+                            bool isLabModel = false;
+                            if (BpDB.assemblerInfos.ContainsKey(processor.recipeInfo.assemblerItemId))
+                            {
+                                isLabModel = BpDB.assemblerInfos[processor.recipeInfo.assemblerItemId].vanillaRecipeType == ERecipeType.Research;
+                            }
+                            if (!isLabModel)
+                            {
+                                processors.Add(processor);
+                            }
+                            else
+                            {
+                                labProcessors.Add(processor);
+                            }
                             processorsMap[recipeInfo.ID] = processor;
                         }
                         else
@@ -205,28 +235,47 @@ namespace DSPCalculator.Bp
                             return false;
                         }
                     }
+                    if (hasBp && processor.isVanilla6006())
+                        hasBp = false; // 对于原始的白糖预制蓝图，没有高架传送带，虽然按照正常蓝图放置即可，但所有它需要的原材料都要有额外的外出口
+
                     RecipeProto proto = recipeInfo.recipeNorm.oriProto;
                     for (int i = 0; i < proto.Items.Length; i++)
                     {
                         int itemId = proto.Items[i];
-                        if(!itemPathInfos.ContainsKey(itemId))
+                        if (hasBp)
                         {
-                            itemPathInfos[itemId] = new BpItemPathInfo(itemId, solution.userPreference.IsOre(itemId) && solution.itemNodes[itemId].speedFromOre > 0.001f);
+                            if (!itemPathInfos.ContainsKey(itemId))
+                            {
+                                itemPathInfos[itemId] = new BpItemPathInfo(itemId, solution.userPreference.IsOre(itemId) && solution.itemNodes[itemId].speedFromOre > 0.001f);
+                            }
+                            itemPathInfos[itemId].AddDemander(processor);
                         }
-                        itemPathInfos[itemId].AddDemander(processor);
+                        else // 没生成蓝图的（比如用了星际组装厂），则把他们本来要吞的原材料增加额外的外出端口
+                        {
+                            additionalOutputItems[itemId] = 1;
+                        }
                     }
                     for (int i = 0; i < proto.Results.Length; i++)
                     {
                         int itemId = proto.Results[i];
-                        if(!itemPathInfos.ContainsKey(itemId))
+                        if (hasBp)
                         {
-                            itemPathInfos[itemId] = new BpItemPathInfo(itemId, solution.userPreference.IsOre(itemId) && solution.itemNodes[itemId].speedFromOre > 0.001f);
+                            if (!itemPathInfos.ContainsKey(itemId))
+                            {
+                                itemPathInfos[itemId] = new BpItemPathInfo(itemId, solution.userPreference.IsOre(itemId) && solution.itemNodes[itemId].speedFromOre > 0.001f);
+                            }
+                            itemPathInfos[itemId].AddProvider(processor);
                         }
-                        itemPathInfos[itemId].AddProvider(processor);
+                        else // 没生成蓝图的（比如用了星际组装厂），则把他们本来要提供的产物，增加额外的外入端口
+                        {
+                            additionalInputItems[itemId] = 1;
+                        }
                     }
+
                 }
             }
-            if (processors.Count <= 0)
+            labProcessors = labProcessors.OrderBy(p => p.height).ToList(); // 为了防止原版白糖预制蓝图被放在最下面不好剔除（剔除后非常不工整）
+            if (processors.Count <= 0 && labProcessors.Count <= 0)
                 return false;
 
             return true;
@@ -235,7 +284,7 @@ namespace DSPCalculator.Bp
         // 构造蓝图排列
         private bool ArrangeBpBlocks(List<BpBlockProcessor> processors)
         {
-            if(processors.Count <= 0) 
+            if (processors.Count <= 0)
                 return false;
 
             lines.Clear();
@@ -245,6 +294,8 @@ namespace DSPCalculator.Bp
             blockLine0.AddBpBlock(processors[0]);
             lines.Add(blockLine0);
             int blockCount = processors.Count;
+            int terminalMaxX = 0; // 最右侧的传送带连接点的X坐标，专门用于限制研究站蓝图的放置方位
+            // 首先处理常规非研究站的蓝图
             for (int i = 1; i < blockCount; i++)
             {
                 BpBlockProcessor processor = processors[i];
@@ -273,24 +324,26 @@ namespace DSPCalculator.Bp
                         minWidthUnconditionLine = j;
                     }
                     if (line.height >= curHeight && line.unusedWidth >= curWidth && line.width < minWidth)
-                    { 
+                    {
                         minWidth = line.width;
                         minWidthLine = j;
                     }
-                    if(line.height + 5 >= curHeight && line.unusedWidth >= curWidth && line.height > maxHeight)
+                    if (line.height + 5 >= curHeight && line.unusedWidth >= curWidth && line.height > maxHeight)
                     {
                         maxHeight = line.height;
                         maxHeightLine = j;
                     }
                 }
 
-                if(minWidthLine >= 0)
+                if (minWidthLine >= 0)
                 {
+                    terminalMaxX = Math.Max(terminalMaxX, lines[minWidthLine].width + processor.leftTerminalX);
                     lines[minWidthLine].AddBpBlock(processor);
                     continue;
                 }
                 else if (maxHeightLine >= 0)
                 {
+                    terminalMaxX = Math.Max(terminalMaxX, lines[maxHeightLine].width + processor.leftTerminalX);
                     lines[maxHeightLine].AddBpBlock(processor);
                     continue;
                 }
@@ -300,9 +353,13 @@ namespace DSPCalculator.Bp
                     int newHeight = height + curHeight;
 
                     if (newWidth <= newHeight)
+                    {
+                        terminalMaxX = Math.Max(terminalMaxX, lines[minWidthUnconditionLine].width + processor.leftTerminalX);
                         lines[minWidthUnconditionLine].AddBpBlock(processor);
+                    }
                     else
                     {
+                        terminalMaxX = Math.Max(terminalMaxX, processor.leftTerminalX);
                         BpBlockLineInfo extraLine = new BpBlockLineInfo(this);
                         extraLine.AddBpBlock(processor);
                         lines.Add(extraLine);
@@ -314,6 +371,48 @@ namespace DSPCalculator.Bp
                     return false;
                 }
             }
+            lines = lines.OrderByDescending(line => line.width).ToList();
+
+            // 然后处理研究站的蓝图该从哪里开始放置
+            if (labProcessors.Count > 0 && processors.Count > 0)
+            {
+                // 所有研究站的蓝图不得比terminalMaxX靠左，并且全部左对齐
+                // 首先计算所有lab的最大的宽度
+                int maxLabBpWidth = 0;
+                int labTotalHeight = 0;
+                for (int i = 0; i < labProcessors.Count; i++)
+                {
+                    maxLabBpWidth = Math.Max(maxLabBpWidth, labProcessors[i].width);
+                    labTotalHeight += labProcessors[i].height;
+                }
+                // 优先查看现有的lines里面有无足够的空间放下所有的lab（现在的lab已经排过序了！），有的话放在空置空间内
+                bool finished = false;
+                if (height > labTotalHeight)
+                {
+                    int heightRemaining = height;
+                    for (int i = 0; i < lines.Count; i++)
+                    {
+                        if (heightRemaining < labTotalHeight) // 说明此方法不行，因为剩余的行高总和已经放不下所有的研究站了
+                            break;
+
+                        if (lines[i].unusedWidth >= maxLabBpWidth) // 如果某一行的空余宽度足够填充，则设定lab的放置原点，并不再判断后面的方案
+                        {
+                            finished = true;
+                            labBlocksOriginPoint = new Vector2(lines[i].width, height - heightRemaining);
+                            break;
+                        }
+                        heightRemaining -= lines[i].height;
+                    }
+                }
+
+                // 如果还是没找到，只能将所有lab蓝图放在最右侧
+                if (!finished)
+                {
+                    labBlocksOriginPoint = new Vector2(width, 0);
+                }
+            }
+
+
             blueprintData.dragBoxSize_x = width;
             blueprintData.dragBoxSize_y = height;
             blueprintData.areas[0].width = width;
@@ -324,6 +423,7 @@ namespace DSPCalculator.Bp
         // 将每个原始蓝图的每个建筑防止在黑盒的对应位置
         private bool PlaceBuildings()
         {
+            // 首先是常规蓝图
             int lineCount = lines.Count;
             int baseY = 0;
             for (int i = 0; i < lineCount; i++)
@@ -350,7 +450,25 @@ namespace DSPCalculator.Bp
                 baseY += line.height;
             }
 
-            
+            // 然后是研究站蓝图
+            int baseLabX = (int)labBlocksOriginPoint.x;
+            int baseLabY = (int)labBlocksOriginPoint.y;
+            for (int i = 0; i < labProcessors.Count; i++)
+            {
+                BpBlockProcessor processor = labProcessors[i];
+                int buildingsLen = processor.blueprintData.buildings.Length;
+                for (int k = 0; k < buildingsLen; k++)
+                {
+                    BlueprintBuilding bb = processor.blueprintData.buildings[k];
+                    bb.localOffset_x += baseLabX;
+                    bb.localOffset_y += baseLabY;
+                    bb.localOffset_x2 += baseLabX;
+                    bb.localOffset_y2 += baseLabY;
+                    bb.index = buildings.Count;
+                    buildings.Add(bb);
+                }
+                baseLabY += labProcessors[i].height;
+            }
 
             return true;
         }
@@ -368,11 +486,11 @@ namespace DSPCalculator.Bp
             }
 
             // 额外输入输出口的基本信息
-            int portX0, portY0, expandX, expandY, directionX, directionY; // expand代表port越来越多时，坐标的bump数值。direction代表一条带子沿着自己的来时方向的坐标的bump数值
-            if(width >= height) // 黑盒的横向宽大于纵向高度，则输入输出口都在上边缘
+            int portX0, portY0, expandX, expandY, directionX, directionY; // expand代表port越来越多时，坐标的bump数值。direction代表一条带子从port输入输出端点，到连接block内的端点的方向
+            if (width >= height && !forcePortOnLeft) // 黑盒的横向宽大于纵向高度，则输入输出口都在上边缘
             {
                 portX0 = 0;
-                portY0 = height + 1;
+                portY0 = height + 2;
                 expandX = 2;
                 expandY = 0;
                 directionX = 0;
@@ -380,7 +498,7 @@ namespace DSPCalculator.Bp
             }
             else // 否则输入输出口都在左边缘
             {
-                portX0 = -2;
+                portX0 = -3;
                 portY0 = 0;
                 expandX = 0;
                 expandY = 2;
@@ -398,63 +516,75 @@ namespace DSPCalculator.Bp
                 int itemId = itemPathKV.Key;
                 if (!itemPath.isOre)
                 {
-                    // 首先串联每个生产block产出物线路
-                    BlueprintBuilding curTerminal = itemPath.provideProcessors[0].outputBelts[itemId];
-                    for (int i = 1; i < itemPath.provideProcessors.Count; i++)
+                    BlueprintBuilding curTerminal;
+                    // 不是原矿但是强制额外增加了port外入口的话，需要增加输入口
+                    if (additionalInputItems.ContainsKey(itemId))
                     {
-                        BlueprintBuilding nextInput = itemPath.provideProcessors[i].inputBelts[itemId];
-                        //if (!ConnectBeltsIfAdjacent(curTerminal, nextInput))
-                        //{
-                        //    int layerZ = FindLegalLayer(curTerminal, nextInput);
-                        //    if (layerZ < 0)
-                        //    {
-                        //        Utils.logger.LogWarning("由于可用层数不足，连接失败");
-                        //        return false;
-                        //    }
-                        //    else
-                        //    {
-                        //        ConnectBeltsInLayer(curTerminal, nextInput, layerZ + 0.5f);
-                        //        segLayers[layerZ].AddSegment(curTerminal, nextInput);
-                        //    }
-                        //}
-                        TryConnect(curTerminal, nextInput);
-                        curTerminal = itemPath.demandProcessors[i].outputBelts[itemId];
+                        int beltItemId = -1;
+                        if (itemPath.provideProcessors.Count > 0)
+                            beltItemId = itemPath.provideProcessors[0].inputBelts[itemId].itemId;
+                        else if (itemPath.demandProcessors.Count > 0)
+                            beltItemId = itemPath.demandProcessors[0].inputBelts[itemId].itemId;
+
+                        if (beltItemId > 0)
+                        {
+                            int PLSIndex = terminalInfos.Count / BpDB.PLSMaxStorageKinds;
+                            int subIndex = terminalInfos.Count % BpDB.PLSMaxStorageKinds;
+                            int terminalX = portX0 + (expandX / 2) * BpDB.PLSDistance * PLSIndex + expandX * subIndex;
+                            int terminalY = portY0 + (expandY / 2) * BpDB.PLSDistance * PLSIndex + expandY * subIndex;
+                            BlueprintBuilding connectTerminal = AddBelt(beltItemId, terminalX + 2 * directionX, terminalY + 2 * directionY, 0, null, null);
+                            BlueprintBuilding midBelt = AddBelt(beltItemId, terminalX + directionX, terminalY + directionY, 0, null, connectTerminal);
+                            BlueprintBuilding portTerminal = AddBelt(beltItemId, terminalX, terminalY, 0, null, midBelt, itemId);
+                            curTerminal = connectTerminal;
+                            terminalInfos.Add(new BpTerminalInfo(portTerminal, itemId, true));
+                            if (itemPath.provideProcessors.Count > 0)
+                            {
+                                BlueprintBuilding blockBeltTerminal = itemPath.provideProcessors[0].inputBelts[itemId];
+                                TryConnect(connectTerminal, blockBeltTerminal);
+                                curTerminal = itemPath.provideProcessors[0].outputBelts[itemId];
+                            }
+                        }
+                        else
+                        {
+                            Utils.logger.LogError($"在处理{Utils.ItemName(itemId)}的额外入口时出错，这种情况不应该发生");
+                            return false;
+                        }
+                    }
+                    else // 否则说明一定至少有一个生产配方
+                    {
+                        curTerminal = itemPath.provideProcessors[0].outputBelts[itemId];
+                    }
+
+                    // 首先串联每个生产block产出物线路
+                    if (itemPath.provideProcessors.Count > 0)
+                    {
+                        for (int i = 1; i < itemPath.provideProcessors.Count; i++)
+                        {
+                            BlueprintBuilding nextInput = itemPath.provideProcessors[i].inputBelts[itemId];
+                            TryConnect(curTerminal, nextInput);
+                            curTerminal = itemPath.provideProcessors[i].outputBelts[itemId];
+                        }
                     }
 
                     // 然后依次连接所有消耗项
                     for (int i = 0; i < itemPath.demandProcessors.Count; i++)
                     {
                         BlueprintBuilding nextInput = itemPath.demandProcessors[i].inputBelts[itemId];
-                        //if (!ConnectBeltsIfAdjacent(curTerminal, nextInput))
-                        //{
-                        //    int layerZ = FindLegalLayer(curTerminal, nextInput);
-                        //    if (layerZ < 0)
-                        //    {
-                        //        Utils.logger.LogWarning("由于可用层数不足，连接失败");
-                        //        return false;
-                        //    }
-                        //    else
-                        //    {
-                        //        ConnectBeltsInLayer(curTerminal, nextInput, layerZ + 0.5f);
-                        //        segLayers[layerZ].AddSegment(curTerminal, nextInput);
-                        //    }
-                        //}
                         TryConnect(curTerminal, nextInput);
                         curTerminal = itemPath.demandProcessors[i].outputBelts[itemId];
                     }
 
-                    
+
                     // 对于目标产物或者溢出产物，需要放置额外的输出口并连接
-                    if (targets.ContainsKey(itemId) || solution.itemNodes[itemId].satisfiedSpeed > solution.itemNodes[itemId].needSpeed + 0.0001f) 
+                    if (targets.ContainsKey(itemId) || solution.itemNodes[itemId].satisfiedSpeed > solution.itemNodes[itemId].needSpeed + 0.0001f || additionalOutputItems.ContainsKey(itemId))
                     {
                         int PLSIndex = terminalInfos.Count / BpDB.PLSMaxStorageKinds;
                         int subIndex = terminalInfos.Count % BpDB.PLSMaxStorageKinds;
                         int terminalX = portX0 + (expandX / 2) * BpDB.PLSDistance * PLSIndex + expandX * subIndex;
                         int terminalY = portY0 + (expandY / 2) * BpDB.PLSDistance * PLSIndex + expandY * subIndex;
-                        int connectBeltX = terminalX + directionX;
-                        int connectBeltY = terminalY + directionY;
                         BlueprintBuilding portTerminal = AddBelt(curTerminal.itemId, terminalX, terminalY, 0, null, null, itemId);
-                        BlueprintBuilding connectTerminal = AddBelt(curTerminal.itemId, connectBeltX, connectBeltY, 0, null, portTerminal, 0);
+                        BlueprintBuilding midBelt = AddBelt(curTerminal.itemId, terminalX + directionX, terminalY + directionY, 0, null, portTerminal);
+                        BlueprintBuilding connectTerminal = AddBelt(curTerminal.itemId, terminalX + 2 * directionX, terminalY + 2 * directionY, 0, null, midBelt);
                         TryConnect(curTerminal, connectTerminal);
                         curTerminal = portTerminal;
                         terminalInfos.Add(new BpTerminalInfo(portTerminal, itemId, false));
@@ -464,7 +594,7 @@ namespace DSPCalculator.Bp
                 }
                 else // 如果是原矿
                 {
-                    if(itemPath.provideProcessors.Count == 0) // 如果没有任何建筑产出，则单纯地每个获取的端点都从外部进料即可
+                    if (itemPath.provideProcessors.Count == 0 && !additionalInputItems.ContainsKey(itemId)) // 如果没有任何建筑产出，则单纯地每个获取的端点都从外部进料即可
                     {
                         for (int i = 0; i < itemPath.demandProcessors.Count; i++)
                         {
@@ -472,22 +602,114 @@ namespace DSPCalculator.Bp
                             int subIndex = terminalInfos.Count % BpDB.PLSMaxStorageKinds;
                             int terminalX = portX0 + (expandX / 2) * BpDB.PLSDistance * PLSIndex + expandX * subIndex;
                             int terminalY = portY0 + (expandY / 2) * BpDB.PLSDistance * PLSIndex + expandY * subIndex;
-                            int connectBeltX = terminalX + directionX;
-                            int connectBeltY = terminalY + directionY;
                             BlueprintBuilding blockBeltTerminal = itemPath.demandProcessors[i].inputBelts[itemId];
-                            BlueprintBuilding connectTerminal = AddBelt(blockBeltTerminal.itemId, connectBeltX, connectBeltY, 0, null, null, 0);
-                            BlueprintBuilding portTerminal = AddBelt(blockBeltTerminal.itemId, terminalX, terminalY, 0, null, connectTerminal, itemId);
+                            BlueprintBuilding connectTerminal = AddBelt(blockBeltTerminal.itemId, terminalX + 2 * directionX, terminalY + 2 * directionY, 0, null, null);
+                            BlueprintBuilding midBelt = AddBelt(blockBeltTerminal.itemId, terminalX + directionX, terminalY + directionY, 0, null, connectTerminal);
+                            BlueprintBuilding portTerminal = AddBelt(blockBeltTerminal.itemId, terminalX, terminalY, 0, null, midBelt, itemId);
                             TryConnect(connectTerminal, blockBeltTerminal);
                             terminalInfos.Add(new BpTerminalInfo(portTerminal, itemId, true));
                         }
                     }
                     else // 又有配方产出，又有原矿输入
                     {
+                        // 首先串联每个生产block产出物线路
+                        BlueprintBuilding curTerminal;
+                        // 不是原矿但是强制额外增加了port外入口的话，需要增加输入口
+                        if (additionalInputItems.ContainsKey(itemId))
+                        {
+                            int beltItemId = -1;
+                            if (itemPath.provideProcessors.Count > 0)
+                                beltItemId = itemPath.provideProcessors[0].inputBelts[itemId].itemId;
+                            else if (itemPath.demandProcessors.Count > 0)
+                                beltItemId = itemPath.demandProcessors[0].inputBelts[itemId].itemId;
+
+                            if (beltItemId > 0)
+                            {
+                                int PLSIndex = terminalInfos.Count / BpDB.PLSMaxStorageKinds;
+                                int subIndex = terminalInfos.Count % BpDB.PLSMaxStorageKinds;
+                                int terminalX = portX0 + (expandX / 2) * BpDB.PLSDistance * PLSIndex + expandX * subIndex;
+                                int terminalY = portY0 + (expandY / 2) * BpDB.PLSDistance * PLSIndex + expandY * subIndex;
+                                BlueprintBuilding connectTerminal = AddBelt(beltItemId, terminalX + 2 * directionX, terminalY + 2 * directionY, 0, null, null);
+                                BlueprintBuilding midBelt = AddBelt(beltItemId, terminalX + directionX, terminalY + directionY, 0, null, connectTerminal);
+                                BlueprintBuilding portTerminal = AddBelt(beltItemId, terminalX, terminalY, 0, null, midBelt, itemId);
+                                curTerminal = connectTerminal;
+                                terminalInfos.Add(new BpTerminalInfo(portTerminal, itemId, true));
+                                if (itemPath.provideProcessors.Count > 0)
+                                {
+                                    BlueprintBuilding blockBeltTerminal = itemPath.provideProcessors[0].inputBelts[itemId];
+                                    TryConnect(connectTerminal, blockBeltTerminal);
+                                    curTerminal = itemPath.provideProcessors[0].outputBelts[itemId];
+                                }
+                            }
+                            else
+                            {
+                                Utils.logger.LogError($"在处理{Utils.ItemName(itemId)}的额外入口时出错，这种情况不应该发生");
+                                return false;
+                            }
+                        }
+                        else // 否则说明一定至少有一个生产配方
+                        {
+                            curTerminal = itemPath.provideProcessors[0].outputBelts[itemId];
+                        }
+                        for (int i = 1; i < itemPath.provideProcessors.Count; i++)
+                        {
+                            BlueprintBuilding nextInput = itemPath.provideProcessors[i].inputBelts[itemId];
+                            TryConnect(curTerminal, nextInput);
+                            curTerminal = itemPath.demandProcessors[i].outputBelts[itemId];
+                        }
+
+                        // 对于每个输入，都将之前的带子作为主路输入，并加入一个旁路的外入（视为原矿输入）入口
+                        for (int i = 0; i < itemPath.demandProcessors.Count; i++)
+                        {
+                            int PLSIndex = terminalInfos.Count / BpDB.PLSMaxStorageKinds;
+                            int subIndex = terminalInfos.Count % BpDB.PLSMaxStorageKinds;
+                            int terminalX = portX0 + (expandX / 2) * BpDB.PLSDistance * PLSIndex + expandX * subIndex;
+                            int terminalY = portY0 + (expandY / 2) * BpDB.PLSDistance * PLSIndex + expandY * subIndex;
+                            BlueprintBuilding endBelt = AddBelt(curTerminal.itemId, terminalX + expandX / 2 + 2 * directionX, terminalY + expandY / 2 + 2 * directionY, 0, null, null);
+                            BlueprintBuilding convergeBelt = AddBelt(curTerminal.itemId, terminalX + expandX / 2 + directionX, terminalY + expandY / 2 + directionY, 0, null, endBelt);
+                            BlueprintBuilding beginBelt = AddBelt(curTerminal.itemId, terminalX + expandX / 2, terminalY + expandY / 2, 0, null, convergeBelt);
+                            BlueprintBuilding bypassInputBelt = AddBelt(curTerminal.itemId, terminalX + directionX, terminalY + directionY, 0, null, convergeBelt, 0, 2);
+                            BlueprintBuilding portTerminal = AddBelt(curTerminal.itemId, terminalX, terminalY, 0, null, bypassInputBelt, itemId);
+
+                            TryConnect(curTerminal, beginBelt);
+                            TryConnect(endBelt, itemPath.demandProcessors[i].inputBelts[itemId]);
+                            curTerminal = itemPath.demandProcessors[i].outputBelts[itemId];
+                            terminalInfos.Add(new BpTerminalInfo(portTerminal, itemId, true));
+                        }
+
+                        // 视为原矿也有可能溢出哦，也需要放置额外的输出口并连接
+                        if (solution.itemNodes[itemId].satisfiedSpeed > solution.itemNodes[itemId].needSpeed + 0.0001f || additionalOutputItems.ContainsKey(itemId))
+                        {
+                            int PLSIndex = terminalInfos.Count / BpDB.PLSMaxStorageKinds;
+                            int subIndex = terminalInfos.Count % BpDB.PLSMaxStorageKinds;
+                            int terminalX = portX0 + (expandX / 2) * BpDB.PLSDistance * PLSIndex + expandX * subIndex;
+                            int terminalY = portY0 + (expandY / 2) * BpDB.PLSDistance * PLSIndex + expandY * subIndex;
+                            BlueprintBuilding portTerminal = AddBelt(curTerminal.itemId, terminalX, terminalY, 0, null, null, itemId);
+                            BlueprintBuilding midBelt = AddBelt(curTerminal.itemId, terminalX + directionX, terminalY + directionY, 0, null, portTerminal);
+                            BlueprintBuilding connectTerminal = AddBelt(curTerminal.itemId, terminalX + 2 * directionX, terminalY + 2 * directionY, 0, null, midBelt);
+                            TryConnect(curTerminal, connectTerminal);
+                            curTerminal = portTerminal;
+                            terminalInfos.Add(new BpTerminalInfo(portTerminal, itemId, false));
+                        }
 
                     }
                 }
-            }
 
+            }
+            if (expandX > 0 && labProcessors.Count > 0) // 如果是在上边缘向右逐步部署port，且有lab，则需要注意port是否超出了lab的terminal的X，超出有可能产生碰撞，这时候需要以强制在左侧生成port的要求重新生成一遍蓝图
+            {
+                if (portXExceedLabTerminal)
+                {
+                    this.forcePortOnLeft = true;
+                    Utils.logger.LogInfo("由于port超出了lab的X，强制在左侧生成port");
+                    CalcItemSumInfos();
+                    GenProcessors();
+                    processors = processors.OrderByDescending(x => x.width).ToList();
+                    ArrangeBpBlocks(processors);
+                    PlaceBuildings();
+                    return ConnectBlocks();
+                }
+            }
             return true;
         }
 
@@ -502,9 +724,9 @@ namespace DSPCalculator.Bp
         {
             Segment segment = new Segment(fromBelt.localOffset_x, fromBelt.localOffset_y, toBelt.localOffset_x, toBelt.localOffset_y);
             int beginZ = minZ;
-            if(segLayers.Count <= beginZ)
+            if (segLayers.Count <= beginZ)
             {
-                while(segLayers.Count < beginZ)
+                while (segLayers.Count < beginZ)
                 {
                     segLayers.Add(null);
                 }
@@ -579,13 +801,7 @@ namespace DSPCalculator.Bp
             return false;
         }
 
-        /// <summary>
-        /// 将两个belt使用高架连接
-        /// </summary>
-        /// <param name="fromBelt"></param>
-        /// <param name="toBelt"></param>
-        /// <param name="actualHeight"></param>
-        /// <returns></returns>
+
         private bool ConnectBeltsInLayer(BlueprintBuilding fromBelt, BlueprintBuilding toBelt, float actualHeight)
         {
 
@@ -660,7 +876,7 @@ namespace DSPCalculator.Bp
                 return false; // 太近了，无法生成
             }
             int count = 0;
-            while(true)
+            while (true)
             {
                 BlueprintBuilding b = new BlueprintBuilding();
                 b.index = buildings.Count;
@@ -769,7 +985,19 @@ namespace DSPCalculator.Bp
             return true;
         }
 
-        private BlueprintBuilding AddBelt(int beltItemId, float x, float y, float z, BlueprintBuilding fromBelt, BlueprintBuilding toBelt, int icon = 0)
+        /// <summary>
+        /// 将两个belt使用高架连接
+        /// </summary>
+        /// <param name="beltItemId"></param>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="z"></param>
+        /// <param name="fromBelt"></param>
+        /// <param name="toBelt"></param>
+        /// <param name="icon"></param>
+        /// <param name="inputAsByPass">如果是旁路输入的传送带，需要为2甚至3，非旁路则是1</param>
+        /// <returns></returns>
+        private BlueprintBuilding AddBelt(int beltItemId, float x, float y, float z, BlueprintBuilding fromBelt, BlueprintBuilding toBelt, int icon = 0, int inputAsByPass = 1)
         {
             BlueprintBuilding b = new BlueprintBuilding();
             b.index = buildings.Count;
@@ -785,30 +1013,44 @@ namespace DSPCalculator.Bp
             b.yaw2 = b.yaw;
             b.itemId = (short)beltItemId;
             b.modelIndex = (short)LDB.items.Select(beltItemId).prefabDesc.modelIndex;
-            if(toBelt  != null )
+            if (toBelt != null)
             {
-                b.outputToSlot = 1;
+                b.outputToSlot = inputAsByPass;
                 b.outputObj = toBelt;
             }
             b.parameters = new int[0];
-            if(icon > 0)
+            if (icon > 0)
             {
                 b.parameters = new int[] { icon, 0 };
             }
             buildings.Add(b);
             //gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
-            if(fromBelt != null)
+            if (fromBelt != null)
             {
                 fromBelt.outputToSlot = 1;
                 fromBelt.outputObj = b;
             }
             return b;
         }
-    }
 
-    /// <summary>
-    /// 黑盒蓝图中，小block按行填充进去，一行可以有一个或多个小蓝图block
-    /// </summary>
+        /// <summary>
+        /// 判断当前所有对外输入输出口是否超出了lab的所有连接端口的X（这是为了防止高架传送带穿过叠层的lab），如果是，则强制使用在左侧生成port的方法重新生成一遍蓝图
+        /// </summary>
+        private bool portXExceedLabTerminal
+        {
+            get
+            {
+                int PLSIndex = (terminalInfos.Count - 1) / BpDB.PLSMaxStorageKinds;
+                int subIndex = (terminalInfos.Count - 1) % BpDB.PLSMaxStorageKinds;
+                int terminalX = BpDB.PLSDistance * PLSIndex + 2 * subIndex;
+
+                return terminalX + 1 > labBlocksOriginPoint.x;
+            }
+        }
+    }
+        /// <summary>
+        /// 黑盒蓝图中，小block按行填充进去，一行可以有一个或多个小蓝图block
+        /// </summary>
     public class BpBlockLineInfo
     {
         public BpConnector parent;
