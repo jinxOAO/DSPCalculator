@@ -13,7 +13,7 @@ namespace DSPCalculator.Bp
         public Vector2 p2;
         public float k;
         public float b;
-
+        public bool isVert;
         public Vector2 vec;
 
         public Segment(float x1, float y1, float x2, float y2)
@@ -26,6 +26,7 @@ namespace DSPCalculator.Bp
             }
             else
             {
+                isVert = true; // k为无穷
                 k = 0;
             }
             b = y1 - k * x1;
@@ -72,28 +73,53 @@ namespace DSPCalculator.Bp
                 else if (res1 <= 0) // 到这里，说明没相交，且this指向other线段内（this的延长线与other线段相交）
                 {
                     // 求this的两个端点到other所在直线的最小距离
+                    if(other.isVert)
+                    {
+                        return Math.Min(Math.Abs(p1.x - other.p1.x), Math.Abs(p2.x - other.p1.x)) < minDistance;
+                    }
                     return Math.Min(p1.DistanceSquare(other.k, other.b), p2.DistanceSquare(other.k, other.b)) < squaredDistance;
                 }
                 else if (res2 <= 0) // 没相交，且other指向this线段内（other的延长线与this线段相交）
                 {
                     // 求other的两个端点到this所在直线的最小距离
+                    if(isVert)
+                    {
+                        return Math.Min(Math.Abs(p1.x - other.p1.x), Math.Abs(p1.x - other.p2.x)) < minDistance;
+                    }
                     return Math.Min(other.p1.DistanceSquare(k, b), other.p2.DistanceSquare(k, b)) < squaredDistance;
                 }
                 else // res都大于0，代表互相指向线段外（所在直线的交点都不在线段上）
                 {
-                    // 求this每个端点到other每个端点，最短距离小于要求距离即视为过近
-                    float d1 = (other.p1.x - p1.x).Square() + (other.p1.y - p1.y).Square();
-                    if (d1 < squaredDistance)
-                        return true;
-                    float d2 = (other.p1.x - p2.x).Square() + (other.p1.y - p2.y).Square();
-                    if (d2 < squaredDistance)
-                        return true;
-                    float d3 = (other.p2.x - p1.x).Square() + (other.p2.y - p1.y).Square();
-                    if (d3 < squaredDistance)
-                        return true;
-                    float d4 = (other.p2.x - p2.x).Square() + (other.p2.y - p2.y).Square();
-                    if (d4 < squaredDistance)
-                        return true;
+                    float dis1;
+                    if (other.isVert)
+                    {
+                        dis1 = Math.Min(Math.Abs(p1.x - other.p1.x), Math.Abs(p2.x - other.p1.x));
+                        dis1 = dis1 * dis1;
+                    }
+                    else
+                        dis1 = Math.Min(p1.DistanceSquare(other.k, other.b), p2.DistanceSquare(other.k, other.b));
+                    float dis2;
+                    if (isVert)
+                    {
+                        dis2 = Math.Min(Math.Abs(p1.x - other.p1.x), Math.Abs(p1.x - other.p2.x));
+                        dis2 = dis2 * dis2;
+                    }
+                    else
+                        dis2 = Math.Min(other.p1.DistanceSquare(k, b), other.p2.DistanceSquare(k, b));
+                    return Math.Max(dis1, dis2) < squaredDistance;
+                    //// 求this每个端点到other每个端点，最短距离小于要求距离即视为过近
+                    //float d1 = (other.p1.x - p1.x).Square() + (other.p1.y - p1.y).Square();
+                    //if (d1 < squaredDistance)
+                    //    return true;
+                    //float d2 = (other.p1.x - p2.x).Square() + (other.p1.y - p2.y).Square();
+                    //if (d2 < squaredDistance)
+                    //    return true;
+                    //float d3 = (other.p2.x - p1.x).Square() + (other.p2.y - p1.y).Square();
+                    //if (d3 < squaredDistance)
+                    //    return true;
+                    //float d4 = (other.p2.x - p2.x).Square() + (other.p2.y - p2.y).Square();
+                    //if (d4 < squaredDistance)
+                    //    return true;
                 }
             }
             return false;

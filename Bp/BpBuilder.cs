@@ -12,7 +12,8 @@ namespace DSPCalculator.Bp
     {
         // outputSlot = 1才能连接到下一个Belt
         // 如果只需要造一格的传送带，根据其方向传入一个类似于2.9,3,0到3,3,0这样的坐标就可以，就是方向向右但是只有一格。并且以end为准！
-        public static void AddBelts(this BpProcessor processor, int itemId, float startX, float startY, float startZ, float endX, float endY, float endZ, int inputFromBelt = -1 , int outputToBelt = -1, int beginIcon = 0, int endIcon = 0)
+        // forceRecord为true时，忽略带子的z，一定会记录进grid
+        public static void AddBelts(this BpProcessor processor, int itemId, float startX, float startY, float startZ, float endX, float endY, float endZ, int inputFromBelt = -1 , int outputToBelt = -1, int beginIcon = 0, int endIcon = 0, bool forceRecord = false)
         {
             ref List<BlueprintBuilding> list = ref processor.buildings;
             ref Dictionary<int, Dictionary<int, int>> gridMap = ref processor.gridMap;
@@ -81,7 +82,7 @@ namespace DSPCalculator.Bp
                         endIcon = 0;
                     }
                     list.Add(b);
-                    if (b.localOffset_z == 0)
+                    if (b.localOffset_z == 0 || forceRecord)
                         gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                     endX += bumpX;
                 }
@@ -130,7 +131,7 @@ namespace DSPCalculator.Bp
                         endIcon = 0;
                     }
                     list.Add(b);
-                    if (b.localOffset_z == 0)
+                    if (b.localOffset_z == 0 || forceRecord)
                         gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                     endY += bumpY;
                 }
@@ -190,7 +191,7 @@ namespace DSPCalculator.Bp
                     }
 
                     list.Add(b);
-                    if (b.localOffset_z == 0)
+                    if (b.localOffset_z == 0 || forceRecord)
                         gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                     endZ += bumpZ;
                 }

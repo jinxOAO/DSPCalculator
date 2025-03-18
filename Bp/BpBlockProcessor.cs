@@ -14,13 +14,20 @@ namespace DSPCalculator.Bp
     {
         public BpConnector parentConnector;
         public int leftTerminalX = 0;
+        public Dictionary<int, BlueprintBuilding> proliferatorInputBelts;
+        public Dictionary<int, BlueprintBuilding> proliferatorOutputBelts;
+
+        public int proliferatorId;
 
         public BpBlockProcessor(RecipeInfo recipeInfo, SolutionTree solution, BpConnector parentConnector, int forceRowCount) : base(recipeInfo, solution, forceRowCount)
         {
             this.parentConnector = parentConnector;
         }
-
         public new bool GenerateBlueprint(int genLevel)
+        {
+            return GenerateBlueprint(genLevel, true);
+        }
+        public bool GenerateBlueprint(int genLevel, bool connectCoaters)
         {
             if (bpPrefabId == 1)
             {
@@ -59,6 +66,9 @@ namespace DSPCalculator.Bp
             insufficientSorterItems = new List<int>();
             inputBelts = new Dictionary<int, BlueprintBuilding>();
             outputBelts = new Dictionary<int, BlueprintBuilding>();
+            proliferatorInputBelts = new Dictionary<int, BlueprintBuilding>();
+            proliferatorOutputBelts = new Dictionary<int, BlueprintBuilding>();
+            proliferatorId = -1;
             if (isGBMega)
             {
                 if (processorGB != null)
@@ -377,8 +387,50 @@ namespace DSPCalculator.Bp
                 //    }
                 //}
             }
-            if (genLevel > 0)
-                GenerateAndConnectPLS();
+            //if (genLevel > 0)
+            //    GenerateAndConnectPLS();
+
+            // 使用了增产剂的配方可都要放置增产剂的带子
+            if(genCoater && connectCoaters)
+            {
+                int coaterSlotPosX = GetBeltLeftX(assemblerInfo) + BpDB.coaterOffsetX - 1;
+                int coaterBeginY = 999;
+                int coaterEndY = -999;
+
+                for (int i = 0; i < cargoBeltPoses.Count; i++)
+                {
+                    BpCargoBeltPos beltPos = cargoBeltPoses[i];
+                    if (beltPos != null)
+                    {
+
+                        if (beltPos.isResource && resourceGenCoater || !beltPos.isResource && productGenCoater)
+                        {
+                            if (beltPos.y > coaterEndY)
+                                coaterEndY = beltPos.y;
+
+                            if (beltPos.y < coaterBeginY)
+                                coaterBeginY = beltPos.y;
+                        }
+                    }
+                }
+                //coaterBeginY -= 1;
+                //if (coaterBeginY > -2)
+                //    coaterBeginY = -2;
+                coaterBeginY--;
+                coaterEndY++;
+                if (coaterEndY > coaterBeginY)
+                {
+                    this.AddBelts(solution.beltsAvailable.Last().itemId, coaterSlotPosX, coaterBeginY, 1, coaterSlotPosX, coaterEndY, 1,-1,-1,0,0,true);
+                    proliferatorId = 1143;
+                    if (resourceGenCoater && CalcDB.proliferatorAbilityToId.ContainsKey(recipeInfo.incLevel))
+                    {
+                        proliferatorId = CalcDB.proliferatorAbilityToId[recipeInfo.incLevel];
+                    }
+                    proliferatorInputBelts[proliferatorId] = buildings[gridMap.GetBuilding(coaterSlotPosX, coaterBeginY)];
+                    proliferatorOutputBelts[proliferatorId] = buildings[gridMap.GetBuilding(coaterSlotPosX, coaterEndY)];
+                }
+            }
+
             if (insufficientSorterItems.Count > 0)
                 UIRealtimeTip.Popup("分拣器科技不足警告".Translate());
             PostProcess();

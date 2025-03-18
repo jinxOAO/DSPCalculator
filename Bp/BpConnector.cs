@@ -34,8 +34,11 @@ namespace DSPCalculator.Bp
         public Dictionary<int, int> additionalOutputItems; //  由于部分中间产物的蓝图无法生成，所有这个蓝图需求的物品都要作为额外的输出口
         public Vector2 labBlocksOriginPoint; // 所有lab蓝图集中放置的起始点坐标
 
+        public Dictionary<int, int> proliferatorUsed; // 标记所有用过的增产剂
+
         public int genLevel;
         public bool forcePortOnLeft; // 强制出入口放在左侧而不是上边
+        public bool connectCoaters; // 是否生成串联喷涂机入口的带子
         public int width;
         public int height;
 
@@ -63,6 +66,7 @@ namespace DSPCalculator.Bp
             additionalInputItems = new Dictionary<int, int>();
             additionalOutputItems = new Dictionary<int, int>();
             labBlocksOriginPoint = Vector2.zero;
+            proliferatorUsed = new Dictionary<int, int>();
             succeeded = GenerateFullBlueprint();
         }
 
@@ -71,7 +75,7 @@ namespace DSPCalculator.Bp
             Stopwatch timer = new Stopwatch();
             this.genLevel = genLevel;
             this.forcePortOnLeft = forcePortOnLeft;
-
+            this.connectCoaters = true;
             // 判断每种物品，单带运力是否足够
             timer.Start();
             if (!CalcItemSumInfos())
@@ -158,6 +162,18 @@ namespace DSPCalculator.Bp
                     minZ = Math.Max(minZ, requireBeltMinHeight);
                 }
             }
+            // 如果增产剂并入了产线，但是用户又把增产剂作为了原矿输入（很奇怪但是万一有这样的人呢），那么还要注意增产剂的用量和带子分配
+            for (int i = 0; i < CalcDB.proliferatorItemIds.Count; i++)
+            {
+                int proliferatorItemId = CalcDB.proliferatorItemIds[i];
+                if (solution.itemNodes.ContainsKey(proliferatorItemId) && solution.itemNodes[proliferatorItemId].needSpeed > 0.001f)
+                {
+                    if (!itemSumInfos.ContainsKey(proliferatorItemId))
+                        itemSumInfos[proliferatorItemId] = new BpItemSumInfo(proliferatorItemId, solution.itemNodes[proliferatorItemId].needSpeed / rawOreInputStack);
+                    else
+                        itemSumInfos[proliferatorItemId].needBeltSpeed = Math.Max(itemSumInfos[proliferatorItemId].needBeltSpeed, solution.itemNodes[proliferatorItemId].needSpeed / outputStack); // 这里为什么用outputStack是因为既然已经有这项说明肯定是有生产设施了，那就要以生产设施产出的堆叠为准去计算带子运力需求
+                }
+            }
             // 没有任何配方产出的item不会在itemSumInfo里面出现，这代表着他们只从原矿输入，无所谓在黑盒的起点处拥有几条带子（可以每个block都拥有独立的输入带，即使对于同一个视为原矿的item）
             // 因此不需要判断“单带”运力是否足够，只需要后续判断单个蓝图是否可以满足即可
             foreach (var sumInfoKV in itemSumInfos)
@@ -196,6 +212,7 @@ namespace DSPCalculator.Bp
             labProcessors.Clear();
             processorsMap.Clear();
             itemPathInfos.Clear();
+            proliferatorUsed.Clear();
             foreach (var recipeInfoKV in solution.recipeInfos)
             {
                 RecipeInfo recipeInfo = recipeInfoKV.Value;
@@ -211,7 +228,7 @@ namespace DSPCalculator.Bp
                     }
                     else
                     {
-                        hasBp = processor.GenerateBlueprint(0);
+                        hasBp = processor.GenerateBlueprint(0, connectCoaters);
                         if (hasBp)
                         {
                             bool isLabModel = false;
@@ -228,6 +245,9 @@ namespace DSPCalculator.Bp
                                 labProcessors.Add(processor);
                             }
                             processorsMap[recipeInfo.ID] = processor;
+
+                            if (processor.proliferatorId > 0)
+                                proliferatorUsed[processor.proliferatorId] = 1;
                         }
                         else
                         {
@@ -552,6 +572,7 @@ namespace DSPCalculator.Bp
                     }
                     else // 否则说明一定至少有一个生产配方
                     {
+                        //itemPath.inputTerminal = itemPath.provideProcessors[0].inputBelts[itemId];
                         curTerminal = itemPath.provideProcessors[0].outputBelts[itemId];
                     }
 
@@ -588,6 +609,7 @@ namespace DSPCalculator.Bp
                         TryConnect(curTerminal, connectTerminal);
                         curTerminal = portTerminal;
                         terminalInfos.Add(new BpTerminalInfo(portTerminal, itemId, false));
+                        //itemPath.inputTerminal = null; // 只要是有外入口，那么后续就不能再处理他的inputTerminal了，想要获取，统一从terminalInfos里面获取
                     }
 
                     itemPath.outputTerminal = curTerminal;
@@ -609,6 +631,10 @@ namespace DSPCalculator.Bp
                             TryConnect(connectTerminal, blockBeltTerminal);
                             terminalInfos.Add(new BpTerminalInfo(portTerminal, itemId, true));
                         }
+
+                        // 对于增产剂，要特别处理一下输出端口，以备后面使用
+                        if (CalcDB.proliferatorItemIds.Contains(itemId) && itemPath.demandProcessors.Count > 0)
+                            itemPath.outputTerminal = itemPath.demandProcessors.Last().outputBelts[itemId];
                     }
                     else // 又有配方产出，又有原矿输入
                     {
@@ -695,6 +721,90 @@ namespace DSPCalculator.Bp
                     }
                 }
 
+            }
+
+            // 最后连接所有喷涂机的增产剂进出口
+            if (connectCoaters)
+            {
+                int pBeltItemId = solution.beltsAvailable.Last().itemId;
+                bool solveProliferators = solution.userPreference.solveProliferators;
+                foreach (var proliferatorKV in proliferatorUsed)
+                {
+                    // 对于每个增产剂，首先找到terminal，然后依次连接。根据设定不同，找terminal的方法不同
+                    int proliferatorItemId = proliferatorKV.Key;
+                    bool isOre = solution.userPreference.IsOre(proliferatorItemId);
+                    BlueprintBuilding terminal;
+                    if (!solveProliferators || (solveProliferators && !itemPathInfos.ContainsKey(proliferatorItemId))) // 如果没有将增产剂并入产线，说明增产剂一定是外入的。或者并入了，但是没有产出增产剂的产线记录，说明被视为原矿了
+                    {
+                        int PLSIndex = terminalInfos.Count / BpDB.PLSMaxStorageKinds;
+                        int subIndex = terminalInfos.Count % BpDB.PLSMaxStorageKinds;
+                        int terminalX = portX0 + (expandX / 2) * BpDB.PLSDistance * PLSIndex + expandX * subIndex;
+                        int terminalY = portY0 + (expandY / 2) * BpDB.PLSDistance * PLSIndex + expandY * subIndex;
+                        BlueprintBuilding connectTerminal = AddBelt(pBeltItemId, terminalX + 2 * directionX, terminalY + 2 * directionY, 0, null, null);
+                        BlueprintBuilding midBelt = AddBelt(pBeltItemId, terminalX + directionX, terminalY + directionY, 0, null, connectTerminal);
+                        BlueprintBuilding portTerminal = AddBelt(pBeltItemId, terminalX, terminalY, 0, null, midBelt, proliferatorItemId);
+                        terminalInfos.Add(new BpTerminalInfo(portTerminal, proliferatorItemId, true));
+                        terminal = connectTerminal;
+                    }
+                    else // 否则，一定有产线生产它，那么一定有outputTerminal可用
+                    {
+                        BpItemPathInfo itemPath = itemPathInfos[proliferatorItemId];
+                        Utils.logger.LogInfo($"{Utils.ItemName(proliferatorItemId)} - itemPath-{itemPath.provideProcessors.Count}-{itemPath.demandProcessors.Count}");
+                        // 如果有外入需求
+                        if (solution.itemNodes[proliferatorItemId].speedFromOre > 0.001f)
+                        {
+                            // 这时就要判断这条线路是不是已经有过外入了
+                            bool hasInputTerminal = false;
+                            for (int i = 0; i < terminalInfos.Count; i++)
+                            {
+                                if (terminalInfos[i].itemId == proliferatorItemId)
+                                {
+                                    hasInputTerminal = true;
+                                    break;
+                                }
+                            }
+                            if (!hasInputTerminal) // 如果没有外入
+                            {
+                                Utils.logger.LogWarning($"2");
+                                int PLSIndex = terminalInfos.Count / BpDB.PLSMaxStorageKinds;
+                                int subIndex = terminalInfos.Count % BpDB.PLSMaxStorageKinds;
+                                int terminalX = portX0 + (expandX / 2) * BpDB.PLSDistance * PLSIndex + expandX * subIndex;
+                                int terminalY = portY0 + (expandY / 2) * BpDB.PLSDistance * PLSIndex + expandY * subIndex;
+                                BlueprintBuilding connectTerminal = AddBelt(pBeltItemId, terminalX + 2 * directionX, terminalY + 2 * directionY, 0, null, null);
+                                BlueprintBuilding midBelt = AddBelt(pBeltItemId, terminalX + directionX, terminalY + directionY, 0, null, connectTerminal);
+                                BlueprintBuilding portTerminal = AddBelt(pBeltItemId, terminalX, terminalY, 0, null, midBelt, proliferatorItemId);
+                                terminalInfos.Add(new BpTerminalInfo(portTerminal, proliferatorItemId, true));
+                                if (itemPath.provideProcessors.Count > 0)
+                                {
+                                    BlueprintBuilding blockBeltTerminal = itemPath.provideProcessors[0].inputBelts[proliferatorItemId];
+                                    TryConnect(connectTerminal, blockBeltTerminal);
+                                }
+                            }
+                        }
+
+                        Utils.logger.LogWarning($"{Utils.ItemName(proliferatorItemId)} out terminal is null? {itemPath.outputTerminal == null}");
+                        terminal = itemPath.outputTerminal;
+                    }
+
+                    // 然后将获取到的terminal依次串联所有喷涂机出入口
+                    if (terminal == null)
+                    {
+                        Utils.logger.LogWarning($"terminal is null");
+                    }
+                    for (int i = 0; i < lines.Count; i++)
+                    {
+                        BpBlockLineInfo line = lines[i];
+                        for (int j = 0; j < line.processors.Count; j++)
+                        {
+                            BpBlockProcessor processor = line.processors[j];
+                            if (processor.proliferatorInputBelts.ContainsKey(proliferatorItemId))
+                            {
+                                TryConnect(terminal, processor.proliferatorInputBelts[proliferatorItemId]);
+                                terminal = processor.proliferatorOutputBelts[proliferatorItemId];
+                            }
+                        }
+                    }
+                }
             }
             if (expandX > 0 && labProcessors.Count > 0) // 如果是在上边缘向右逐步部署port，且有lab，则需要注意port是否超出了lab的terminal的X，超出有可能产生碰撞，这时候需要以强制在左侧生成port的要求重新生成一遍蓝图
             {
@@ -1110,7 +1220,7 @@ namespace DSPCalculator.Bp
         public int itemId;
         public List<BpBlockProcessor> demandProcessors; // 所有需要此物品的processor
         public List<BpBlockProcessor> provideProcessors; // 所有产出此物品的processor
-
+        //public BlueprintBuilding inputTerminal;
         public BlueprintBuilding outputTerminal;
         public bool isOre; // 视作原矿时，每个require都要从外面单独有一条输入口（如果有配方也产出此物品，则仍需要串联起来，并且每个require都要多加一条外入带，并进串联的主线）
 
@@ -1119,6 +1229,7 @@ namespace DSPCalculator.Bp
             this.itemId = itemId;
             demandProcessors = new List<BpBlockProcessor>();
             provideProcessors = new List<BpBlockProcessor>();
+            //inputTerminal = null;
             outputTerminal = null;
             this.isOre = isOre;
         }
@@ -1188,11 +1299,11 @@ namespace DSPCalculator.Bp
     /// </summary>
     public class BpTerminalInfo
     {
-        int itemId;
-        bool isDemand;
-        int x;
-        int y;
-        BlueprintBuilding belt;
+        public int itemId;
+        public bool isDemand;
+        public int x;
+        public int y;
+        public BlueprintBuilding belt;
 
         public BpTerminalInfo(BlueprintBuilding belt, int itemId, bool isDemand)
         {
