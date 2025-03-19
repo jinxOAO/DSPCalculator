@@ -37,6 +37,7 @@ namespace DSPCalculator.Bp
         public Dictionary<int, int> proliferatorUsed; // 标记所有用过的增产剂
 
         public int genLevel;
+        public bool orthogonalConnect; // 正交连接
         public bool forcePortOnLeft; // 强制出入口放在左侧而不是上边
         public bool connectCoaters; // 是否生成串联喷涂机入口的带子
         public int width;
@@ -70,12 +71,13 @@ namespace DSPCalculator.Bp
             succeeded = GenerateFullBlueprint();
         }
 
-        private bool GenerateFullBlueprint(int genLevel = 0, bool forcePortOnLeft = false)
+        private bool GenerateFullBlueprint(int genLevel = 0, bool forcePortOnLeft = false, bool orthogonalConnect = true)
         {
             Stopwatch timer = new Stopwatch();
             this.genLevel = genLevel;
             this.forcePortOnLeft = forcePortOnLeft;
             this.connectCoaters = true;
+            this.orthogonalConnect = orthogonalConnect;
             // 判断每种物品，单带运力是否足够
             timer.Start();
             if (!CalcItemSumInfos())
@@ -749,7 +751,6 @@ namespace DSPCalculator.Bp
                     else // 否则，一定有产线生产它，那么一定有outputTerminal可用
                     {
                         BpItemPathInfo itemPath = itemPathInfos[proliferatorItemId];
-                        Utils.logger.LogInfo($"{Utils.ItemName(proliferatorItemId)} - itemPath-{itemPath.provideProcessors.Count}-{itemPath.demandProcessors.Count}");
                         // 如果有外入需求
                         if (solution.itemNodes[proliferatorItemId].speedFromOre > 0.001f)
                         {
@@ -765,7 +766,6 @@ namespace DSPCalculator.Bp
                             }
                             if (!hasInputTerminal) // 如果没有外入
                             {
-                                Utils.logger.LogWarning($"2");
                                 int PLSIndex = terminalInfos.Count / BpDB.PLSMaxStorageKinds;
                                 int subIndex = terminalInfos.Count % BpDB.PLSMaxStorageKinds;
                                 int terminalX = portX0 + (expandX / 2) * BpDB.PLSDistance * PLSIndex + expandX * subIndex;
@@ -782,7 +782,6 @@ namespace DSPCalculator.Bp
                             }
                         }
 
-                        Utils.logger.LogWarning($"{Utils.ItemName(proliferatorItemId)} out terminal is null? {itemPath.outputTerminal == null}");
                         terminal = itemPath.outputTerminal;
                     }
 
@@ -824,15 +823,24 @@ namespace DSPCalculator.Bp
         }
 
 
+
         private bool PostProcess()
         {
             blueprintData.buildings = buildings.ToArray();
             return true;
         }
 
-        private int FindLegalLayer(BlueprintBuilding fromBelt, BlueprintBuilding toBelt)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="fromBelt"></param>
+        /// <param name="toBelt"></param>
+        /// <param name="changeXFirst">在连接传送带时，从toBelt向fromBelt连接，先在X方向上创建直线传送带的是changeXFirst，代表着创建传送带方向先change谁，而不是传送带流向</param>
+        /// <returns></returns>
+        private int FindLegalLayer(BlueprintBuilding fromBelt, BlueprintBuilding toBelt, out bool changeXFirst, out bool isDirectlyConnect)
         {
-            Segment segment = new Segment(fromBelt.localOffset_x, fromBelt.localOffset_y, toBelt.localOffset_x, toBelt.localOffset_y);
+            changeXFirst = false;
+            isDirectlyConnect = IsDirectlyConnect(fromBelt, toBelt);
             int beginZ = minZ;
             if (segLayers.Count <= beginZ)
             {
@@ -842,11 +850,32 @@ namespace DSPCalculator.Bp
                 }
                 segLayers.Add(new BpSegmentLayer(beginZ, minBeltDistance));
             }
+            Segment segment = new Segment(fromBelt.localOffset_x, fromBelt.localOffset_y, toBelt.localOffset_x, toBelt.localOffset_y);
+            Segment xFirst1 = new Segment(toBelt.localOffset_x, toBelt.localOffset_y, fromBelt.localOffset_x, toBelt.localOffset_y); // 从toBelt开始先在x方向上摆放传送带，再在y方向上连接到fromBelt（因为创建传送带的方向和传送带自身流向相反）
+            Segment xFirst2 = new Segment(fromBelt.localOffset_x, toBelt.localOffset_y, fromBelt.localOffset_x, fromBelt.localOffset_y);
+            Segment yFirst1 = new Segment(toBelt.localOffset_x, toBelt.localOffset_y, toBelt.localOffset_x, fromBelt.localOffset_y); // 先在y方向上
+            Segment yFirst2 = new Segment(toBelt.localOffset_x, fromBelt.localOffset_y, fromBelt.localOffset_x, fromBelt.localOffset_y);
             for (int z = beginZ; z < segLayers.Count; z++)
             {
-                if (segLayers[z].CollideCheckValid(segment))
+                if (isDirectlyConnect) // 直连，只需要判断斜线
                 {
-                    return z;
+                    if (segLayers[z].CollideCheckValid(segment))
+                    {
+                        return z;
+                    }
+                }
+                else
+                {
+                    if (segLayers[z].CollideCheckValid(xFirst1) && segLayers[z].CollideCheckValid(xFirst2))
+                    {
+                        changeXFirst = true;
+                        return z;
+                    }
+                    else if (segLayers[z].CollideCheckValid(yFirst1) && segLayers[z].CollideCheckValid(yFirst2))
+                    {
+                        changeXFirst = false;
+                        return z;
+                    }
                 }
             }
 
@@ -860,7 +889,17 @@ namespace DSPCalculator.Bp
             {
                 return -1;
             }
+            
+        }
 
+        private bool IsDirectlyConnect(BlueprintBuilding fromBelt, BlueprintBuilding toBelt)
+        {
+            if (!orthogonalConnect)
+                return true;
+            if (Math.Abs(fromBelt.localOffset_x - toBelt.localOffset_x) < 0.5f || Math.Abs(fromBelt.localOffset_y - toBelt.localOffset_y) < 0.5f)
+                return true;
+
+            return false;
         }
 
         /// <summary>
@@ -873,7 +912,9 @@ namespace DSPCalculator.Bp
         {
             if (!ConnectBeltsIfAdjacent(fromBelt, toBelt))
             {
-                int layerZ = FindLegalLayer(fromBelt, toBelt);
+                bool changeXFirst;
+                bool isDirectlyConnect;
+                int layerZ = FindLegalLayer(fromBelt, toBelt, out changeXFirst, out isDirectlyConnect);
                 if (layerZ < 0)
                 {
                     Utils.logger.LogWarning("由于可用层数不足，连接失败");
@@ -881,8 +922,25 @@ namespace DSPCalculator.Bp
                 }
                 else
                 {
-                    ConnectBeltsInLayer(fromBelt, toBelt, layerZ + 0.5f);
-                    segLayers[layerZ].AddSegment(fromBelt, toBelt);
+                    if (isDirectlyConnect)
+                    {
+                        ConnectBeltsInLayer(fromBelt, toBelt, layerZ + 0.5f);
+                        segLayers[layerZ].AddSegmentDirect(fromBelt, toBelt);
+                    }
+                    else // 正交
+                    {
+                        ConnectBeltsOrthogonalInLayer(fromBelt, toBelt, layerZ + 0.5f, changeXFirst);
+                        if(changeXFirst)
+                        {
+                            segLayers[layerZ].AddSegment(toBelt.localOffset_x, toBelt.localOffset_y, fromBelt.localOffset_x, toBelt.localOffset_y);
+                            segLayers[layerZ].AddSegment(fromBelt.localOffset_x, toBelt.localOffset_y, fromBelt.localOffset_x, fromBelt.localOffset_y);
+                        }
+                        else
+                        {
+                            segLayers[layerZ].AddSegment(toBelt.localOffset_x, toBelt.localOffset_y, toBelt.localOffset_x, fromBelt.localOffset_y);
+                            segLayers[layerZ].AddSegment(toBelt.localOffset_x, fromBelt.localOffset_y, fromBelt.localOffset_x, fromBelt.localOffset_y);
+                        }
+                    }
                 }
             }
             return true;
@@ -1096,6 +1154,166 @@ namespace DSPCalculator.Bp
         }
 
         /// <summary>
+        /// 目前对fromBelt或者toBelt在非整数格点的情况的处理可能会有问题
+        /// </summary>
+        /// <param name="fromBelt"></param>
+        /// <param name="toBelt"></param>
+        /// <param name="actualHeight"></param>
+        /// <param name="changeXFirst"></param>
+        /// <returns></returns>
+        private bool ConnectBeltsOrthogonalInLayer(BlueprintBuilding fromBelt, BlueprintBuilding toBelt, float actualHeight, bool changeXFirst)
+        {
+            if (actualHeight < 0)
+            {
+                return false;
+            }
+
+            int toZ = (int)Math.Round(toBelt.localOffset_z);
+            int fromZ = (int)Math.Round(fromBelt.localOffset_z);
+            int zBase = (int)actualHeight; // 传送带那层的层高的整数部分
+            if (zBase < toZ || zBase < fromZ)
+            {
+                return false;
+            }
+
+            actualHeight = (int)actualHeight + 0.5f; // 传送带那层的层高的实际数值
+            short itemId = toBelt.itemId;
+            short modelIndex = toBelt.modelIndex;
+            BlueprintBuilding last = toBelt;
+            float x1 = toBelt.localOffset_x;
+            float y1 = toBelt.localOffset_y;
+            float x2 = fromBelt.localOffset_x;
+            float y2 = fromBelt.localOffset_y;
+            // 从toBelt一路向上直到目标层的zBase高度
+            for (int z = toZ + 1; z <= zBase; z++)
+            {
+                BlueprintBuilding b = new BlueprintBuilding();
+                b.index = buildings.Count;
+                b.areaIndex = 0;
+                b.localOffset_x = x1;
+                b.localOffset_y = y1;
+                b.localOffset_z = z;
+                b.localOffset_x2 = b.localOffset_x;
+                b.localOffset_y2 = b.localOffset_y;
+                b.localOffset_z2 = b.localOffset_z;
+                b.inputToSlot = 1;
+                b.yaw = 0;
+                b.yaw2 = b.yaw;
+                b.itemId = itemId;
+                b.modelIndex = modelIndex;
+                b.outputToSlot = 1;
+                b.outputObj = last; // 连接上一个
+                b.parameters = new int[0];
+                buildings.Add(b);
+                //gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
+                last = b;
+            }
+            // 在层上正交连接
+            float inflectionX, inflectionY;
+            int stepCount1, stepCount2, bumpX1, bumpY1, bumpX2, bumpY2;
+            if (changeXFirst)
+            {
+                inflectionX = fromBelt.localOffset_x;
+                inflectionY = toBelt.localOffset_y;
+                bumpX1 = inflectionX - toBelt.localOffset_x > 0 ? 1 : -1;
+                bumpY1 = 0;
+                bumpX2 = 0;
+                bumpY2 = fromBelt.localOffset_y - inflectionY > 0 ? 1 : -1;
+                stepCount1 = (int)Math.Round(Math.Abs(fromBelt.localOffset_x - toBelt.localOffset_x));
+                stepCount2 = (int)Math.Round(Math.Abs(fromBelt.localOffset_y - toBelt.localOffset_y));
+            }
+            else
+            {
+                inflectionX = toBelt.localOffset_x;
+                inflectionY = fromBelt.localOffset_y;
+                bumpX1 = 0;
+                bumpY1 = inflectionY - toBelt.localOffset_y > 0 ? 1 : -1;
+                bumpX2 = fromBelt.localOffset_x - inflectionX > 0 ? 1 : -1;
+                bumpY2 = 0;
+                stepCount1 = (int)Math.Round(Math.Abs(fromBelt.localOffset_y - toBelt.localOffset_y));
+                stepCount2 = (int)Math.Round(Math.Abs(fromBelt.localOffset_x - toBelt.localOffset_x));
+            }
+
+            // step1
+            for (int i = 0; i <= stepCount1; i++) // 这里的边界条件是等于哦
+            {
+                BlueprintBuilding b = new BlueprintBuilding();
+                b.index = buildings.Count;
+                b.areaIndex = 0;
+                b.localOffset_x = toBelt.localOffset_x + bumpX1 * i;
+                b.localOffset_y = toBelt.localOffset_y + bumpY1 * i;
+                b.localOffset_z = actualHeight;
+                b.localOffset_x2 = b.localOffset_x;
+                b.localOffset_y2 = b.localOffset_y;
+                b.localOffset_z2 = b.localOffset_z;
+                b.inputToSlot = 1;
+                b.yaw = 0;
+                b.yaw2 = b.yaw;
+                b.itemId = itemId;
+                b.modelIndex = modelIndex;
+                b.outputToSlot = 1;
+                b.outputObj = last; // 连接上一个
+                b.parameters = new int[0];
+                buildings.Add(b);
+                last = b;
+            }
+            // step2
+            for (int i = 0; i < stepCount2; i++)
+            {
+                BlueprintBuilding b = new BlueprintBuilding();
+                b.index = buildings.Count;
+                b.areaIndex = 0;
+                b.localOffset_x = inflectionX + bumpX2 * i;
+                b.localOffset_y = inflectionY + bumpY2 * i;
+                b.localOffset_z = actualHeight;
+                b.localOffset_x2 = b.localOffset_x;
+                b.localOffset_y2 = b.localOffset_y;
+                b.localOffset_z2 = b.localOffset_z;
+                b.inputToSlot = 1;
+                b.yaw = 0;
+                b.yaw2 = b.yaw;
+                b.itemId = itemId;
+                b.modelIndex = modelIndex;
+                b.outputToSlot = 1;
+                b.outputObj = last; // 连接上一个
+                b.parameters = new int[0];
+                buildings.Add(b);
+                last = b;
+            }
+
+           
+            // 然后从目标层的zBase高度一路向下直到fromBelt
+            for (int z = zBase; z > fromZ; z--)
+            {
+                BlueprintBuilding b = new BlueprintBuilding();
+                b.index = buildings.Count;
+                b.areaIndex = 0;
+                b.localOffset_x = x2;
+                b.localOffset_y = y2;
+                b.localOffset_z = z;
+                b.localOffset_x2 = b.localOffset_x;
+                b.localOffset_y2 = b.localOffset_y;
+                b.localOffset_z2 = b.localOffset_z;
+                b.inputToSlot = 1;
+                b.yaw = 0;
+                b.yaw2 = b.yaw;
+                b.itemId = itemId;
+                b.modelIndex = modelIndex;
+                b.outputToSlot = 1;
+                b.outputObj = last; // 连接上一个
+                b.parameters = new int[0];
+                buildings.Add(b);
+                //gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
+                last = b;
+            }
+            // 最后连接fromBelt
+            fromBelt.outputToSlot = 1;
+            fromBelt.outputObj = last;
+
+            return true;
+
+        }
+        /// <summary>
         /// 将两个belt使用高架连接
         /// </summary>
         /// <param name="beltItemId"></param>
@@ -1261,7 +1479,7 @@ namespace DSPCalculator.Bp
             segments = new List<Segment>();
         }
 
-        public void AddSegment(BlueprintBuilding fromBelt, BlueprintBuilding toBelt)
+        public void AddSegmentDirect(BlueprintBuilding fromBelt, BlueprintBuilding toBelt)
         {
             AddSegment(fromBelt.localOffset_x, fromBelt.localOffset_y, toBelt.localOffset_x, toBelt.localOffset_y);
         }
@@ -1287,7 +1505,9 @@ namespace DSPCalculator.Bp
             for (int i = 0; i < segments.Count; i++)
             {
                 if (segments[i].CrossOrNear(segment, minDistance))
+                {
                     return false;
+                }
             }
 
             return true;

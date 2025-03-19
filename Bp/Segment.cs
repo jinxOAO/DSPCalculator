@@ -44,11 +44,11 @@ namespace DSPCalculator.Bp
             float squaredDistance = minDistance * minDistance;
 
             // 首先判断相交，不相交则判断距离
-            if (Math.Abs(p1.x - p2.x) < 0.001f && Math.Abs(other.p1.x - other.p2.x) < 0.001f) // 如果平行，且都是k为无穷的情况，直接判断x距离
+            if (isVert && other.isVert) // 如果平行，且都是k为无穷的情况，直接判断x距离
             {
                 return Math.Abs(p1.x - other.p1.x) < minDistance;
             }
-            else if (other.k == k) // 如果平行，直接判断距离
+            else if (Math.Abs(other.k - k) <= 0.0001f && isVert == other.isVert) // 如果平行，直接判断距离
             {
                 return ((other.b - b) * (other.b - b) / (1 + k * k)) < squaredDistance; // 如果距离够远则不near
             }
@@ -65,7 +65,6 @@ namespace DSPCalculator.Bp
                 float cc1 = other.vec.Cross(vv1);
                 float cc2 = other.vec.Cross(vv2);
                 float res2 = cc1 * cc2;
-
                 if (res1 <= 0 && res2 <= 0)
                 {
                     return true;
