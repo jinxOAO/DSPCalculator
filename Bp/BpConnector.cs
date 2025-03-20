@@ -13,7 +13,7 @@ using UnityEngine;
 
 namespace DSPCalculator.Bp
 {
-    public class BpConnector
+    public class BpConnector : BpBuildingList
     {
         public static bool enabled = true;
 
@@ -23,13 +23,12 @@ namespace DSPCalculator.Bp
         public List<BpBlockProcessor> processors;
         public Dictionary<int, BpBlockProcessor> processorsMap; // recipeId到对应的processor映射
         public List<BpBlockProcessor> labProcessors; // 所有使用可堆叠的研究站的蓝图，不放在processorMap里面，而是放在这里面，为了防止交叉走线穿过研究站（特别高），因此所有使用lab的蓝图要左端对齐，统一放在最右侧边缘，这样就会产生高架传送带穿过lab的情况
-        public List<BlueprintBuilding> buildings;
         public Dictionary<int, BpItemSumInfo> itemSumInfos; // 存储每个Item所有配方的产出或者消耗总和，所需求的带速的最大值，表示潜在的单条带需要承担的最大运力
         public Dictionary<int, BpItemPathInfo> itemPathInfos; // 存储每个Item用于构造串联线路的信息
 
         public List<BpBlockLineInfo> lines;
         public List<BpSegmentLayer> segLayers; // 所有架空连接的传送带所在层的信息
-        public List<BpTerminalInfo> terminalInfos; // 所有向外连接的输出、输出接口的belt信息
+        public List<BpTerminalInfo> terminalInfos; // 所有向外连接的输入、输出接口的belt信息
         public Dictionary<int, int> additionalInputItems; // 由于部分中间产物的蓝图无法生成（例如星际组装厂解决此配方），所有这个蓝图提供的物品都需要额外的输入口
         public Dictionary<int, int> additionalOutputItems; //  由于部分中间产物的蓝图无法生成，所有这个蓝图需求的物品都要作为额外的输出口
         public Vector2 labBlocksOriginPoint; // 所有lab蓝图集中放置的起始点坐标
@@ -40,6 +39,7 @@ namespace DSPCalculator.Bp
         public bool orthogonalConnect; // 正交连接
         public bool forcePortOnLeft; // 强制出入口放在左侧而不是上边
         public bool connectCoaters; // 是否生成串联喷涂机入口的带子
+        public int priorityPLSTopOrLeft; // -1 = forceLeft;   1 = forceTop;   0 = noForce
         public int width;
         public int height;
 
@@ -50,7 +50,7 @@ namespace DSPCalculator.Bp
         // 以下为静态量
         public static float minBeltDistance = 0.5f; // 两条带在同一高度时，允许的最近点的距离
 
-        public BpConnector(UICalcWindow calcWindow)
+        public BpConnector(UICalcWindow calcWindow, int genLevel)
         {
             this.calcWindow = calcWindow;
             solution = calcWindow.solution;
@@ -59,6 +59,8 @@ namespace DSPCalculator.Bp
             processorsMap = new Dictionary<int, BpBlockProcessor>();
             labProcessors = new List<BpBlockProcessor>();
             buildings = new List<BlueprintBuilding>();
+            PLSs = new List<int>();
+            gridMap = new Dictionary<int, Dictionary<int, int>>();
             itemSumInfos = new Dictionary<int, BpItemSumInfo>();
             itemPathInfos = new Dictionary<int, BpItemPathInfo>();
             lines = new List<BpBlockLineInfo>();
@@ -68,22 +70,24 @@ namespace DSPCalculator.Bp
             additionalOutputItems = new Dictionary<int, int>();
             labBlocksOriginPoint = Vector2.zero;
             proliferatorUsed = new Dictionary<int, int>();
-            succeeded = GenerateFullBlueprint();
+            succeeded = GenerateFullBlueprint(genLevel);
         }
 
         private bool GenerateFullBlueprint(int genLevel = 0, bool forcePortOnLeft = false, bool orthogonalConnect = true)
         {
             Stopwatch timer = new Stopwatch();
             this.genLevel = genLevel;
+            this.priorityPLSTopOrLeft = 0;
             this.forcePortOnLeft = forcePortOnLeft;
-            this.connectCoaters = true;
+            this.connectCoaters = solution.userPreference.bpConnectBlackboxCoater;
             this.orthogonalConnect = orthogonalConnect;
+            ResetBp();
             // 判断每种物品，单带运力是否足够
             timer.Start();
             if (!CalcItemSumInfos())
                 return false;
             timer.Stop();
-            Utils.logger.LogInfo($"判断每种物品的单带运力是否足够耗时{timer.Elapsed.TotalMilliseconds}ms");
+            // Utils.logger.LogInfo($"判断每种物品的单带运力是否足够耗时{timer.Elapsed.TotalMilliseconds}ms");
 
 
             // 生成所有processor
@@ -91,20 +95,20 @@ namespace DSPCalculator.Bp
             if (!GenProcessors())
                 return false;
             timer.Stop();
-            Utils.logger.LogInfo($"生成processor过程耗时{timer.Elapsed.TotalMilliseconds}ms");
+            // Utils.logger.LogInfo($"生成processor过程耗时{timer.Elapsed.TotalMilliseconds}ms");
 
             // 根据长度降序排序
             timer.Restart();
             processors = processors.OrderByDescending(x => x.width).ToList();
             timer.Stop();
-            Utils.logger.LogInfo($"排序processor过程耗时{timer.Elapsed.TotalMilliseconds}ms");
+            // Utils.logger.LogInfo($"排序processor过程耗时{timer.Elapsed.TotalMilliseconds}ms");
 
             //填充行列表
             timer.Restart();
             if (!ArrangeBpBlocks(processors))
                 return false;
             timer.Stop();
-            Utils.logger.LogInfo($"排列processor过程耗时{timer.Elapsed.TotalMilliseconds}ms");
+            // Utils.logger.LogInfo($"排列processor过程耗时{timer.Elapsed.TotalMilliseconds}ms");
 
 
             //放置建筑
@@ -112,7 +116,7 @@ namespace DSPCalculator.Bp
             if (!PlaceBuildings())
                 return false;
             timer.Stop();
-            Utils.logger.LogInfo($"重新放置buildings过程耗时{timer.Elapsed.TotalMilliseconds}ms");
+            // Utils.logger.LogInfo($"重新放置buildings过程耗时{timer.Elapsed.TotalMilliseconds}ms");
 
 
             //放置建筑
@@ -120,11 +124,17 @@ namespace DSPCalculator.Bp
             if (!ConnectBlocks())
                 return false;
             timer.Stop();
-            Utils.logger.LogInfo($"连接各个block过程耗时{timer.Elapsed.TotalMilliseconds}ms");
-
+            // Utils.logger.LogInfo($"连接各个block过程耗时{timer.Elapsed.TotalMilliseconds}ms");
 
             PostProcess(); // 后处理，完成蓝图构建
             return true;
+        }
+
+        private void ResetBp()
+        {
+            buildings.Clear();
+            PLSs.Clear();
+            gridMap.Clear();
         }
 
         // 判断每种物品，单带运力是否足够
@@ -507,21 +517,38 @@ namespace DSPCalculator.Bp
                 targets[solution.targets[i].itemId] = 1;
             }
 
+            bool succeeded = true;
+
             // 额外输入输出口的基本信息
             int portX0, portY0, expandX, expandY, directionX, directionY; // expand代表port越来越多时，坐标的bump数值。direction代表一条带子从port输入输出端点，到连接block内的端点的方向
-            if (width >= height && !forcePortOnLeft) // 黑盒的横向宽大于纵向高度，则输入输出口都在上边缘
+            bool isTopSide;
+            // 根据优先级（forceLeft > priority有设定的值 > 优先选取最窄边）
+            if (forcePortOnLeft)
+                isTopSide = false;
+            else if (priorityPLSTopOrLeft > 0)
+                isTopSide = true;
+            else if (priorityPLSTopOrLeft < 0)
+                isTopSide = false;
+            else if (width >= height)
+                isTopSide = false;
+            else
+                isTopSide = true;
+
+            if (isTopSide) 
             {
-                portX0 = 0;
+                isTopSide = true;
+                portX0 = 1;
                 portY0 = height + 2;
                 expandX = 2;
                 expandY = 0;
                 directionX = 0;
                 directionY = -1;
             }
-            else // 否则输入输出口都在左边缘
+            else
             {
+                isTopSide = false;
                 portX0 = -3;
-                portY0 = 0;
+                portY0 = 1;
                 expandX = 0;
                 expandY = 2;
                 directionX = 1;
@@ -562,7 +589,7 @@ namespace DSPCalculator.Bp
                             if (itemPath.provideProcessors.Count > 0)
                             {
                                 BlueprintBuilding blockBeltTerminal = itemPath.provideProcessors[0].inputBelts[itemId];
-                                TryConnect(connectTerminal, blockBeltTerminal);
+                                succeeded = succeeded && TryConnect(connectTerminal, blockBeltTerminal);
                                 curTerminal = itemPath.provideProcessors[0].outputBelts[itemId];
                             }
                         }
@@ -584,7 +611,7 @@ namespace DSPCalculator.Bp
                         for (int i = 1; i < itemPath.provideProcessors.Count; i++)
                         {
                             BlueprintBuilding nextInput = itemPath.provideProcessors[i].inputBelts[itemId];
-                            TryConnect(curTerminal, nextInput);
+                            succeeded = succeeded && TryConnect(curTerminal, nextInput);
                             curTerminal = itemPath.provideProcessors[i].outputBelts[itemId];
                         }
                     }
@@ -593,7 +620,7 @@ namespace DSPCalculator.Bp
                     for (int i = 0; i < itemPath.demandProcessors.Count; i++)
                     {
                         BlueprintBuilding nextInput = itemPath.demandProcessors[i].inputBelts[itemId];
-                        TryConnect(curTerminal, nextInput);
+                        succeeded = succeeded && TryConnect(curTerminal, nextInput);
                         curTerminal = itemPath.demandProcessors[i].outputBelts[itemId];
                     }
 
@@ -608,7 +635,7 @@ namespace DSPCalculator.Bp
                         BlueprintBuilding portTerminal = AddBelt(curTerminal.itemId, terminalX, terminalY, 0, null, null, itemId);
                         BlueprintBuilding midBelt = AddBelt(curTerminal.itemId, terminalX + directionX, terminalY + directionY, 0, null, portTerminal);
                         BlueprintBuilding connectTerminal = AddBelt(curTerminal.itemId, terminalX + 2 * directionX, terminalY + 2 * directionY, 0, null, midBelt);
-                        TryConnect(curTerminal, connectTerminal);
+                        succeeded = succeeded && TryConnect(curTerminal, connectTerminal);
                         curTerminal = portTerminal;
                         terminalInfos.Add(new BpTerminalInfo(portTerminal, itemId, false));
                         //itemPath.inputTerminal = null; // 只要是有外入口，那么后续就不能再处理他的inputTerminal了，想要获取，统一从terminalInfos里面获取
@@ -630,7 +657,7 @@ namespace DSPCalculator.Bp
                             BlueprintBuilding connectTerminal = AddBelt(blockBeltTerminal.itemId, terminalX + 2 * directionX, terminalY + 2 * directionY, 0, null, null);
                             BlueprintBuilding midBelt = AddBelt(blockBeltTerminal.itemId, terminalX + directionX, terminalY + directionY, 0, null, connectTerminal);
                             BlueprintBuilding portTerminal = AddBelt(blockBeltTerminal.itemId, terminalX, terminalY, 0, null, midBelt, itemId);
-                            TryConnect(connectTerminal, blockBeltTerminal);
+                            succeeded = succeeded && TryConnect(connectTerminal, blockBeltTerminal);
                             terminalInfos.Add(new BpTerminalInfo(portTerminal, itemId, true));
                         }
 
@@ -665,7 +692,7 @@ namespace DSPCalculator.Bp
                                 if (itemPath.provideProcessors.Count > 0)
                                 {
                                     BlueprintBuilding blockBeltTerminal = itemPath.provideProcessors[0].inputBelts[itemId];
-                                    TryConnect(connectTerminal, blockBeltTerminal);
+                                    succeeded = succeeded && TryConnect(connectTerminal, blockBeltTerminal);
                                     curTerminal = itemPath.provideProcessors[0].outputBelts[itemId];
                                 }
                             }
@@ -682,7 +709,7 @@ namespace DSPCalculator.Bp
                         for (int i = 1; i < itemPath.provideProcessors.Count; i++)
                         {
                             BlueprintBuilding nextInput = itemPath.provideProcessors[i].inputBelts[itemId];
-                            TryConnect(curTerminal, nextInput);
+                            succeeded = succeeded && TryConnect(curTerminal, nextInput);
                             curTerminal = itemPath.demandProcessors[i].outputBelts[itemId];
                         }
 
@@ -699,8 +726,8 @@ namespace DSPCalculator.Bp
                             BlueprintBuilding bypassInputBelt = AddBelt(curTerminal.itemId, terminalX + directionX, terminalY + directionY, 0, null, convergeBelt, 0, 2);
                             BlueprintBuilding portTerminal = AddBelt(curTerminal.itemId, terminalX, terminalY, 0, null, bypassInputBelt, itemId);
 
-                            TryConnect(curTerminal, beginBelt);
-                            TryConnect(endBelt, itemPath.demandProcessors[i].inputBelts[itemId]);
+                            succeeded = succeeded && TryConnect(curTerminal, beginBelt);
+                            succeeded = succeeded && TryConnect(endBelt, itemPath.demandProcessors[i].inputBelts[itemId]);
                             curTerminal = itemPath.demandProcessors[i].outputBelts[itemId];
                             terminalInfos.Add(new BpTerminalInfo(portTerminal, itemId, true));
                         }
@@ -715,7 +742,7 @@ namespace DSPCalculator.Bp
                             BlueprintBuilding portTerminal = AddBelt(curTerminal.itemId, terminalX, terminalY, 0, null, null, itemId);
                             BlueprintBuilding midBelt = AddBelt(curTerminal.itemId, terminalX + directionX, terminalY + directionY, 0, null, portTerminal);
                             BlueprintBuilding connectTerminal = AddBelt(curTerminal.itemId, terminalX + 2 * directionX, terminalY + 2 * directionY, 0, null, midBelt);
-                            TryConnect(curTerminal, connectTerminal);
+                            succeeded = succeeded && TryConnect(curTerminal, connectTerminal);
                             curTerminal = portTerminal;
                             terminalInfos.Add(new BpTerminalInfo(portTerminal, itemId, false));
                         }
@@ -777,7 +804,7 @@ namespace DSPCalculator.Bp
                                 if (itemPath.provideProcessors.Count > 0)
                                 {
                                     BlueprintBuilding blockBeltTerminal = itemPath.provideProcessors[0].inputBelts[proliferatorItemId];
-                                    TryConnect(connectTerminal, blockBeltTerminal);
+                                    succeeded = succeeded && TryConnect(connectTerminal, blockBeltTerminal);
                                 }
                             }
                         }
@@ -798,11 +825,45 @@ namespace DSPCalculator.Bp
                             BpBlockProcessor processor = line.processors[j];
                             if (processor.proliferatorInputBelts.ContainsKey(proliferatorItemId))
                             {
-                                TryConnect(terminal, processor.proliferatorInputBelts[proliferatorItemId]);
+                                succeeded = succeeded && TryConnect(terminal, processor.proliferatorInputBelts[proliferatorItemId]);
                                 terminal = processor.proliferatorOutputBelts[proliferatorItemId];
                             }
                         }
                     }
+                }
+            }
+            if(!succeeded && orthogonalConnect) // 如果没成功，那么可能是由于高度不够导致的连接失败，则取消正交连接的限制，改为直接斜线连接过去进行尝试
+            {
+                this.orthogonalConnect = false;
+                Utils.logger.LogInfo("由于正交连接失败，改为斜线直连");
+                CalcItemSumInfos();
+                GenProcessors();
+                processors = processors.OrderByDescending(x => x.width).ToList();
+                ArrangeBpBlocks(processors);
+                PlaceBuildings();
+                return ConnectBlocks();
+            }
+            bool needToRegenerate = false;
+
+            // 如果优先放在短边的策略导致了超出对应宽度有点太多了，则改为优先放在长的那边
+            if (priorityPLSTopOrLeft == 0)
+            {
+                int PLSCount = terminalInfos.Count / BpDB.PLSMaxStorageKinds + 1;
+                if (terminalInfos.Count % BpDB.PLSMaxStorageKinds == 0)
+                    PLSCount--;
+                int PLSNeed = (PLSCount - 1) * BpDB.PLSDistance + 9;
+                if (terminalInfos.Count % BpDB.PLSMaxStorageKinds == 0 && terminalInfos.Count > 0)
+                    PLSNeed++;
+                Utils.logger.LogInfo($"PLS{PLSNeed},height{height},width{width},istop?{isTopSide}");
+                if (isTopSide && (PLSNeed > width + 4 || (PLSNeed > width && height <= PLSNeed + 8)))  // 超出过多，或者超出一点，而另一边恰好正好
+                {
+                    priorityPLSTopOrLeft = -1;
+                    needToRegenerate = true;
+                }
+                else if (!isTopSide && (labProcessors.Count == 0 || !portXExceedLabTerminal) && (PLSNeed > height + 4 || (PLSNeed > height && width <= PLSNeed + 8)))
+                {
+                    priorityPLSTopOrLeft = 1;
+                    needToRegenerate = true;
                 }
             }
             if (expandX > 0 && labProcessors.Count > 0) // 如果是在上边缘向右逐步部署port，且有lab，则需要注意port是否超出了lab的terminal的X，超出有可能产生碰撞，这时候需要以强制在左侧生成port的要求重新生成一遍蓝图
@@ -811,17 +872,140 @@ namespace DSPCalculator.Bp
                 {
                     this.forcePortOnLeft = true;
                     Utils.logger.LogInfo("由于port超出了lab的X，强制在左侧生成port");
-                    CalcItemSumInfos();
-                    GenProcessors();
-                    processors = processors.OrderByDescending(x => x.width).ToList();
-                    ArrangeBpBlocks(processors);
-                    PlaceBuildings();
-                    return ConnectBlocks();
+                    needToRegenerate = true;
+                }
+            }
+            
+
+            // 如果因任何原因需要重新生成，则重新执行前面的操作
+            if(needToRegenerate)
+            {
+                ResetBp();
+                CalcItemSumInfos();
+                GenProcessors();
+                processors = processors.OrderByDescending(x => x.width).ToList();
+                ArrangeBpBlocks(processors);
+                PlaceBuildings();
+                return ConnectBlocks();
+            }
+
+            if(genLevel > 0)
+            {
+                CreatePLSs(isTopSide);
+            }
+
+            return true;
+        }
+
+
+        public bool CreatePLSs(bool isTopSide)
+        {
+            gridMap.Clear();
+            PLSs.Clear();
+            int portTerminalCnt = terminalInfos.Count;
+            int PLSIter = portTerminalCnt / BpDB.PLSMaxStorageKinds;
+            int expandX, expandY, beginX, beginY;
+            if(isTopSide)
+            {
+                beginX = 4;
+                beginY = height + 6;
+                expandX = 1;
+                expandY = 0;
+            }
+            else
+            {
+                beginX = -7;
+                beginY = 4;
+                expandX = 0;
+                expandY = 1;
+            }
+            for (int i = 0; i <= PLSIter ; i++)
+            {
+                if (i * BpDB.PLSMaxStorageKinds >= portTerminalCnt)
+                    break;
+
+                // 首先在正确位置创建PLS
+                int x = beginX + i * BpDB.PLSDistance * expandX;
+                int y = beginY + i * BpDB.PLSDistance * expandY;
+                int plsBuildingListIndex = this.AddPLS(x, y);
+
+                for (int j = 0; j < BpDB.PLSMaxStorageKinds; j++)
+                {
+                    int index = i * BpDB.PLSMaxStorageKinds + j;
+                    if(index >= portTerminalCnt)
+                    {
+                        break;
+                    }
+                    BpTerminalInfo terminalInfo = terminalInfos[index];
+                    if (j == 1 || j == 2)
+                    {
+                        int slotNum = j == 1 ? 6 : 8;
+                        if (!isTopSide)
+                            slotNum = j == 1 ? 9 : 11;
+                        int storageIndex;
+                        this.SetOrGetPLSStorage(plsBuildingListIndex, terminalInfo.itemId, terminalInfo.isDemand, out storageIndex);
+                        this.ConnectPLSToBelt(plsBuildingListIndex, slotNum, terminalInfo.isDemand ? storageIndex : -1, terminalInfo.belt.index);
+                    }
+                    else if (j == 0 || j == 3)
+                    {
+                        int finalBeltId;
+                        List<int> xs;
+                        List<int> ys;
+                        if (isTopSide)
+                        {
+                            ys = new List<int> { y - 1, y - 2, y - 3, y - 3 };
+                            if (j == 0)
+                                xs = new List<int> { x - 4, x - 4, x - 4, x - 3 };
+                            else
+                                xs = new List<int> { x + 4, x + 4, x + 4, x + 3 };
+                        }
+                        else
+                        {
+                            xs = new List<int> { x + 1, x + 2, x + 3, x + 3 };
+                            if (j == 0)
+                                ys = new List<int> { y - 4, y - 4, y - 4, y - 3 };
+                            else
+                                ys = new List<int> { y + 4, y + 4, y + 4, y + 3 };
+
+                        }
+                        int beginIdx = 0;
+                        int inc = 1;
+                        if(terminalInfo.isDemand)
+                        {
+                            beginIdx = 3;
+                            inc = -1;
+                        }
+                        BlueprintBuilding lastBelt = null;
+                        for (int k = 0; k < 4; k++)
+                        {
+                            int actualListIdx = beginIdx + k * inc;
+                            int actualX = xs[actualListIdx];
+                            int actualY = ys[actualListIdx];
+                            BlueprintBuilding b;
+                            if (k == 0 && terminalInfo.isDemand)
+                                b = AddBelt(terminalInfo.belt.itemId, actualX, actualY, 0, null, terminalInfo.belt);
+                            else if (k == 3 && !terminalInfo.isDemand)
+                                b = AddBelt(terminalInfo.belt.itemId, actualX, actualY, 0, terminalInfo.belt, lastBelt);
+                            else
+                                b = AddBelt(terminalInfo.belt.itemId, actualX, actualY, 0, null, lastBelt);
+
+                            lastBelt = b;
+                        }
+                        int waitingToConnectPLS = gridMap.GetBuilding(xs[0], ys[0]);
+                        int slotNum = j == 0 ? 5 : 9;
+                        if (!isTopSide)
+                            slotNum = j == 0 ? 8 : 0;
+
+                        int storageIndex;
+                        this.SetOrGetPLSStorage(plsBuildingListIndex, terminalInfo.itemId, terminalInfo.isDemand, out storageIndex);
+
+                        this.ConnectPLSToBelt(plsBuildingListIndex, slotNum, terminalInfo.isDemand ? storageIndex : -1, waitingToConnectPLS);
+
+                    }
                 }
             }
             return true;
         }
-
 
 
         private bool PostProcess()
@@ -1352,7 +1536,7 @@ namespace DSPCalculator.Bp
                 b.parameters = new int[] { icon, 0 };
             }
             buildings.Add(b);
-            //gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
+            gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
             if (fromBelt != null)
             {
                 fromBelt.outputToSlot = 1;
@@ -1370,7 +1554,7 @@ namespace DSPCalculator.Bp
             {
                 int PLSIndex = (terminalInfos.Count - 1) / BpDB.PLSMaxStorageKinds;
                 int subIndex = (terminalInfos.Count - 1) % BpDB.PLSMaxStorageKinds;
-                int terminalX = BpDB.PLSDistance * PLSIndex + 2 * subIndex;
+                int terminalX = BpDB.PLSDistance * PLSIndex + 2 * subIndex + 1;
 
                 return terminalX + 1 > labBlocksOriginPoint.x;
             }

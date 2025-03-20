@@ -121,6 +121,7 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("生成喷涂机从不", "Never", "从不", "Never");
 
             LocalizationModule.RegisterTranslation("生成产物喷涂机", "Spray Products", "喷涂产物", "Spray Products");
+            LocalizationModule.RegisterTranslation("产物生成喷涂机说明", "For the product coater, the default proliferator is to use the same proliferator as the raw material uses. If the raw material is set to not spray the proliferator, the product will default use Proliferator Mk.III. \n<color=#FD965EC0>If the entire production line uses multiple different proliferator settings, it is recommended to disable this option.</color>", "对于产物喷涂机的增产剂，默认使用与原材料同种的增产剂。如果原材料设置为不喷涂增产剂，则产物默认使用Mk.III型。\n<color=#FD965EC0>若整个产线使用了多种不同的增产剂设置，建议不要开启此选项。</color>", "For the product coater, the default proliferator is to use the same proliferator as the raw material uses. If the raw material is set to not spray the proliferator, the product will default use Proliferator Mk.III. \n<color=#FD965EC0>If the entire production line uses multiple different proliferator settings, it is recommended to disable this option.</color>");
 
             LocalizationModule.RegisterTranslation("物流塔提供增产剂", "PLS provide proliferators", "物流塔提供增产剂", "PLS provide proliferators");
             LocalizationModule.RegisterTranslation("物流塔提供增产剂是", "Yes", "是", "Yes");
@@ -146,6 +147,16 @@ namespace DSPCalculator
 
             LocalizationModule.RegisterTranslation("传送带堆叠", "Item Stack", "物料堆叠", "Item Stack");
             LocalizationModule.RegisterTranslation("传送带堆叠当前科技", "Current Tech", "当前科技", "Current Tech");
+
+            LocalizationModule.RegisterTranslation("生成黑盒蓝图标题", "Assemble to Generate Blackbox Blueprint", "拼接以生成黑盒蓝图", "Assemble to Generate Blackbox Blueprint");
+            LocalizationModule.RegisterTranslation("生成黑盒蓝图说明", "<color=#FD965EC0>[Testing Function]</color> Unable to generate blueprints with excessive output.\nHold <color=#FD965EC0>Shift</color> to generate a blueprint <color=#FD965EC0>with PLS</color>.", "<color=#FD965EC0>[测试中的功能]</color>无法生成产量过大的蓝图。\n按住<color=#FD965EC0>Shift</color>则生成<color=#FD965EC0>带有行星内物流塔</color>的蓝图。", "<color=#FD965EC0>[Testing Function]</color> Unable to generate blueprints with excessive output.\nHold <color=#FD965EC0>Shift</color> to generate a blueprint <color=#FD965EC0>with PLS</color>.");
+            LocalizationModule.RegisterTranslation("黑盒连接喷涂机进料口", "Blackbox Proliferator", "黑盒喷涂机供给带", "Blackbox Proliferator");
+            LocalizationModule.RegisterTranslation("黑盒连接喷涂机生成", "Generate", "生成", "Generate");
+            LocalizationModule.RegisterTranslation("黑盒连接喷涂机不生成", "Don't Generate", "不生成", "Don't Generate");
+            LocalizationModule.RegisterTranslation("黑盒连接喷涂机进料口标题", "Generate", "生成", "Generate");
+            LocalizationModule.RegisterTranslation("黑盒连接喷涂机进料口说明", "<color=#FD965EC0>This setting only applies to the generation of integrated blackbox blueprint.</color>\nThe proliferator supply conveyor belt will be automatically created for all coaters, but <color=#FD965EC0>this will cause a large number of gaps in the blueprint</color>.", "<color=#FD965EC0>此设置仅对生成拼合的整体黑盒蓝图生效。</color>\n生成喷涂机的供给传送带，会在生成蓝图时自动为所有喷涂机创建增产剂的进料传送带，但<color=#FD965EC0>这会导致蓝图产生大量空隙</color>。", "<color=#FD965EC0>This setting only applies to the generation of integrated blackbox blueprint.</color>\nThe proliferator supply conveyor belt will be automatically created for all coaters, but <color=#FD965EC0>this will cause a large number of gaps in the blueprint</color>.");
+            LocalizationModule.RegisterTranslation("黑盒不连接喷涂机进料口标题", "Don't Generate", "不生成", "Don't Generate");
+            LocalizationModule.RegisterTranslation("黑盒不连接喷涂机进料口说明", "<color=#FD965EC0>This setting only applies to the generation of integrated blackbox blueprint.</color>\nWhen generating blueprints, not proliferator feeding belts will be created for coaters.The <color=#FD965EC0>blueprint will be assembled as densely as possible</color>, but you will need to build those proliferators supply belts by yourself.", "<color=#FD965EC0>此设置仅对生成拼合的整体黑盒蓝图生效。</color>\n生成蓝图时，不创建喷涂机增产剂的进料传送带，<color=#FD965EC0>蓝图会尽可能密集地拼合</color>，但你需要自行铺设用于为喷涂机供给增产剂的传送带。", "<color=#FD965EC0>This setting only applies to the generation of integrated blackbox blueprint.</color>\nWhen generating blueprints, not proliferator feeding belts will be created for coaters.The <color=#FD965EC0>blueprint will be assembled as densely as possible</color>, but you will need to build those proliferators supply belts by yourself.");
 
             LocalizationModule.RegisterTranslation("不在行星上无法粘贴蓝图警告", "You must be on a planet to paste blueprints!", "你必须处在行星上才能粘贴蓝图！", "You must be on a planet to paste blueprints!");
 

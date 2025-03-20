@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace DSPCalculator.Bp
 {
-    public class BpProcessor
+    public class BpProcessor : BpBuildingList
     {
         public static bool enabled = true;
 
@@ -53,9 +53,6 @@ namespace DSPCalculator.Bp
         public bool genCoater { get { return resourceGenCoater || productGenCoater; } } // 有喷涂机
         public bool PLSProvideProliferator { get { return genCoater && solution.userPreference.bpStationProlifSlot; } } // PLS提供增产剂
 
-        public Dictionary<int, Dictionary<int, int>> gridMap;
-        public List<BlueprintBuilding> buildings;
-        public List<int> PLSs;
 
         public BlueprintData blueprintData;
 

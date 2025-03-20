@@ -41,6 +41,7 @@ namespace DSPCalculator.Logic
         public bool bpSorterHighest;
         public bool bpSorterTechLimit;
         public int bpStackSetting;
+        public bool bpConnectBlackboxCoater;
 
         public bool showMixBeltInfo; // 是否显示混带数据
 
@@ -76,6 +77,7 @@ namespace DSPCalculator.Logic
             bpSorterHighest = false;
             bpSorterTechLimit = true;
             bpStackSetting = 0;
+            bpConnectBlackboxCoater = true;
         }
 
         public void ClearWhenChangeTarget()

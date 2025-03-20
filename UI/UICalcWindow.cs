@@ -560,15 +560,15 @@ namespace DSPCalculator.UI
                 genBpButtonObj.transform.localScale = Vector3.one;
                 genBpButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(0, 1);
                 genBpButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(0, 1);
-                genBpButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(250, -80, 0);
+                genBpButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(245, -80, 0);
                 if(CompatManager.GB)
                     genBpButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(240, -80, 0);
-                genBpButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 30);
+                genBpButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(25, 25);
                 genBpButtonObj.GetComponent<Image>().sprite = UICalcWindow.blueprintIconSprite;
                 genBpButtonObj.GetComponent<Button>().onClick.AddListener(() => { GenerateBlackboxBpAndPaste(); });
                 genBpUIBtn = genBpButtonObj.GetComponent<UIButton>();
                 genBpButtonObj.GetComponent<UIButton>().tips.tipTitle = "生成黑盒蓝图标题".Translate();
-                genBpButtonObj.GetComponent<UIButton>().tips.tipText = "生成黑盒蓝图描述".Translate();
+                genBpButtonObj.GetComponent<UIButton>().tips.tipText = "生成黑盒蓝图说明".Translate();
                 genBpButtonObj.GetComponent<UIButton>().tips.corner = 3;
                 genBpButtonObj.GetComponent<UIButton>().tips.width = 270;
                 Navigation nvg_gbp0 = new Navigation();
@@ -1006,17 +1006,22 @@ namespace DSPCalculator.UI
         public Image uibtnIcon_bpStack3;
         public Image uibtnIcon_bpStack2;
         public Image uibtnIcon_bpStack1;
+        public Image uibtnIcon_bpBlackboxConnectCoater;
+        public Image uibtnIcon_bpBlackboxNotConnectCoater;
 
         public void InitBpPreferceUI(Transform parent)
         {
             // 行数、喷涂机、传送带使用和科技、分拣器使用和科技
 
+            float lineBeginY = -20;
+            float lineSpacing = 23; // 实际是减去lineSpaceing，所以向下扩展保持lineSpacing为正数即可
+
             // 行数
             if (true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title1";
-                titleObj1.transform.localPosition = new Vector3(15, -20, 0);
+                titleObj1.name = "title0";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY, 0);
                 titleObj1.GetComponent<Text>().text = "蓝图行数".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1044,86 +1049,13 @@ namespace DSPCalculator.UI
                 cb2.GetComponent<UIButton>().tips.width = 300;
                 cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "蓝图行数双行";
             }
-            // 喷涂机
-            if (true)
-            {
-                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title2";
-                titleObj1.transform.localPosition = new Vector3(15, -45, 0);
-                titleObj1.GetComponent<Text>().text = "生成喷涂机".Translate();
-                titleObj1.GetComponent<Text>().fontSize = 14;
-
-                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
-                cb1.name = "cb1";
-                uibtnIcon_bpCoaterAuto = cb1.GetComponent<Image>();
-                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, -0, 0);
-                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(0); });
-                cb1.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机自动".Translate();
-                cb1.GetComponent<UIButton>().tips.tipText = "生成喷涂机自动说明".Translate();
-                cb1.GetComponent<UIButton>().tips.corner = 1;
-                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
-                cb1.GetComponent<UIButton>().tips.width = 300;
-                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机自动";
-
-                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
-                cb2.name = "cb2";
-                uibtnIcon_bpCoaterAlways = cb2.GetComponent<Image>();
-                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
-                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(1); });
-                //cb2.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机总是".Translate();
-                //cb2.GetComponent<UIButton>().tips.tipText = "生成喷涂机总是说明".Translate();
-                cb2.GetComponent<UIButton>().tips.corner = 1;
-                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
-                cb2.GetComponent<UIButton>().tips.width = 300;
-                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机总是";
-
-                GameObject cb3 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
-                cb3.name = "cb3";
-                uibtnIcon_bpCoaterNever = cb3.GetComponent<Image>();
-                cb3.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(280, 0, 0);
-                cb3.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(-1); });
-                //cb3.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机从不".Translate();
-                //cb3.GetComponent<UIButton>().tips.tipText = "生成喷涂机从不说明".Translate();
-                cb3.GetComponent<UIButton>().tips.corner = 1;
-                cb3.GetComponent<UIButton>().tips.delay = 0.1f;
-                cb3.GetComponent<UIButton>().tips.width = 300;
-                cb3.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机从不";
-            } 
-            // 为产物生成喷涂机
-            if (true)
-            {
-                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title2";
-                titleObj1.transform.localPosition = new Vector3(15, -70, 0);
-                titleObj1.GetComponent<Text>().text = "生成产物喷涂机".Translate();
-                titleObj1.GetComponent<Text>().fontSize = 14;
-
-                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
-                cb1.name = "cb1";
-                uibtnIcon_bpProductCoaterAlways = cb1.GetComponent<Image>();
-                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
-                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpProductCoaterSet(true); });
-                cb1.GetComponent<UIButton>().tips.corner = 1;
-                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
-                cb1.GetComponent<UIButton>().tips.width = 300;
-                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机总是";
-
-                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
-                cb2.name = "cb2";
-                uibtnIcon_bpProductCoaterNever = cb2.GetComponent<Image>();
-                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
-                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpProductCoaterSet(false); });
-                cb2.GetComponent<UIButton>().tips.corner = 1;
-                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
-                cb2.GetComponent<UIButton>().tips.width = 300;
-                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机从不";
-            }
+            
             // 物流塔预留增产剂槽位吗
             if (true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title3";
-                titleObj1.transform.localPosition = new Vector3(15, -95, 0);
+                titleObj1.name = "title1";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 1 * lineSpacing, 0);
                 titleObj1.GetComponent<Text>().text = "物流塔提供增产剂".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1157,8 +1089,8 @@ namespace DSPCalculator.UI
             if (true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title4";
-                titleObj1.transform.localPosition = new Vector3(15, -120, 0);
+                titleObj1.name = "title2";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 2 * lineSpacing, 0);
                 titleObj1.GetComponent<Text>().text = "首选传送带".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1190,8 +1122,8 @@ namespace DSPCalculator.UI
             if (true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title5";
-                titleObj1.transform.localPosition = new Vector3(15, -145, 0);
+                titleObj1.name = "title3";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 3 * lineSpacing, 0);
                 titleObj1.GetComponent<Text>().text = "传送带科技限制".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1224,8 +1156,8 @@ namespace DSPCalculator.UI
             if (true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title6";
-                titleObj1.transform.localPosition = new Vector3(15, -170, 0);
+                titleObj1.name = "title4";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 4 * lineSpacing, 0);
                 titleObj1.GetComponent<Text>().text = "首选分拣器".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1257,8 +1189,8 @@ namespace DSPCalculator.UI
             if (true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title7";
-                titleObj1.transform.localPosition = new Vector3(15, -195, 0);
+                titleObj1.name = "title5";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 5 * lineSpacing, 0);
                 titleObj1.GetComponent<Text>().text = "分拣器科技限制".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1291,8 +1223,8 @@ namespace DSPCalculator.UI
             if(true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title8";
-                titleObj1.transform.localPosition = new Vector3(15, -220, 0);
+                titleObj1.name = "title6";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 6 * lineSpacing, 0);
                 titleObj1.GetComponent<Text>().text = "传送带堆叠".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1347,6 +1279,115 @@ namespace DSPCalculator.UI
                 cb1.GetComponent<UIButton>().tips.delay = 0.1f;
                 cb1.GetComponent<UIButton>().tips.width = 0;
                 cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "1";
+            }
+            // 为原材料生成喷涂机
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title7";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 7 * lineSpacing, 0);
+                titleObj1.GetComponent<Text>().text = "生成喷涂机".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpCoaterAuto = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, -0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(0); });
+                cb1.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机自动".Translate();
+                cb1.GetComponent<UIButton>().tips.tipText = "生成喷涂机自动说明".Translate();
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 300;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机自动";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpCoaterAlways = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(1); });
+                //cb2.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机总是".Translate();
+                //cb2.GetComponent<UIButton>().tips.tipText = "生成喷涂机总是说明".Translate();
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机总是";
+
+                GameObject cb3 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb3.name = "cb3";
+                uibtnIcon_bpCoaterNever = cb3.GetComponent<Image>();
+                cb3.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(280, 0, 0);
+                cb3.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(-1); });
+                //cb3.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机从不".Translate();
+                //cb3.GetComponent<UIButton>().tips.tipText = "生成喷涂机从不说明".Translate();
+                cb3.GetComponent<UIButton>().tips.corner = 1;
+                cb3.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb3.GetComponent<UIButton>().tips.width = 300;
+                cb3.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机从不";
+            }
+            // 为产物生成喷涂机
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title8";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 8 * lineSpacing, 0);
+                titleObj1.GetComponent<Text>().text = "生成产物喷涂机".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpProductCoaterAlways = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpProductCoaterSet(true); });
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 300;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机总是";
+                cb1.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机总是".Translate();
+                cb1.GetComponent<UIButton>().tips.tipText = "产物生成喷涂机说明".Translate();
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpProductCoaterNever = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpProductCoaterSet(false); });
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机从不";
+            }
+            // 黑盒喷涂机是否连接供给带子
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title9";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 9 * lineSpacing, 0);
+                titleObj1.GetComponent<Text>().text = "黑盒连接喷涂机进料口".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpBlackboxConnectCoater = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpBlackboxCoaterConnectSet(true); });
+                cb1.GetComponent<UIButton>().tips.tipTitle = "黑盒连接喷涂机进料口标题".Translate();
+                cb1.GetComponent<UIButton>().tips.tipText = "黑盒连接喷涂机进料口说明".Translate();
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 300;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "黑盒连接喷涂机生成";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpBlackboxNotConnectCoater = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpBlackboxCoaterConnectSet(false); });
+                cb2.GetComponent<UIButton>().tips.tipTitle = "黑盒不连接喷涂机进料口标题".Translate();
+                cb2.GetComponent<UIButton>().tips.tipText = "黑盒不连接喷涂机进料口说明".Translate();
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "黑盒连接喷涂机不生成";
             }
         }
 
@@ -2215,6 +2256,16 @@ namespace DSPCalculator.UI
                 uibtnIcon_bpSorterLimit.sprite = checkboxOffSprite;
                 uibtnIcon_bpSorterUnlimit.sprite = checkboxOnSprite;
             }
+            if(solution.userPreference.bpConnectBlackboxCoater)
+            {
+                uibtnIcon_bpBlackboxConnectCoater.sprite = checkboxOnSprite;
+                uibtnIcon_bpBlackboxNotConnectCoater.sprite= checkboxOffSprite;
+            }
+            else
+            {
+                uibtnIcon_bpBlackboxConnectCoater.sprite = checkboxOffSprite;
+                uibtnIcon_bpBlackboxNotConnectCoater.sprite = checkboxOnSprite;
+            }
 
             uibtnIcon_bpStack1.sprite = solution.userPreference.bpStackSetting == 1 ? checkboxOnSprite: checkboxOffSprite;
             uibtnIcon_bpStack2.sprite = solution.userPreference.bpStackSetting == 2 ? checkboxOnSprite : checkboxOffSprite;
@@ -2576,7 +2627,8 @@ namespace DSPCalculator.UI
 
         public void GenerateBlackboxBpAndPaste()
         {
-            BpConnector connector = new BpConnector(this);
+            int genLevel = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) ? 1 : 0;
+            BpConnector connector = new BpConnector(this, genLevel);
             if (connector.succeeded)
             {
                 // 暂时关闭窗口以便粘贴
@@ -2773,6 +2825,12 @@ namespace DSPCalculator.UI
         public void OnBpStackSet(int stack)
         {
             solution.userPreference.bpStackSetting = stack;
+            RefreshBpPreferences();
+        }
+
+        public void OnBpBlackboxCoaterConnectSet(bool connect)
+        {
+            solution.userPreference.bpConnectBlackboxCoater = connect;
             RefreshBpPreferences();
         }
     }

@@ -290,7 +290,7 @@ namespace DSPCalculator.Bp
             return groundLevelIndex;
         }
 
-        public static int AddPLS(this BpProcessor processor, int x, int y)
+        public static int AddPLS(this BpBuildingList processor, int x, int y)
         {
             int itemId = BpDB.PLS;
             BlueprintBuilding b = new BlueprintBuilding();
@@ -347,7 +347,7 @@ namespace DSPCalculator.Bp
         /// <summary>
         /// 只支持直线正对连接,storageIndex从0开始
         /// </summary>
-        public static void ConnectPLSToBelt(this BpProcessor processor, int PLSBuildingIndex, int PLSSlot, int storageIndex, int beltIndex)
+        public static void ConnectPLSToBelt(this BpBuildingList processor, int PLSBuildingIndex, int PLSSlot, int storageIndex, int beltIndex)
         {
             int PLSX = (int)Math.Round(processor.buildings[PLSBuildingIndex].localOffset_x);
             int PLSY = (int)Math.Round(processor.buildings[PLSBuildingIndex].localOffset_y);
@@ -625,12 +625,12 @@ namespace DSPCalculator.Bp
             }
         }
 
-        public static int GetPLSItemByStorageIndex(this BpProcessor processor, int PLSIndex, int storageIndex)
+        public static int GetPLSItemByStorageIndex(this BpBuildingList processor, int PLSIndex, int storageIndex)
         {
             return processor.buildings[PLSIndex].parameters[storageIndex * 6];
         }
 
-        public static void SetPLSStorage(this BpProcessor processor, int PLSIndex, int storageIndex, int itemId, bool isNeed)
+        public static void SetPLSStorage(this BpBuildingList processor, int PLSIndex, int storageIndex, int itemId, bool isNeed)
         {
             processor.buildings[PLSIndex].parameters[storageIndex * 6] = itemId;
             processor.buildings[PLSIndex].parameters[storageIndex * 6 + 1] = isNeed ? 2 : 1;
@@ -668,7 +668,7 @@ namespace DSPCalculator.Bp
             return bp;
         }
 
-        public static bool SetOrGetPLSStorage(this BpProcessor processor, int PLSBuildingIndex, int itemId, bool isNeed, out int index)
+        public static bool SetOrGetPLSStorage(this BpBuildingList processor, int PLSBuildingIndex, int itemId, bool isNeed, out int index)
         {
             for (int i = 0; i < BpDB.PLSMaxStorageKinds; i++)
             {
