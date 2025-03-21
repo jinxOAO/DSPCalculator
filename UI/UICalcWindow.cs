@@ -2655,7 +2655,41 @@ namespace DSPCalculator.UI
                 }
             }
         }
+        public void FocusTargetNode(int itemId)
+        {
+            if (uiItemNodeOrders.ContainsKey(itemId))
+            {
+                int order = uiItemNodeOrders[itemId];
+                int totalCount = uiItemNodeOrders.Count;
+                if (order >= 0 && order < uiItemNodeOrders.Count)
+                {
+                    // 跳转到目标位置，小于8不需要跳转
+                    if (totalCount >= 8)
+                    {
+                        int calcOrder = order - 3;
+                        int calcTotal = totalCount - 7;
+                        if (calcOrder < 0)
+                            calcOrder = 0;
+                        if (calcOrder > calcTotal)
+                            calcOrder = calcTotal;
+                        float vPos = 1f - (1.0f * calcOrder / calcTotal);
+                        targetVerticalPosition = vPos;
+                        //parentCalcWindow.contentScrollRect.verticalNormalizedPosition = vPos;
+                    }
 
+
+                    UIItemNode targetNode = uiItemNodes[order];
+                    Color oldColor = targetNode.backgroundImg.color;
+                    targetNode.backgroundImg.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f); // 让他闪烁一次
+                }
+            }
+            if (uiItemSimplesByItemId.ContainsKey(itemId))
+            {
+                UIItemNodeSimple targetNodeSimple = uiItemSimplesByItemId[itemId];
+                Color oldColor = targetNodeSimple.backgroundImg.color;
+                targetNodeSimple.backgroundImg.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f); // 闪烁一次
+            }
+        }
         public void OnBluebuffClick()
         {
             solution.userPreference.bluebuff = !solution.userPreference.bluebuff;

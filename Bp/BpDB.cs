@@ -16,6 +16,7 @@ namespace DSPCalculator.Bp
         public static List<BpBeltInfo> beltsAscending;
         public static List<BpSorterInfo> sortersAscending;
         public static Dictionary<int, int> GBMegas;
+        public static int GBMegaTowerHeight = 20;
 
         public static int stationParam320 = 1000000; // 最大充电功率
         public static int stationParam321 = -100000000;
@@ -40,9 +41,7 @@ namespace DSPCalculator.Bp
         public static List<int> cargoInfoNormIndexToBeltPosIndexMap_SecondRow = new List<int> { 5, 6, -1, 7, 8 }; // 适用于第二行工厂，注意共享带不能重复录入，所以共享带会在第二行工厂处返回-1，读取这个是会越界的
         public static List<int> beltPosIndexToPLSStorageIndexMap = new List<int> { };
         public static int PLSMaxStorageKinds = 4;
-
         public static int labHeight = 3;
-
 
         public static void Init()
         {

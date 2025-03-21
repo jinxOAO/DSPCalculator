@@ -1,6 +1,7 @@
 ﻿using DSPCalculator.Bp;
 using DSPCalculator.Logic;
 using DSPCalculator.UI;
+using MathNet.Numerics.Distributions;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -32,6 +33,7 @@ namespace DSPCalculator.Bp
         public Dictionary<int, int> additionalInputItems; // 由于部分中间产物的蓝图无法生成（例如星际组装厂解决此配方），所有这个蓝图提供的物品都需要额外的输入口
         public Dictionary<int, int> additionalOutputItems; //  由于部分中间产物的蓝图无法生成，所有这个蓝图需求的物品都要作为额外的输出口
         public Vector2 labBlocksOriginPoint; // 所有lab蓝图集中放置的起始点坐标
+        public List<int> needUserBuildOutsideRecipeIds; // 那些需要用户在黑盒蓝图外自行构建的配方（由于分馏或者星际组装厂或者其他导致生成蓝图失败的原因）
 
         public Dictionary<int, int> proliferatorUsed; // 标记所有用过的增产剂
 
@@ -43,7 +45,9 @@ namespace DSPCalculator.Bp
         public int width;
         public int height;
 
-        public int maxZ = 49; // 允许的传送带最大高度（实际为maxZ + 0.5）
+        public int maxZTechLimited = 47; // 当前科技允许的传送带最大高度（实际为maxZ + 0.5）
+        public int maxZGameLimited = 47; // 整个游戏允许的传送带最大高度（48）
+        public int usedZ = 0; // 使用的最大Z高度
         public int minZ = 5; // 允许的传送带最小高度（实际为minZ + 0.5)，会根据黑盒蓝图里面有什么生产建筑决定
         public bool succeeded;
 
@@ -70,17 +74,25 @@ namespace DSPCalculator.Bp
             additionalOutputItems = new Dictionary<int, int>();
             labBlocksOriginPoint = Vector2.zero;
             proliferatorUsed = new Dictionary<int, int>();
+            needUserBuildOutsideRecipeIds = new List<int>();
             succeeded = GenerateFullBlueprint(genLevel);
         }
 
         private bool GenerateFullBlueprint(int genLevel = 0, bool forcePortOnLeft = false, bool orthogonalConnect = true)
         {
+            if(!GameMain.history.TechUnlocked(1711) && LDB.techs.Select(1711) != null)
+            {
+                UIMessageBox.Show("蓝图生成失败".Translate(), "未解锁垂直建造传送带科技警告".Translate() + LDB.techs.Select(1711).name, "calc关闭".Translate(), 1, new UIMessageBox.Response(() => { }));
+                return false;
+            }
+
             Stopwatch timer = new Stopwatch();
             this.genLevel = genLevel;
             this.priorityPLSTopOrLeft = 0;
             this.forcePortOnLeft = forcePortOnLeft;
             this.connectCoaters = solution.userPreference.bpConnectBlackboxCoater;
             this.orthogonalConnect = orthogonalConnect;
+            maxZTechLimited = GetMaxBeltZByCurTech() - 1;
             ResetBp();
             // 判断每种物品，单带运力是否足够
             timer.Start();
@@ -96,6 +108,19 @@ namespace DSPCalculator.Bp
                 return false;
             timer.Stop();
             // Utils.logger.LogInfo($"生成processor过程耗时{timer.Elapsed.TotalMilliseconds}ms");
+
+
+            if (needUserBuildOutsideRecipeIds.Count > 0)
+            {
+                string recipeNames = "";
+                for (int i = 0; i < needUserBuildOutsideRecipeIds.Count; i++)
+                {
+                    recipeNames += LDB.recipes.Select(needUserBuildOutsideRecipeIds[i])?.name;
+                    if (i < needUserBuildOutsideRecipeIds.Count - 1)
+                        recipeNames += ", ";
+                }
+                UIMessageBox.Show("calc提示".Translate(), "部分蓝图无法生成说明".Translate() + recipeNames, "calc确定".Translate(), 1, new UIMessageBox.Response(() => { }));
+            }
 
             // 根据长度降序排序
             timer.Restart();
@@ -121,9 +146,33 @@ namespace DSPCalculator.Bp
 
             //放置建筑
             timer.Restart();
-            if (!ConnectBlocks())
-                return false;
+            bool connectSucceeded = ConnectBlocks();
             timer.Stop();
+            if (!connectSucceeded)
+            {
+                if(usedZ > maxZGameLimited)
+                {
+                    UIMessageBox.Show("蓝图生成失败".Translate(), "传送带高度游戏限制说明".Translate(), "calc关闭".Translate(), 1, new UIMessageBox.Response(() => { }));
+                }
+                else
+                {
+                    UIMessageBox.Show("蓝图生成失败".Translate(), "Unexpected Error 503", "calc关闭".Translate(), 1, new UIMessageBox.Response(() => { }));
+                }
+                return false;
+            }
+            else if (connectSucceeded && !this.orthogonalConnect)
+            {
+                if (usedZ > maxZTechLimited)
+                {
+                    // 传送带斜插提示
+                    UIMessageBox.Show("calc提示".Translate(), "传送带高度科技限制说明".Translate(), "calc确定".Translate(), 1, new UIMessageBox.Response(() => { }));
+                }
+                else
+                {
+                    // 传送带斜插提示
+                    UIMessageBox.Show("calc提示".Translate(), "传送带斜插说明".Translate(), "calc确定".Translate(), 1, new UIMessageBox.Response(() => { }));
+                }
+            }
             // Utils.logger.LogInfo($"连接各个block过程耗时{timer.Elapsed.TotalMilliseconds}ms");
 
             PostProcess(); // 后处理，完成蓝图构建
@@ -162,6 +211,7 @@ namespace DSPCalculator.Bp
                             else
                             {
                                 Utils.logger.LogError($"判断物品{Utils.ItemName(itemId)}单带运力是否足够时发生了错误，节点在solution中不存在。");
+                                UIMessageBox.Show("蓝图生成失败".Translate(), "Unexpected Error 101", "calc关闭".Translate(), 1, new UIMessageBox.Response(() => { }));
                                 return false;
                             }
                         }
@@ -170,8 +220,11 @@ namespace DSPCalculator.Bp
                     }
 
                     // 处理全局传送带最小高度
-                    int requireBeltMinHeight = BpDB.assemblerInfos[recipeInfo.assemblerItemId].height + 1;
-                    minZ = Math.Max(minZ, requireBeltMinHeight);
+                    if (BpDB.assemblerInfos.ContainsKey(recipeInfo.assemblerItemId))
+                    {
+                        int requireBeltMinHeight = BpDB.assemblerInfos[recipeInfo.assemblerItemId].height + 1;
+                        minZ = Math.Max(minZ, requireBeltMinHeight);
+                    }
                 }
             }
             // 如果增产剂并入了产线，但是用户又把增产剂作为了原矿输入（很奇怪但是万一有这样的人呢），那么还要注意增产剂的用量和带子分配
@@ -193,7 +246,11 @@ namespace DSPCalculator.Bp
                 BpItemSumInfo sumInfo = sumInfoKV.Value;
                 if (sumInfo.needBeltSpeed > solution.beltsAvailable.Last().speedPerMin)
                 {
-                    Utils.logger.LogInfo($"由于{Utils.ItemName(sumInfo.itemId)}速度过大{sumInfo.needBeltSpeed}>{solution.beltsAvailable.Last().speedPerMin}");
+                    // Utils.logger.LogInfo($"由于{Utils.ItemName(sumInfo.itemId)}速度过大{sumInfo.needBeltSpeed}>{solution.beltsAvailable.Last().speedPerMin}");
+                    calcWindow.FocusTargetNode(sumInfo.itemId);
+                    UIMessageBox.Show("蓝图生成失败".Translate(), "有蓝图传送带运力不够说明".Translate(), "calc关闭".Translate(), 1, new UIMessageBox.Response(() => {
+                        calcWindow.FocusTargetNode(sumInfo.itemId);
+                    }));
                     return false;
                 }
                 if (solution.userPreference.bpBeltHighest) // 如果用户配置为总是使用最高级
@@ -225,17 +282,41 @@ namespace DSPCalculator.Bp
             processorsMap.Clear();
             itemPathInfos.Clear();
             proliferatorUsed.Clear();
+            needUserBuildOutsideRecipeIds.Clear();
             foreach (var recipeInfoKV in solution.recipeInfos)
             {
                 RecipeInfo recipeInfo = recipeInfoKV.Value;
                 if (recipeInfo != null && recipeInfo.assemblerCount > 0.0001f)
                 {
                     BpBlockProcessor processor = new BpBlockProcessor(recipeInfo, solution, this, 1);
-                    processor.PreProcess();
-                    bool hasBp = false; // 这个processor是否真的生成了蓝图
-                    if (processor.bpCountToSatisfy > 1)
+                    if (processor.isGBMega)
                     {
-                        Utils.logger.LogWarning($"生成bp block 过程失败，由于配方{LDB.recipes.Select(recipeInfo.ID).name}的单个蓝图无法承载全部产出。");
+                        processor.processorGB = new BpProcessorGB(processor as BpBlockProcessor);
+                        processor.PreProcessGB();
+                        minZ = Math.Max(BpDB.GBMegaTowerHeight, minZ);
+                    }
+                    else
+                    {
+                        processor.PreProcess();
+                    }
+                    bool hasBp = false; // 这个processor是否真的生成了蓝图
+                    if (processor.bpCountToSatisfy > 1 || processor.bpCountToSatisfy < 0)
+                    {
+                        //Utils.logger.LogWarning($"生成bp block 过程失败，由于配方{LDB.recipes.Select(recipeInfo.ID).name}的单个蓝图无法承载全部产出。");
+                        // 首先高亮有问题的产线
+                        int itemId = -1;
+                        for (int i = 0; i < recipeInfo.recipeNorm.oriProto.Results.Length; i++)
+                        {
+                            itemId = recipeInfo.recipeNorm.oriProto.Results[i];
+                            if (solution.itemNodes.ContainsKey(itemId) && solution.itemNodes[itemId].mainRecipe != null && solution.itemNodes[itemId].mainRecipe.ID == recipeInfo.ID)
+                            {
+                                calcWindow.FocusTargetNode(itemId);
+                                break;
+                            }
+                        }
+                        UIMessageBox.Show("蓝图生成失败".Translate(), "有蓝图传送带运力不够说明".Translate(), "calc关闭".Translate(), 1, new UIMessageBox.Response(() => {
+                            calcWindow.FocusTargetNode(itemId);
+                        }));
                         return false;
                     }
                     else
@@ -263,8 +344,7 @@ namespace DSPCalculator.Bp
                         }
                         else
                         {
-                            Utils.logger.LogWarning($"生成bp block 过程失败，由于配方{LDB.recipes.Select(recipeInfo.ID).name}生成蓝图过程失败。");
-                            return false;
+                            needUserBuildOutsideRecipeIds.Add(recipeInfo.ID);
                         }
                     }
                     if (hasBp && processor.isVanilla6006())
@@ -317,7 +397,10 @@ namespace DSPCalculator.Bp
         private bool ArrangeBpBlocks(List<BpBlockProcessor> processors)
         {
             if (processors.Count <= 0)
+            {
+                UIMessageBox.Show("蓝图生成失败".Translate(), "没有任何可以生成蓝图的产线".Translate(), "calc关闭".Translate(), 1, new UIMessageBox.Response(() => { }));
                 return false;
+            }
 
             lines.Clear();
             height = 0;
@@ -400,6 +483,7 @@ namespace DSPCalculator.Bp
                 else
                 {
                     Utils.logger.LogError("在排列蓝图块时出错误，而这种情况不应该发生！");
+                    UIMessageBox.Show("蓝图生成失败".Translate(), "Unexpected Error 301", "calc关闭".Translate(), 1, new UIMessageBox.Response(() => { }));
                     return false;
                 }
             }
@@ -511,6 +595,7 @@ namespace DSPCalculator.Bp
             // 我发现垂直传送带（z为整数高的节点连接起来的），不会与层高为半层(z=n+0.5)的传送带产生碰撞。因此，所有斜向连接（水平直接连接）都要在n+0.5的高度进行
             segLayers.Clear();
             terminalInfos.Clear();
+            usedZ = 0;
             Dictionary<int, int> targets = new Dictionary<int, int>();
             for (int i = 0; i < solution.targets.Count; i++)
             {
@@ -596,6 +681,7 @@ namespace DSPCalculator.Bp
                         else
                         {
                             Utils.logger.LogError($"在处理{Utils.ItemName(itemId)}的额外入口时出错，这种情况不应该发生");
+                            UIMessageBox.Show("蓝图生成失败".Translate(), "Unexpected Error 501", "calc关闭".Translate(), 1, new UIMessageBox.Response(() => { }));
                             return false;
                         }
                     }
@@ -699,6 +785,7 @@ namespace DSPCalculator.Bp
                             else
                             {
                                 Utils.logger.LogError($"在处理{Utils.ItemName(itemId)}的额外入口时出错，这种情况不应该发生");
+                                UIMessageBox.Show("蓝图生成失败".Translate(), "Unexpected Error 502", "calc关闭".Translate(), 1, new UIMessageBox.Response(() => { }));
                                 return false;
                             }
                         }
@@ -835,13 +922,14 @@ namespace DSPCalculator.Bp
             if(!succeeded && orthogonalConnect) // 如果没成功，那么可能是由于高度不够导致的连接失败，则取消正交连接的限制，改为直接斜线连接过去进行尝试
             {
                 this.orthogonalConnect = false;
-                Utils.logger.LogInfo("由于正交连接失败，改为斜线直连");
+                //Utils.logger.LogInfo("由于正交连接失败，改为斜线直连");
                 CalcItemSumInfos();
                 GenProcessors();
                 processors = processors.OrderByDescending(x => x.width).ToList();
                 ArrangeBpBlocks(processors);
                 PlaceBuildings();
                 return ConnectBlocks();
+                
             }
             bool needToRegenerate = false;
 
@@ -854,7 +942,6 @@ namespace DSPCalculator.Bp
                 int PLSNeed = (PLSCount - 1) * BpDB.PLSDistance + 9;
                 if (terminalInfos.Count % BpDB.PLSMaxStorageKinds == 0 && terminalInfos.Count > 0)
                     PLSNeed++;
-                Utils.logger.LogInfo($"PLS{PLSNeed},height{height},width{width},istop?{isTopSide}");
                 if (isTopSide && (PLSNeed > width + 4 || (PLSNeed > width && height <= PLSNeed + 8)))  // 超出过多，或者超出一点，而另一边恰好正好
                 {
                     priorityPLSTopOrLeft = -1;
@@ -871,7 +958,7 @@ namespace DSPCalculator.Bp
                 if (portXExceedLabTerminal)
                 {
                     this.forcePortOnLeft = true;
-                    Utils.logger.LogInfo("由于port超出了lab的X，强制在左侧生成port");
+                    //Utils.logger.LogInfo("由于port超出了lab的X，强制在左侧生成port");
                     needToRegenerate = true;
                 }
             }
@@ -1026,6 +1113,7 @@ namespace DSPCalculator.Bp
             changeXFirst = false;
             isDirectlyConnect = IsDirectlyConnect(fromBelt, toBelt);
             int beginZ = minZ;
+            usedZ = Math.Max(usedZ, minZ);
             if (segLayers.Count <= beginZ)
             {
                 while (segLayers.Count < beginZ)
@@ -1063,8 +1151,8 @@ namespace DSPCalculator.Bp
                 }
             }
 
-            // 到这里说明现有层都有碰撞，则新建一层（前提是没有超出最高层数）
-            if (segLayers.Count <= maxZ)
+            // 到这里说明现有层都有碰撞，则新建一层（前提是没有超出最高层数），如果已经是非正交情况了，则超出游戏科技限制也行，但是也不能超出游戏的最高限制
+            if (segLayers.Count <= maxZTechLimited || (segLayers.Count <= maxZGameLimited && !orthogonalConnect))
             {
                 segLayers.Add(new BpSegmentLayer(segLayers.Count, minBeltDistance));
                 return segLayers.Count - 1;
@@ -1099,9 +1187,10 @@ namespace DSPCalculator.Bp
                 bool changeXFirst;
                 bool isDirectlyConnect;
                 int layerZ = FindLegalLayer(fromBelt, toBelt, out changeXFirst, out isDirectlyConnect);
+                usedZ = Math.Max(usedZ, layerZ);
                 if (layerZ < 0)
                 {
-                    Utils.logger.LogWarning("由于可用层数不足，连接失败");
+                    //Utils.logger.LogWarning("由于可用层数不足，连接失败");
                     return false;
                 }
                 else
@@ -1442,7 +1531,7 @@ namespace DSPCalculator.Bp
                 last = b;
             }
             // step2
-            for (int i = 0; i < stepCount2; i++)
+            for (int i = 0; i <= stepCount2; i++)
             {
                 BlueprintBuilding b = new BlueprintBuilding();
                 b.index = buildings.Count;
@@ -1558,6 +1647,24 @@ namespace DSPCalculator.Bp
 
                 return terminalX + 1 > labBlocksOriginPoint.x;
             }
+        }
+
+        public int GetMaxBeltZByCurTech()
+        {
+            if (GameMain.history.TechUnlocked(3706))
+                return 48;
+            else if (GameMain.history.TechUnlocked(3705))
+                return 38;
+            else if (GameMain.history.TechUnlocked(3704))
+                return 32;
+            else if (GameMain.history.TechUnlocked(3703))
+                return 26;
+            else if (GameMain.history.TechUnlocked(3702))
+                return 20;
+            else if (GameMain.history.TechUnlocked(3701))
+                return 14;
+
+            return 8;
         }
     }
         /// <summary>

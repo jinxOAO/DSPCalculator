@@ -23,6 +23,17 @@ namespace DSPCalculator.Bp
         {
             this.parentConnector = parentConnector;
         }
+
+        public void PreProcessGB()
+        {
+            if (isGBMega)
+            {
+                processorGB = new BpProcessorGB(this);
+                processorGB.PreProcess(true);
+                return;
+            }
+        }
+
         public new bool GenerateBlueprint(int genLevel)
         {
             return GenerateBlueprint(genLevel, true);
@@ -72,7 +83,14 @@ namespace DSPCalculator.Bp
             if (isGBMega)
             {
                 if (processorGB != null)
-                    return processorGB.GenerateBlueprints(genLevel);
+                {
+                    proliferatorId = 1143;
+                    if (resourceGenCoater && CalcDB.proliferatorAbilityToId.ContainsKey(recipeInfo.incLevel))
+                    {
+                        proliferatorId = CalcDB.proliferatorAbilityToId[recipeInfo.incLevel];
+                    }
+                    return processorGB.GenerateBlueprints(0);
+                }
 
                 return false;
             }
@@ -485,6 +503,14 @@ namespace DSPCalculator.Bp
             if (BpDB.assemblerInfos.ContainsKey(recipeInfo.assemblerItemId) && BpDB.assemblerInfos[recipeInfo.assemblerItemId].vanillaRecipeType == ERecipeType.Particle)
             {
                 maxX += 3;
+            }
+
+            if(isGBMega)
+            {
+                if(minY > -3)
+                    minY = -3;
+                if (maxY < 3)
+                    maxY = 3;
             }
 
             for (int i = 0; i < buildings.Count; i++)
