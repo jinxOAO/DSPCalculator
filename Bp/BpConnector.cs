@@ -648,9 +648,9 @@ namespace DSPCalculator.Bp
             {
                 BpItemPathInfo itemPath = itemPathKV.Value;
                 int itemId = itemPathKV.Key;
-                if (!itemPath.isOre)
+                if (!itemPath.isOre && itemPath.provideProcessors.Count == 0)
                 {
-                    BlueprintBuilding curTerminal;
+                    BlueprintBuilding curTerminal = null;
                     // 不是原矿但是强制额外增加了port外入口的话，需要增加输入口
                     if (additionalInputItems.ContainsKey(itemId))
                     {
@@ -685,9 +685,8 @@ namespace DSPCalculator.Bp
                             return false;
                         }
                     }
-                    else // 否则说明一定至少有一个生产配方
+                    else if (itemPath.provideProcessors.Count > 0) // 否则说明一定至少有一个生产配方，或者也有可能因为有蓝buff导致没有生产配方
                     {
-                        //itemPath.inputTerminal = itemPath.provideProcessors[0].inputBelts[itemId];
                         curTerminal = itemPath.provideProcessors[0].outputBelts[itemId];
                     }
 
@@ -706,7 +705,8 @@ namespace DSPCalculator.Bp
                     for (int i = 0; i < itemPath.demandProcessors.Count; i++)
                     {
                         BlueprintBuilding nextInput = itemPath.demandProcessors[i].inputBelts[itemId];
-                        succeeded = succeeded && TryConnect(curTerminal, nextInput);
+                        if(curTerminal != null)
+                            succeeded = succeeded && TryConnect(curTerminal, nextInput);
                         curTerminal = itemPath.demandProcessors[i].outputBelts[itemId];
                     }
 
@@ -1182,6 +1182,9 @@ namespace DSPCalculator.Bp
         /// <returns></returns>
         private bool TryConnect(BlueprintBuilding fromBelt, BlueprintBuilding toBelt)
         {
+            if (fromBelt == null || toBelt == null)
+                return false;
+
             if (!ConnectBeltsIfAdjacent(fromBelt, toBelt))
             {
                 bool changeXFirst;
