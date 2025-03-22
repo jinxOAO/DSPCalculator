@@ -797,7 +797,7 @@ namespace DSPCalculator.Bp
                         {
                             BlueprintBuilding nextInput = itemPath.provideProcessors[i].inputBelts[itemId];
                             succeeded = succeeded && TryConnect(curTerminal, nextInput);
-                            curTerminal = itemPath.demandProcessors[i].outputBelts[itemId];
+                            curTerminal = itemPath.provideProcessors[i].outputBelts[itemId];
                         }
 
                         // 对于每个输入，都将之前的带子作为主路输入，并加入一个旁路的外入（视为原矿输入）入口
