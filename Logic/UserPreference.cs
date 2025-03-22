@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -217,26 +218,120 @@ namespace DSPCalculator.Logic
                     return 3;
             }
         }
-
-        //public void Clear()
-        //{
-        //    recipeConfigs.Clear();
-        //    itemConfigs.Clear();
-        //    globalIncLevel = 0;
-        //    globalIsInc = true;
-        //    bluebuff = false;
-        //    energyBurst = false;
-        //    dirac = false;
-        //    inferior = false;
-        //    customizeIncMilli = false;
-        //    customizeAccMilli = false;
-        //    showMixBeltInfo = false;
-        //    incMilliOverride = 0;
-        //    accMilliOverride = 0;
-        //    globalAssemblerIdByType.Clear();
-        //    globalUseIA = false;
-        //    globalIAType = 0;
-        //}
+     
+        public void Export(BinaryWriter w)
+        {
+            int recipeConfigCount = recipeConfigs.Count;
+            w.Write(recipeConfigCount);
+            foreach (var KV in recipeConfigs)
+            {
+                w.Write(KV.Key);
+                KV.Value.Export(w);
+            }
+            int itemConfigCount = itemConfigs.Count;
+            w.Write(itemConfigCount);
+            foreach (var KV in itemConfigs)
+            {
+                w.Write(KV.Key);
+                KV.Value.Export(w);
+            }
+            w.Write(globalIncLevel);
+            w.Write(globalIsInc);
+            w.Write(globalAssemblerIdByType.Count);
+            foreach (var KV in globalAssemblerIdByType)
+            {
+                w.Write(KV.Key);
+                w.Write(KV.Value);
+            }
+            w.Write(globalUseIA);
+            w.Write(globalIAType);
+            w.Write(bluebuff);
+            w.Write(energyBurst);
+            w.Write(dirac);
+            w.Write(inferior);
+            w.Write(customizeIncMilli);
+            w.Write(customizeAccMilli);
+            w.Write(incMilliOverride);
+            w.Write(accMilliOverride);
+            w.Write(finishedRecipes.Count);
+            foreach (var KV in finishedRecipes)
+            {
+                w.Write(KV.Key);
+                w.Write(KV.Value);
+            }
+            w.Write(roundUpAssemgblerNum);
+            w.Write(solveProliferators);
+            w.Write(bpRowCount);
+            w.Write(bpResourceCoater);
+            w.Write(bpProductCoater);
+            w.Write(bpStationProlifSlot);
+            w.Write(bpBeltHighest);
+            w.Write(bpBeltTechLimit);
+            w.Write(bpSorterHighest);
+            w.Write(bpSorterTechLimit);
+            w.Write(bpStackSetting);
+            w.Write(bpConnectBlackboxCoater);
+        }
+        public void Import(BinaryReader r)
+        {
+            recipeConfigs.Clear();
+            itemConfigs.Clear();
+            globalAssemblerIdByType.Clear();
+            finishedRecipes.Clear();
+            int count = r.ReadInt32();
+            for (int i = 0; i < count; i++)
+            {
+                int id = r.ReadInt32();
+                RecipeConfig recipeConfig = new RecipeConfig(r);
+                recipeConfigs[id] = recipeConfig;
+            }
+            count = r.ReadInt32();
+            for (int i = 0; i < count; i++)
+            {
+                int id = r.ReadInt32();
+                ItemConfig itemConfig = new ItemConfig(id);
+                itemConfig.Import(r);
+                itemConfigs[id] = itemConfig;
+            }
+            globalIncLevel = r.ReadInt32();
+            globalIsInc = r.ReadByte() > 0;
+            count = r.ReadInt32();
+            for (int i = 0; i < count; i++)
+            {
+                int key = r.ReadInt32();
+                int value = r.ReadInt32();
+                globalAssemblerIdByType[key] = value;
+            }
+            globalUseIA = r.ReadByte() > 0;
+            globalIAType = r.ReadInt32();
+            bluebuff = r.ReadByte() > 0;
+            energyBurst = r.ReadByte() > 0;
+            dirac = r.ReadByte() > 0;
+            inferior = r.ReadByte() > 0;
+            customizeIncMilli = r.ReadByte() > 0;
+            customizeAccMilli = r.ReadByte() > 0;
+            incMilliOverride = r.ReadDouble();
+            accMilliOverride = r.ReadDouble();
+            count = r.ReadInt32();
+            for (int i = 0; i < count; i++)
+            {
+                int key = r.ReadInt32();
+                int value = r.ReadInt32();
+                finishedRecipes[key] = value;
+            }
+            roundUpAssemgblerNum = r.ReadByte() > 0;
+            solveProliferators = r.ReadByte() > 0;
+            bpRowCount = r.ReadInt32();
+            bpResourceCoater = r.ReadInt32();
+            bpProductCoater = r.ReadByte() > 0;
+            bpStationProlifSlot = r.ReadByte() > 0;
+            bpBeltHighest = r.ReadByte() > 0;
+            bpBeltTechLimit = r.ReadByte() > 0;
+            bpSorterHighest = r.ReadByte() > 0;
+            bpSorterTechLimit = r.ReadByte() > 0;
+            bpStackSetting = r.ReadInt32();
+            bpConnectBlackboxCoater = r.ReadByte() > 0;
+        }
     }
 
     public class RecipeConfig
@@ -266,6 +361,30 @@ namespace DSPCalculator.Logic
             forceUseIA = ori.forceUseIA;
             IAType = ori.IAType;
         }
+        public RecipeConfig(BinaryReader r)
+        {
+            this.Import(r);
+        }
+
+        public void Export(BinaryWriter w)
+        {
+            w.Write(ID);
+            w.Write(incLevel);
+            w.Write(forceIncMode);
+            w.Write(assemblerItemId);
+            w.Write(forceUseIA);
+            w.Write(IAType);
+        }
+
+        public void Import(BinaryReader r)
+        {
+            ID = r.ReadInt32();
+            incLevel = r.ReadInt32();
+            forceIncMode = r.ReadInt32();
+            assemblerItemId = r.ReadInt32();
+            forceUseIA = r.ReadByte() > 0;
+            IAType = r.ReadInt32();
+        }
     }
 
     public class ItemConfig
@@ -289,6 +408,21 @@ namespace DSPCalculator.Logic
             recipeID = ori.recipeID;
             consideredAsOre = ori.consideredAsOre;
             forceNotOre = ori.forceNotOre;
+        }
+
+        public void Export(BinaryWriter w)
+        {
+            w.Write(ID);
+            w.Write(recipeID);
+            w.Write(consideredAsOre);
+            w.Write(forceNotOre);
+        }
+        public void Import(BinaryReader r)
+        {
+            ID = r.ReadInt32();
+            recipeID = r.ReadInt32();
+            consideredAsOre = r.ReadByte() > 0;
+            forceNotOre = r.ReadByte() > 0;
         }
     }
 }

@@ -186,6 +186,16 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("calc关闭", "Close", "关闭", "Close");
             LocalizationModule.RegisterTranslation("calc确定", "OK", "确定", "OK");
 
+            LocalizationModule.RegisterTranslation("calc复制标题", "Copy", "复制", "Copy");
+            LocalizationModule.RegisterTranslation("calc复制说明", "Copy the target product, production line settings, and blueprint settings of the current window to the clipboard.", "复制当前窗口的目标产物、产线设置和蓝图设置到剪贴板。", "Copy the target product, production line settings, and blueprint settings of the current window to the clipboard.");
+            LocalizationModule.RegisterTranslation("calc粘贴标题", "Paste", "粘贴", "Paste");
+            LocalizationModule.RegisterTranslation("calc粘贴说明", "Load the target product, production line settings, and blueprint settings from the clipboard, then solve them.", "从剪贴板中加载目标产物、产线设置和蓝图设置，并进行求解。", "");
+            LocalizationModule.RegisterTranslation("calc复制成功提示", "Data Copied", "复制成功", "Data Copied");
+            LocalizationModule.RegisterTranslation("calc复制失败提示", "Copy Failed!!!", "复制失败！！！", "Copy Failed!!!");
+            LocalizationModule.RegisterTranslation("calc粘贴成功提示", "Data Pasted", "粘贴成功", "Data Pasted");
+            LocalizationModule.RegisterTranslation("calc粘贴失败提示", "Paste failed, please check the contents of the clipboard. All configurations have been reset.", "粘贴失败，请检查剪贴板内容。所有配置已被重置。", "Paste failed, please check the contents of the clipboard. All configurations have been reset.");
+
+
         }
     }
 }

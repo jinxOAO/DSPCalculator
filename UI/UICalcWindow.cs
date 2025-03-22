@@ -5,12 +5,15 @@ using DSPCalculator.Logic;
 using NGPT;
 using System;
 using System.Collections.Generic;
+using System.IO.Compression;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Reflection.Emit;
 
 namespace DSPCalculator.UI
 {
@@ -88,6 +91,8 @@ namespace DSPCalculator.UI
         public static Sprite LSWhiteSprite = null;
         public static Sprite blueprintIconSprite = null;// 还有其他的比如traficc-icon  transport-icon可以加入
         public static Sprite newBPFloderSprite = null; // 18x18的大小
+        public static Sprite copySprite;
+        public static Sprite pasteSprite;
 
         // UI元素
         public GameObject windowObj;
@@ -330,6 +335,41 @@ namespace DSPCalculator.UI
             targetProductTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(25, 318, 0);
             targetProductTextObj.GetComponent<Text>().text = "设置目标产物".Translate();
             targetProductTextObj.GetComponent<Text>().fontSize = 16;
+            // 复制粘贴按钮，作为设置目标产物文本的子对象
+            GameObject copyButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip, targetProductTextObj.transform);
+            copyButtonObj.name = "copy"; 
+            copyButtonObj.transform.localScale = Vector3.one;
+            copyButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.5f);
+            copyButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(0, 0.5f);
+            copyButtonObj.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
+            copyButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(100, -1, 0);
+            copyButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(16, 16);
+            copyButtonObj.GetComponent<Image>().sprite = UICalcWindow.copySprite;
+            copyButtonObj.GetComponent<Button>().onClick.AddListener(() => { OnCopyButtonClick(); });
+            copyButtonObj.GetComponent<UIButton>().tips.tipTitle = "calc复制标题".Translate();
+            copyButtonObj.GetComponent<UIButton>().tips.tipText = "calc复制说明".Translate();
+            copyButtonObj.GetComponent<UIButton>().tips.corner = 3;
+            copyButtonObj.GetComponent<UIButton>().tips.width = 200;
+            copyButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0.6f, 0.6f, 1);
+            copyButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.4f, 0.4f, 0.4f, 1);
+            copyButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.8f, 0.8f, 0.8f, 1);
+            GameObject pasteButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip, targetProductTextObj.transform);
+            pasteButtonObj.name = "paste";
+            pasteButtonObj.transform.localScale = Vector3.one;
+            pasteButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.5f);
+            pasteButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(0, 0.5f);
+            pasteButtonObj.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
+            pasteButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, -1, 0);
+            pasteButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(16, 16);
+            pasteButtonObj.GetComponent<Image>().sprite = UICalcWindow.pasteSprite;
+            pasteButtonObj.GetComponent<Button>().onClick.AddListener(() => { OnPasteButtonClick(); });
+            pasteButtonObj.GetComponent<UIButton>().tips.tipTitle = "calc粘贴标题".Translate();
+            pasteButtonObj.GetComponent<UIButton>().tips.tipText = "calc粘贴说明".Translate();
+            pasteButtonObj.GetComponent<UIButton>().tips.corner = 3;
+            pasteButtonObj.GetComponent<UIButton>().tips.width = 200;
+            pasteButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0.6f, 0.6f, 1);
+            pasteButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.4f, 0.4f, 0.4f, 1);
+            pasteButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.8f, 0.8f, 0.8f, 1);
 
             // 目标产物图标
             GameObject oriItemIconObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Station Window/storage-box-0/storage-icon-empty");
@@ -968,6 +1008,8 @@ namespace DSPCalculator.UI
                 LSWhiteSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/logistics-station-40-icon");
                 blueprintIconSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/blueprint-icon");
                 newBPFloderSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/new-bpfolder-icon");
+                copySprite = Resources.Load<Sprite>("ui/textures/sprites/icons/copy");
+                pasteSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/paste");
             }
         }
 
@@ -2588,6 +2630,7 @@ namespace DSPCalculator.UI
                 else
                     cbIncMilli.sprite = checkboxOffSprite;
                 txtIncMilli.text = "强制增产效能".Translate();
+                incInput.text = ((int)Math.Round(solution.userPreference.incMilliOverride * 100)).ToString();
 
             }
             if(cbAccMilli != null)
@@ -2597,6 +2640,7 @@ namespace DSPCalculator.UI
                 else
                     cbAccMilli.sprite = checkboxOffSprite;
                 txtAccMilli.text = "强制加速效能".Translate();
+                accInput.text = ((int)Math.Round(solution.userPreference.accMilliOverride * 100)).ToString();
             }
             if(cbRoundUp != null)
             {
@@ -2866,6 +2910,149 @@ namespace DSPCalculator.UI
         {
             solution.userPreference.bpConnectBlackboxCoater = connect;
             RefreshBpPreferences();
+        }
+
+        public void OnCopyButtonClick()
+        {
+            Copy();
+        }
+
+        public void Copy()
+        {
+            string header = "DSPCalcData,";
+            for (int i = 0; i < solution.targets.Count; i++)
+            {
+                header += Utils.GetItemName(solution.targets[i].itemId) + ":" + solution.targets[i].speed.ToString();
+                header += ",";
+            }
+            header += "\"";
+            string final = "";
+            try
+            {
+                StringBuilder stringBuilder = new StringBuilder(1024);
+                using (MemoryStream memoryStream = new MemoryStream())
+                {
+                    using (BinaryWriter binaryWriter = new BinaryWriter(memoryStream))
+                    {
+                        solution.Export(binaryWriter);
+                        memoryStream.Position = 0L;
+                        using (MemoryStream memoryStream2 = new MemoryStream())
+                        {
+                            using (GZipStream gzipStream = new GZipStream(memoryStream2, CompressionMode.Compress))
+                            {
+                                memoryStream.CopyTo(gzipStream);
+                            }
+                            byte[] inArray = memoryStream2.ToArray();
+                            stringBuilder.Append(header);
+                            stringBuilder.Append(Convert.ToBase64String(inArray));
+                            string value = MD5F.Compute(stringBuilder.ToString());
+                            stringBuilder.Append("\"");
+                            stringBuilder.Append(value);
+                            final = stringBuilder.ToString();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError(ex.ToString().Replace("Exception", "Excption"));
+            }
+            if(final.Length > 13)
+            {
+                GUIUtility.systemCopyBuffer = final;
+                UIRealtimeTip.Popup("calc复制成功提示".Translate());
+            }
+            else
+            {
+                UIRealtimeTip.Popup("calc复制失败提示".Translate());
+            }
+        }
+
+        public void OnPasteButtonClick()
+        {
+            string systemCopyBuffer = GUIUtility.systemCopyBuffer;
+            if (!TryPaste(systemCopyBuffer))
+            {
+                ClearAllUserPreference();
+                UIRealtimeTip.Popup("calc粘贴失败提示".Translate());
+            }
+
+        }
+
+        public bool TryPaste(string str)
+        {
+            string legalHeader = "DSPCalcData,";
+            if (str.Length <= legalHeader.Length)
+                return false;
+            for (int i = 0; i < legalHeader.Length; i++)
+            {
+                if (legalHeader[i] != str[i])
+                    return false;
+            }
+            if (LoadFromBase64String(str))
+            {
+                UIRealtimeTip.Popup("calc粘贴成功提示".Translate());
+                RefreshAll();
+                nextFrameRecalc = true;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public bool LoadFromBase64String(string str)
+        {
+            try
+            {
+                int begin = -1;
+                int end = -1;
+                for (int i = 0; i < str.Length; i++)
+                {
+                    if (str[i] == '"')
+                    {
+                        begin = i;
+                        break;
+                    }
+                }
+                if (begin < 0)
+                {
+                    return false;
+                }
+                for (int i = str.Length - 1; i >= 0; i--)
+                {
+                    if (str[i] == '"')
+                    {
+                        end = i;
+                        break;
+                    }
+                }
+                if (end < begin + 2)
+                {
+                    return false;
+                }
+                using (MemoryStream memoryStream = new MemoryStream(Convert.FromBase64String(str.Substring(begin + 1, end - begin - 1))))
+                {
+                    using (MemoryStream memoryStream2 = new MemoryStream())
+                    {
+                        using (GZipStream gzipStream = new GZipStream(memoryStream, CompressionMode.Decompress))
+                        {
+                            gzipStream.CopyTo(memoryStream2);
+                        }
+                        memoryStream2.Position = 0L;
+                        using (BinaryReader binaryReader = new BinaryReader(memoryStream2))
+                        {
+                            solution.Import(binaryReader);
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+            return true;
         }
     }
 }
