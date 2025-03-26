@@ -286,6 +286,8 @@ namespace DSPCalculator.Bp
             itemId = item.ID;
             grade = item.prefabDesc.inserterGrade;
             speedPerMin = 300000.0 / item.prefabDesc.inserterSTT * 60;
+            if (grade >= 4)
+                speedPerMin = 240 * 3600;
         }
 
         public bool Satisfy(double speedNeed, int distance)
