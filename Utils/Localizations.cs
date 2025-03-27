@@ -47,8 +47,8 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("移除并在新窗口中计算标题", "Remove and Calculate in New Window", "移除并在新窗口中计算", "Remove and Calculate in New Window");
             LocalizationModule.RegisterTranslation("移除并在新窗口中计算说明", "<color=#FD965EC0>Remove this item</color> from target products, then open a new quantification calculator window and calculate the production line for this item in the new window.\n\n<color=#FD965EC0>Holding Shift will retain this target product</color> instead of removing it.", "<color=#FD965EC0>移除此目标产物</color>，并打开一个新的量化计算器窗口，在该窗口中计算此物品的生产线。\n\n<color=#FD965EC0>按住Shift</color>还会在当前计算器中<color=#FD965EC0>保留此目标产物</color>。", "<color=#FD965EC0>Remove this item</color> from target products, then open a new quantification calculator window and calculate the production line for this item in the new window.\n\n<color=#FD965EC0>Holding Shift will retain this target product</color> instead of removing it.");
 
-            LocalizationModule.RegisterTranslation("还原默认配置标题", "Reset All Configuration", "还原默认配置", "Reset All Configuration");
-            LocalizationModule.RegisterTranslation("还原默认配置说明", "All preferred production buildings, proliferator settings, raw ore settings, etc. will be restored to default configurations.", "所有首选生产建筑、增产、原矿等设置将被还原为默认配置。", "All preferred production buildings, proliferator settings, raw ore settings, etc. will be restored to default configurations.");
+            LocalizationModule.RegisterTranslation("还原默认配置标题", "Reset All Configuration", "还原初始配置", "Reset All Configuration");
+            LocalizationModule.RegisterTranslation("还原默认配置说明", "All preferred production buildings, proliferator settings, raw ore settings, etc. will be restored to mod's vanilla configurations.", "所有首选生产建筑、增产、原矿等设置将被还原为初始配置。", "All preferred production buildings, proliferator settings, raw ore settings, etc. will be restored to mod's vanilla configurations.");
 
             LocalizationModule.RegisterTranslation("预估电量", "Power Consumption Est.", "预估电量需求", "Power Consumption Est.");
             LocalizationModule.RegisterTranslation("工厂需求", "Production Facilities", "生产设施", "Production Facilities");
@@ -194,6 +194,11 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("calc复制失败提示", "Copy Failed!!!", "复制失败！！！", "Copy Failed!!!");
             LocalizationModule.RegisterTranslation("calc粘贴成功提示", "Data Pasted", "粘贴成功", "Data Pasted");
             LocalizationModule.RegisterTranslation("calc粘贴失败提示", "Paste failed, please check the contents of the clipboard. All configurations have been reset.", "粘贴失败，请检查剪贴板内容。所有配置已被重置。", "Paste failed, please check the contents of the clipboard. All configurations have been reset.");
+            LocalizationModule.RegisterTranslation("calc设置成功提示", "Succeeded", "设置成功", "Succeeded");
+
+
+            LocalizationModule.RegisterTranslation("保存为默认配置标题", "Save as Dafault", "保存为默认配置", "Save as Dafault");
+            LocalizationModule.RegisterTranslation("保存为默认配置说明", "Save all configurations and target products of the current window as the default configuration, and all newly opened windows in the future (even after restarting the game) will load this configuration by default.\nHold Ctrl and click to clear all default configurations.", "将当前窗口的所有配置和目标产物保存为默认配置，未来所有新打开的窗口（包括重启游戏后），都将默认加载此配置。\n按住Ctrl点击，则清除所有默认配置。", "Save all configurations and target products of the current window as the default configuration, and all newly opened windows in the future (even after restarting the game) will load this configuration by default.\nHold Ctrl and click to clear all default configurations.");
 
 
         }

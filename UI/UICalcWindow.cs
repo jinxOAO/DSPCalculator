@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Reflection.Emit;
+using MathNet.Numerics;
 
 namespace DSPCalculator.UI
 {
@@ -93,6 +94,9 @@ namespace DSPCalculator.UI
         public static Sprite newBPFloderSprite = null; // 18x18的大小
         public static Sprite copySprite;
         public static Sprite pasteSprite;
+        public static Sprite lockSprite;
+        public static Sprite listSprite;
+        public static Sprite doubleLayerSprite;
 
         // UI元素
         public GameObject windowObj;
@@ -228,7 +232,7 @@ namespace DSPCalculator.UI
             // 窗口大小切换按钮
             switchSizeButtonObj = GameObject.Instantiate(closeButtonObj, windowObj.transform.Find("panel-bg"));
             switchSizeButtonObj.name = "-";
-            switchSizeButtonObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(-43, -13); // 原本的x是-13, -13
+            switchSizeButtonObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(-37, -13); // 原本的x是-13, -13
             switchSizeButtonObj.GetComponent<Image>().sprite = leftTriangleSprite;
             switchSizeButtonObj.GetComponent<UIButton>().tips.tipTitle = "收起/展开".Translate() + UIHotkeySettingPatcher.GetFoldHotkeyString();
             switchSizeButtonObj.GetComponent<UIButton>().tips.corner = 3;
@@ -236,6 +240,51 @@ namespace DSPCalculator.UI
             Button switchSizeButton = switchSizeButtonObj.GetComponent<Button>();
             switchSizeButton.onClick.RemoveAllListeners();
             switchSizeButton.onClick.AddListener(() => { SwitchWindowSize(); });
+
+            Transform panelParent = windowObj.transform.Find("panel-bg");
+            // 保存当前配置为默认按钮
+            GameObject saveUserPreferenceButtonObj = GameObject.Instantiate(closeButtonObj);
+            saveUserPreferenceButtonObj.name = "save-all";
+            saveUserPreferenceButtonObj.transform.SetParent(panelParent, false);
+            saveUserPreferenceButtonObj.transform.localScale = Vector3.one;
+            saveUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(1, 1);
+            saveUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(1, 1);
+            saveUserPreferenceButtonObj.GetComponent<RectTransform>().pivot = new Vector2(1, 1);
+            saveUserPreferenceButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(-64, -14.5f, 0);
+            saveUserPreferenceButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(18, 18);
+            saveUserPreferenceButtonObj.GetComponent<Image>().sprite = UICalcWindow.doubleLayerSprite;
+            saveUserPreferenceButtonObj.GetComponent<Button>().onClick.AddListener(() => { SaveAllUserPreferenceAsDefault(); });
+            saveUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipTitle = "保存为默认配置标题".Translate();
+            saveUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipText = "保存为默认配置说明".Translate();
+            saveUserPreferenceButtonObj.GetComponent<UIButton>().tips.corner = 3;
+            saveUserPreferenceButtonObj.GetComponent<UIButton>().tips.width = 200;
+            saveUserPreferenceButtonObj.GetComponent<UIButton>().audios.enterName = "ui-hover-0";
+            saveUserPreferenceButtonObj.GetComponent<UIButton>().audios.downName = "ui-click-0";
+            //saveUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0, 0, 1);
+            //saveUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.6f, 0, 0, 1);
+            //saveUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.9f, 0.2f, 0.2f, 1);
+
+            // 还原所有配置按钮
+            GameObject resetUserPreferenceButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
+            resetUserPreferenceButtonObj.name = "reset-all";
+            resetUserPreferenceButtonObj.transform.SetParent(panelParent, false);
+            resetUserPreferenceButtonObj.transform.localScale = Vector3.one;
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(1, 1);
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(1, 1);
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().pivot = new Vector2(1, 1);
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(-89, -14.5f, 0);
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(18, 18);
+            resetUserPreferenceButtonObj.GetComponent<Image>().sprite = UICalcWindow.resetSprite;
+            resetUserPreferenceButtonObj.GetComponent<Button>().onClick.AddListener(() => { ClearAllUserPreference(); });
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipTitle = "还原默认配置标题".Translate();
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipText = "还原默认配置说明".Translate();
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.corner = 3;
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.width = 200;
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0, 0, 1);
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.6f, 0, 0, 1);
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.9f, 0.2f, 0.2f, 1);
+
+
 
             viewGroupObj = windowObj.transform.Find("view-group").gameObject;
             // 下面调整至以左下角为基准，且调整一下大小
@@ -273,7 +322,6 @@ namespace DSPCalculator.UI
 
             titleText.text = "量化计算器".Translate(); // 一定要在设置active之后进行
 
-            Transform panelParent = windowObj.transform.Find("panel-bg");
 
 
             // 可编辑标题
@@ -693,25 +741,8 @@ namespace DSPCalculator.UI
             assemblersDemandsGroupObj.transform.localPosition = new Vector3(13, -110, 0);
             // 实际创建工厂信息由RefreshAssemblerDemands()完成
 
-            // 还原所有配置按钮
-            GameObject resetUserPreferenceButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
-            resetUserPreferenceButtonObj.name = "reset-all";
-            resetUserPreferenceButtonObj.transform.SetParent(panelParent, false);
-            resetUserPreferenceButtonObj.transform.localScale = Vector3.one;
-            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(1, 1);
-            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(1, 1);
-            resetUserPreferenceButtonObj.GetComponent<RectTransform>().pivot = new Vector2(1, 1);
-            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(-75, -15, 0);
-            resetUserPreferenceButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(18, 18);
-            resetUserPreferenceButtonObj.GetComponent<Image>().sprite = UICalcWindow.resetSprite;
-            resetUserPreferenceButtonObj.GetComponent<Button>().onClick.AddListener(() => { ClearAllUserPreference(); });
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipTitle = "还原默认配置标题".Translate();
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipText = "还原默认配置说明".Translate();
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.corner = 3;
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.width = 200;
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0, 0, 1);
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.6f, 0, 0, 1);
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.9f, 0.2f, 0.2f, 1);
+
+           
 
             // 右侧可调整元驱动等配置信息                         
             GameObject checkBoxGroupObj = new GameObject();
@@ -877,6 +908,8 @@ namespace DSPCalculator.UI
             RefreshAssemblerButtonDisplay();
             RefreshProliferatorButtonDisplay();
             RefreshBpGenButton();
+
+            TryLoadDefault();
         }
 
         public static void TryInitStaticPrefabs()
@@ -1010,6 +1043,9 @@ namespace DSPCalculator.UI
                 newBPFloderSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/new-bpfolder-icon");
                 copySprite = Resources.Load<Sprite>("ui/textures/sprites/icons/copy");
                 pasteSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/paste");
+                lockSprite = Resources.Load<Sprite>("ui/textures/sprites/dashboard/menu/lock");
+                listSprite = Resources.Load<Sprite>("ui/textures/sprites/test/test-list-alt");
+                doubleLayerSprite = Resources.Load<Sprite>("ui/textures/sprites/dashboard/menu/top");
             }
         }
 
@@ -1801,8 +1837,9 @@ namespace DSPCalculator.UI
 
         public void RefreshAll()
         {
-            if (solution.targets.Count == 0)
+            if (solution.targets.Count == 0 || solution.targets[0].itemId == 0)
                 targetProductIcon.sprite = itemNotSelectedSprite;
+
             RefreshProductContent();
             RefreshResourceNeedAndByProductContent();
             RefreshFinalInfoText();
@@ -2589,6 +2626,54 @@ namespace DSPCalculator.UI
             RefreshAll();
         }
 
+        public void SaveAllUserPreferenceAsDefault()
+        {
+            if(Input.GetKey(KeyCode.LeftControl)||Input.GetKey(KeyCode.RightControl))
+            {
+                DSPCalculatorPlugin.DefaultNewWindowData.Value = "";
+                DSPCalculatorPlugin.DefaultNewWindowData.ConfigFile.Save();
+                UIRealtimeTip.Popup("calc设置成功提示".Translate());
+            }
+            else
+            {
+                string data = Copy();
+                if (data.Length > 13)
+                {
+                    UIRealtimeTip.Popup("calc设置成功提示".Translate());
+                    DSPCalculatorPlugin.DefaultNewWindowData.Value = data;
+                    DSPCalculatorPlugin.DefaultNewWindowData.ConfigFile.Save();
+                }
+                else
+                {
+                    UIRealtimeTip.Popup("Unknown Error");
+                }
+            }
+
+        }
+
+        public void TryLoadDefault()
+        {
+            string data = DSPCalculatorPlugin.DefaultNewWindowData.Value;
+            if (data != null && data.Length > 13)
+            {
+                try
+                {
+                    if(!TryPaste(data))
+                    {
+                        ClearAllUserPreference();
+                        DSPCalculatorPlugin.DefaultNewWindowData.Value = "";
+                        DSPCalculatorPlugin.DefaultNewWindowData.ConfigFile.Save();
+                    }
+                }
+                catch (Exception)
+                {
+                    ClearAllUserPreference();
+                    DSPCalculatorPlugin.DefaultNewWindowData.Value = "";
+                    DSPCalculatorPlugin.DefaultNewWindowData.ConfigFile.Save();
+                }
+            }
+        }
+
         public void RefreshCheckBoxes()
         {
             if(cbBluebuff != null)
@@ -2914,10 +2999,19 @@ namespace DSPCalculator.UI
 
         public void OnCopyButtonClick()
         {
-            Copy();
+            string data = Copy();
+            if (data.Length > 13)
+            {
+                GUIUtility.systemCopyBuffer = data;
+                UIRealtimeTip.Popup("calc复制成功提示".Translate());
+            }
+            else
+            {
+                UIRealtimeTip.Popup("calc复制失败提示".Translate());
+            }
         }
 
-        public void Copy()
+        public string Copy()
         {
             string header = "DSPCalcData,";
             for (int i = 0; i < solution.targets.Count; i++)
@@ -2956,16 +3050,9 @@ namespace DSPCalculator.UI
             catch (Exception ex)
             {
                 Debug.LogError(ex.ToString().Replace("Exception", "Excption"));
+                return "";
             }
-            if(final.Length > 13)
-            {
-                GUIUtility.systemCopyBuffer = final;
-                UIRealtimeTip.Popup("calc复制成功提示".Translate());
-            }
-            else
-            {
-                UIRealtimeTip.Popup("calc复制失败提示".Translate());
-            }
+            return final;
         }
 
         public void OnPasteButtonClick()
@@ -2975,6 +3062,10 @@ namespace DSPCalculator.UI
             {
                 ClearAllUserPreference();
                 UIRealtimeTip.Popup("calc粘贴失败提示".Translate());
+            }
+            else
+            {
+                UIRealtimeTip.Popup("calc粘贴成功提示".Translate());
             }
 
         }
@@ -2991,7 +3082,6 @@ namespace DSPCalculator.UI
             }
             if (LoadFromBase64String(str))
             {
-                UIRealtimeTip.Popup("calc粘贴成功提示".Translate());
                 RefreshAll();
                 nextFrameRecalc = true;
                 return true;

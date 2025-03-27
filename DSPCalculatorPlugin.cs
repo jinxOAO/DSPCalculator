@@ -27,8 +27,8 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.5.4";
-        public const int VERSIONINT = 504;
+        public const string VERSION = "0.5.5";
+        public const int VERSIONINT = 505;
 
         // ---------------------------------------------------------------------------
         public static bool developerMode = false; //           发布前修改             |
@@ -44,6 +44,7 @@ namespace DSPCalculator
         public static ConfigEntry<int> MaxWindowsReservedAfterClose;
         public static ConfigEntry<bool> ClickToSwitchRecipeMode;
         public static ConfigEntry<bool> OnlyCountUnfinishedFacilities;
+        public static ConfigEntry<string> DefaultNewWindowData;
 
         //public static ConfigEntry<bool> assemblerNumberKMG; // 生产设施是否用使用最大千分位符号
         //public static ConfigEntry<int> assemblerNumberDecimalPlaces; // 生产设施数量显示的小数位数，-1表示默认3位有效数字，正数表示恒定保留x位小数
@@ -67,6 +68,7 @@ namespace DSPCalculator
             ClickToSwitchRecipeMode = Config.Bind<bool>("config", "ClickToSwitchRecipeMode", false, "切换配方选取的模式会使用“点击循环切换”而非“点击然后选取配方”的模式。The mode for switching recipe selection will use the \"click loop switch\" instead of the \"click and select recipe\" mode.");
 
             OnlyCountUnfinishedFacilities = Config.Bind<bool>("config", "OnlyCountUnfinishedFacilities", false, "如果设置为true，一旦你将某个物品产出勾选为已完成，其需求的生产设施将不再被计入右侧面板的生产设施需求总数。If set to true, once you check an item as finished, its required production facilities will no longer be included in the total production facility demand on the right panel.");
+            DefaultNewWindowData = Config.Bind<string>("config", "DefaultNewWindowData", "", "不要编辑此项内容，除非你知道你在做什么。Never Edit this unless you know what you are doing.");
 
             Harmony.CreateAndPatchAll(typeof(DSPCalculatorPlugin));
             Harmony.CreateAndPatchAll(typeof(RecipePickerPatcher));
