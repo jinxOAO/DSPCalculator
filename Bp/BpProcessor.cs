@@ -984,6 +984,8 @@ namespace DSPCalculator.Bp
         public int GetBeltLeftX(BpAssemblerBuildingInfo assemblerInfo)
         {
             int leftExtend = assemblerInfo.slotConnectBeltXPositions.Min() - 1; // 最左格子对应的传送带的坐标，再额外延长一格
+            if (assemblerInfo.vanillaRecipeType == ERecipeType.Research && !genCoater) // 对于研究站，由于堆叠放置特别高，需要将端口延长出来一节，但是如果生成喷涂机的话就不需要了
+                leftExtend -= 1;
             int reserveForCoater = BpDB.coaterBeltBackwardLen;
             if (!genCoater)
                 reserveForCoater = 0;
