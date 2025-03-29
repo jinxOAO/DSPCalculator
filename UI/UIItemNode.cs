@@ -1071,6 +1071,7 @@ namespace DSPCalculator.UI
                     uiNode.RefreshFinishedMark();
                 }
                 parentCalcWindow.RefreshAssemblerDemandsDisplay();
+                parentCalcWindow.RefreshProgressCircle();
             }
         }
 

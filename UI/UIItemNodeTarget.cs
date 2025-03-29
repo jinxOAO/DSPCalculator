@@ -99,6 +99,9 @@ namespace DSPCalculator.UI
 
             // 设置图标
             GameObject targetProductIconObj = GameObject.Instantiate(parentCalcWindow.targetProductIconObj, mainInfoGroupObj.transform);
+            GameObject progressCircleObj = targetProductIconObj.transform.Find("circle-progress")?.gameObject;
+            if(progressCircleObj != null)
+                GameObject.DestroyImmediate(progressCircleObj);
             targetProductIconObj.transform.localScale = Vector3.one;
             RectTransform rect = targetProductIconObj.GetComponent<RectTransform>();
             rect.anchorMax = new Vector2(0, 1);

@@ -44,6 +44,8 @@ namespace DSPCalculator.UI
         public static Color accModeImageColor = new Color(0.9906f, 0.5897f, 0.3691f, 0.384f);
         public static Color incModeTextColor = new Color(0.282f, 0.845f, 1, 0.705f);
         public static Color accModeTextColor = new Color(0.9906f, 0.5897f, 0.3691f, 0.705f);
+        public static Color inProgressColor = new Color(0.9906f, 0.5897f, 0.3691f, 0.705f);
+        public static Color finishedProgressColor = new Color(0.282f, 0.845f, 1, 0.705f);
         public static float largeWindowWidth = 1340;
         public static float smallWindowWidth = 315;
         public static float largeWindowViewGroupWidth = 890;
@@ -97,6 +99,7 @@ namespace DSPCalculator.UI
         public static Sprite lockSprite;
         public static Sprite listSprite;
         public static Sprite doubleLayerSprite;
+        public static Sprite circleThinSprite;
 
         // UI元素
         public GameObject windowObj;
@@ -134,6 +137,7 @@ namespace DSPCalculator.UI
         public List<UIButton> sideInfoPanelSwitchUIBtns; // 右侧panel切换按钮
         public GameObject genBpButtonObj; // 生成黑盒蓝图的按钮Obj
         public UIButton genBpUIBtn;
+        public Image progressCircleImg;
 
         public Image cbBluebuff;
         public Image cbEnergyBurst;
@@ -445,6 +449,22 @@ namespace DSPCalculator.UI
                 targetProductIcon.sprite = Resources.Load<Sprite>("ui/textures/sprites/icons/controlpanel-icon-40"); // 是循环箭头环绕的齿轮，去掉40则是64*64大小的相同图标
 
                 targetProductIconUIBtn = targetProductIconObj.GetComponent<UIButton>();
+
+                // 进度百分比环形图标
+                GameObject progressCircleObj = new GameObject("circle-progress");
+                progressCircleImg = progressCircleObj.AddComponent<Image>();
+                progressCircleObj.transform.SetParent(targetProductIconObj.transform, false);
+                progressCircleObj.transform.localScale = Vector3.one;
+                progressCircleObj.GetComponent<RectTransform>().anchoredPosition3D = Vector3.zero;
+                progressCircleObj.GetComponent<RectTransform>().sizeDelta = new Vector2(54, 54);
+                progressCircleImg.sprite = circleThinSprite;
+                progressCircleImg.type = Image.Type.Filled;
+                progressCircleImg.fillMethod = Image.FillMethod.Radial360;
+                progressCircleImg.fillAmount = 0;
+                progressCircleImg.fillOrigin = 2;
+                progressCircleImg.material = targetProductIcon.material;
+                progressCircleImg.color = inProgressColor;
+
             }
             else
             {
@@ -908,6 +928,7 @@ namespace DSPCalculator.UI
             RefreshAssemblerButtonDisplay();
             RefreshProliferatorButtonDisplay();
             RefreshBpGenButton();
+            RefreshProgressCircle();
 
             TryLoadDefault();
         }
@@ -1046,6 +1067,7 @@ namespace DSPCalculator.UI
                 lockSprite = Resources.Load<Sprite>("ui/textures/sprites/dashboard/menu/lock");
                 listSprite = Resources.Load<Sprite>("ui/textures/sprites/test/test-list-alt");
                 doubleLayerSprite = Resources.Load<Sprite>("ui/textures/sprites/dashboard/menu/top");
+                circleThinSprite = Resources.Load<Sprite>("ui/textures/sprites/sci-fi/circle-thin");
             }
         }
 
@@ -1850,6 +1872,7 @@ namespace DSPCalculator.UI
             RefreshCheckBoxes();
             RefreshSideInfoPanels();
             RefreshBpGenButton();
+            RefreshProgressCircle();
             refreshIndex = 0;
         }
 
@@ -2784,6 +2807,37 @@ namespace DSPCalculator.UI
                 }
             }
         }
+
+        public void RefreshProgressCircle()
+        {
+            double totalFacilityCount = 0;
+            double finishedFacilityCount = 0;
+            foreach (var item in solution.recipeInfos)
+            {
+                RecipeInfo recipeInfo = item.Value;
+                if(recipeInfo.count > 0.0001f)
+                {
+                    totalFacilityCount += recipeInfo.assemblerCount;
+                    if(solution.userPreference.finishedRecipes.ContainsKey(item.Key))
+                    {
+                        finishedFacilityCount += recipeInfo.assemblerCount;
+                    }
+                }
+
+            }
+
+            double progress = 0;
+            if(totalFacilityCount > 0)
+                progress = finishedFacilityCount / totalFacilityCount;
+
+            progressCircleImg.fillAmount = (float)progress;
+            if (progress >= 1)
+                progressCircleImg.color = finishedProgressColor;
+            else
+                progressCircleImg.color = inProgressColor;
+        }
+
+
         public void FocusTargetNode(int itemId)
         {
             if (uiItemNodeOrders.ContainsKey(itemId))
