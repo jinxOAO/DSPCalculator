@@ -648,7 +648,7 @@ namespace DSPCalculator.Bp
             {
                 BpItemPathInfo itemPath = itemPathKV.Value;
                 int itemId = itemPathKV.Key;
-                if (!itemPath.isOre && itemPath.provideProcessors.Count == 0)
+                if (!itemPath.isOre)
                 {
                     BlueprintBuilding curTerminal = null;
                     // 不是原矿但是强制额外增加了port外入口的话，需要增加输入口
