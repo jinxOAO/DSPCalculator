@@ -551,7 +551,7 @@ namespace DSPCalculator.Bp
 
             if (processor.genCoater || genLevel >= 1 || blockProcessor != null)
             {
-                int prolifSupplyX = -7;
+                int prolifSupplyX = -4 - BpDB.coaterBeltBackwardLen + BpDB.coaterOffsetX - 1;
                 for (int i = 0; i < beltLines.Count; i++)
                 {
                     BpGBCargoInfo cargoInfo = cargoInfos[beltLines[i]];
@@ -816,6 +816,7 @@ namespace DSPCalculator.Bp
 
                         blockProcessor.proliferatorInputBelts[proliferatorId] = processor.buildings[processor.gridMap.GetBuilding(prolifSupplyX, beginY)];
                         blockProcessor.proliferatorOutputBelts[proliferatorId] = processor.buildings[processor.gridMap.GetBuilding(prolifSupplyX, endY)];
+                        //Utils.logger.LogInfo($"in z ={blockProcessor.proliferatorInputBelts[proliferatorId].localOffset_z}, out z = {blockProcessor.proliferatorOutputBelts[proliferatorId].localOffset_z}");
                     }
                 }
 

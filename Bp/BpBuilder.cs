@@ -699,6 +699,8 @@ namespace DSPCalculator.Bp
                 gridMap[x] = new Dictionary<int, int>();
             if (!gridMap[x].ContainsKey(y))
                 gridMap[x].Add(y, index);
+            else
+                gridMap[x][y] = index;
         }
 
         public static int GetBuilding(this Dictionary<int, Dictionary<int, int>> gridMap, int x, int y)
