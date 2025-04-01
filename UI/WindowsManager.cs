@@ -51,9 +51,12 @@ namespace DSPCalculator.UI
 
         public static void InitUIResolution()
         {
-            UIResolutionRatio = DSPGame.globalOption.uiLayoutHeight * 1.0f / DSPGame.globalOption.resolution.height;
-            UIResolutionX = DSPGame.globalOption.resolution.width * DSPGame.globalOption.uiLayoutHeight / DSPGame.globalOption.resolution.height;
-            UIResolutionY = DSPGame.globalOption.uiLayoutHeight;
+            int actualUILayoutHeight = DSPGame.globalOption.uiLayoutHeight;
+            if (DSPGame.globalOption.uiLayoutHeight <= 0)
+                actualUILayoutHeight = UICanvasScalerHandler.GetSuggestUILayoutHeight(DSPGame.globalOption.resolution.height);
+            UIResolutionRatio = actualUILayoutHeight * 1.0f / DSPGame.globalOption.resolution.height;
+            UIResolutionX = DSPGame.globalOption.resolution.width * actualUILayoutHeight * 1.0f / DSPGame.globalOption.resolution.height;
+            UIResolutionY = actualUILayoutHeight;
         }
 
         public static void OnUpdate()
