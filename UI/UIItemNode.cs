@@ -831,7 +831,7 @@ namespace DSPCalculator.UI
 
         public void OnRecipeChangeButtonClick()
         {
-            if (DSPCalculatorPlugin.ClickToSwitchRecipeMode.Value)
+            if (DSPCalculatorPlugin.ClickToSwitchRecipeMode.Value && double.TryParse(parentCalcWindow.speedInputObj.GetComponent<InputField>().text, out _))
             {
                 if (itemNode.mainRecipe != null && CalcDB.itemDict.ContainsKey(itemNode.itemId))
                 {
@@ -863,7 +863,9 @@ namespace DSPCalculator.UI
                             preference.itemConfigs[itemNode.itemId].recipeID = proto.ID;
                             if (proto.ID == oriRecipeId)
                             {
-                                parentCalcWindow.solution.ReSolve(Convert.ToDouble(parentCalcWindow.speedInputObj.GetComponent<InputField>().text));
+                                double speed;
+                                double.TryParse(parentCalcWindow.speedInputObj.GetComponent<InputField>().text, out speed);
+                                parentCalcWindow.solution.ReSolve(speed);
                                 break;
                             }
                         }
@@ -879,7 +881,7 @@ namespace DSPCalculator.UI
 
         public void OnRecipePickerReturn(RecipeProto recipeProto)
         {
-            if (recipeProto != null)
+            if (recipeProto != null && double.TryParse(parentCalcWindow.speedInputObj.GetComponent<InputField>().text, out _))
             {
                 UserPreference preference = parentCalcWindow.solution.userPreference;
                 if (!preference.itemConfigs.ContainsKey(itemNode.itemId))
@@ -900,7 +902,9 @@ namespace DSPCalculator.UI
             UserPreference preference = parentCalcWindow.solution.userPreference;
             if (preference.itemConfigs.ContainsKey(itemNode.itemId))
                 preference.itemConfigs[itemNode.itemId].recipeID = 0;
-            parentCalcWindow.solution.ReSolve(Convert.ToDouble(parentCalcWindow.speedInputObj.GetComponent<InputField>().text));
+            double speed = 0;
+            double.TryParse(parentCalcWindow.speedInputObj.GetComponent<InputField>().text, out speed);
+            parentCalcWindow.solution.ReSolve(speed);
             parentCalcWindow.RefreshAll();
         }
 
@@ -917,8 +921,9 @@ namespace DSPCalculator.UI
             {
                 CalcInNewWindow(true);
             }
-
-            parentCalcWindow.solution.ReSolve(Convert.ToDouble(parentCalcWindow.speedInputObj.GetComponent<InputField>().text));
+            double speed;
+            double.TryParse(parentCalcWindow.speedInputObj.GetComponent<InputField>().text, out speed);
+            parentCalcWindow.solution.ReSolve(speed);
             parentCalcWindow.RefreshAll();
 
         }

@@ -349,7 +349,8 @@ namespace DSPCalculator.UI
 
         public void OnSpeedEndEdit(string text)
         {
-            double newTargetSpeed = Convert.ToDouble(speedInputObj.GetComponent<InputField>().text);
+            double newTargetSpeed;
+            double.TryParse(speedInputObj.GetComponent<InputField>().text, out newTargetSpeed);
             if (targetSpeed > 0 && newTargetSpeed <= 0)
             {
                 RemoveThisFromTargets();
@@ -387,7 +388,7 @@ namespace DSPCalculator.UI
                 targetProductIconUIBtn.tips.itemId = item.ID;
                 targetProductIconUIBtn.tips.delay = 0.1f;
                 itemId = item.ID;
-                targetSpeed = Convert.ToDouble(speedInputObj.GetComponent<InputField>().text);
+                double.TryParse(speedInputObj.GetComponent<InputField>().text, out targetSpeed);
                 CheckAndRecalc();
             }
         }

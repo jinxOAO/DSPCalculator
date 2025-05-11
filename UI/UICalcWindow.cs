@@ -1583,8 +1583,9 @@ namespace DSPCalculator.UI
                         targetProductIcon.sprite = LDB.items.Select(solution.targets[0].itemId)?.iconSprite;
                     speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString();
                 }
-
-                solution.ReSolve(Convert.ToDouble(speedInputObj.GetComponent<InputField>().text));
+                double forceSpeed;
+                double.TryParse(speedInputObj.GetComponent<InputField>().text, out forceSpeed);
+                solution.ReSolve(forceSpeed);
                 RefreshAll();
             }
 
@@ -1810,7 +1811,8 @@ namespace DSPCalculator.UI
                 targetProductIconUIBtn.tips.corner = 3;
                 targetProductIconUIBtn.tips.itemId = item.ID;
                 targetProductIconUIBtn.tips.delay = 0.1f;
-                double newTargetSpeed = Convert.ToDouble(speedInputObj.GetComponent<InputField>().text);
+                double newTargetSpeed = 0;
+                double.TryParse(speedInputObj.GetComponent<InputField>().text, out newTargetSpeed);
                 solution.SetTargetAndSolve(0, item.ID, newTargetSpeed);
                 //solution.SetTargetItemAndBeginSolve(item.ID);
                 RefreshAll();
@@ -1821,7 +1823,8 @@ namespace DSPCalculator.UI
         {
             try
             {
-                double newTargetSpeed = Convert.ToDouble(num);
+                double newTargetSpeed;
+                double.TryParse(num, out newTargetSpeed);
                 solution.ChangeTargetSpeed0AndSolve(newTargetSpeed);
                 RefreshAll();
             }
@@ -2239,7 +2242,21 @@ namespace DSPCalculator.UI
                 return false;
             }
         }
+        public bool AddOrUpdateTargetButNotResolve(int index, int targetItem, double targetSpeed)
+        {
+            if (solution.AddOrUpdateTarget(index, targetItem, targetSpeed))
+            {
+                solution.MergeDuplicateTargets();
+                speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString(); // 这里不能直接用targetSpeed因为有可能merge之后这个速度变了
 
+                nextFrameRecalc = false;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
 
         public void RefreshSideInfoPanels()
         {
@@ -2645,7 +2662,9 @@ namespace DSPCalculator.UI
         public void ClearAllUserPreference()
         {
             solution.ClearUserPreference();
-            solution.ReSolve(Convert.ToDouble(speedInputObj.GetComponent<InputField>().text));
+            double forceSpeed;
+            double.TryParse(speedInputObj.GetComponent<InputField>().text, out forceSpeed);
+            solution.ReSolve(forceSpeed);
             RefreshAll();
         }
 

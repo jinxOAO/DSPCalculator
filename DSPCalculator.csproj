@@ -124,6 +124,7 @@
     <Compile Include="UI\UINode.cs" />
     <Compile Include="UI\UIPauseBarPatcher.cs" />
     <Compile Include="UI\WindowsManager.cs" />
+    <Compile Include="Utils\API.cs" />
     <Compile Include="Utils\Localizations.cs" />
     <Compile Include="Utils\Utils.cs" />
   </ItemGroup>
