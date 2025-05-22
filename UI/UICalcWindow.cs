@@ -2055,7 +2055,10 @@ namespace DSPCalculator.UI
                 if (solution.targets[i].itemId > 0 && solution.targets[i].speed > 0)
                 {
                     int index = i;
-                    UIItemNodeTarget uiTargetNode = new UIItemNodeTarget(index, solution.targets[i].itemId, solution.targets[i].speed, this);
+                    double speed = solution.targets[i].speed;
+                    if (solution.tempNotShrinkRoot && i == 0 && solution.itemNodes.ContainsKey(solution.targets[i].itemId))
+                        speed = solution.itemNodes[solution.targets[i].itemId].needSpeed;
+                    UIItemNodeTarget uiTargetNode = new UIItemNodeTarget(index, solution.targets[i].itemId, speed, this);
                     uiSideItemNodes.Add(uiTargetNode);
                     count++;
                 }

@@ -1018,7 +1018,10 @@ namespace DSPCalculator.Logic
             for (int i = 0; i < targetCount; i++)
             {
                 w.Write(targets[i].itemId);
-                w.Write(targets[i].speed);
+                if (tempNotShrinkRoot && targetCount == 1 && itemNodes.ContainsKey(targets[i].itemId))
+                    w.Write(itemNodes[targets[i].itemId].satisfiedSpeed);
+                else
+                    w.Write(targets[i].speed);
             }
             userPreference.Export(w);
         }
