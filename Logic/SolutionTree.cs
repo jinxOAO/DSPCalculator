@@ -6,6 +6,7 @@ using MathNet.Numerics.LinearAlgebra.Factorization;
 using MathNet.Numerics.LinearAlgebra.Solvers;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -1009,106 +1010,35 @@ namespace DSPCalculator.Logic
                 return true;
         }
 
-        //public void TestLog()
-        //{
-        //    if (DSPCalculatorPlugin.developerMode)
-        //    {
-        //        List<ItemNode> stack = new List<ItemNode>();
-        //        List<int> levelStack = new List<int>();
-        //        stack.Add(root);
-        //        levelStack.Add(0);
-        //        while(stack.Count > 0)
-        //        {
-        //            ItemNode curNode = stack[stack.Count - 1];
-        //            stack.RemoveAt(stack.Count - 1);
-        //            int curLevel = levelStack[levelStack.Count - 1];
-        //            levelStack.RemoveAt(levelStack.Count - 1);
+        public void Export(BinaryWriter w)
+        {
+            w.Write(DSPCalculatorPlugin.VERSIONINT);
+            int targetCount = targets.Count;
+            w.Write(targetCount);
+            for (int i = 0; i < targetCount; i++)
+            {
+                w.Write(targets[i].itemId);
+                if (tempNotShrinkRoot && targetCount == 1 && itemNodes.ContainsKey(targets[i].itemId))
+                    w.Write(itemNodes[targets[i].itemId].satisfiedSpeed);
+                else
+                    w.Write(targets[i].speed);
+            }
+            userPreference.Export(w);
+        }
 
-        //            string log = "";
-        //            for (int i = 0; i < curLevel; i++)
-        //            {
-        //                log += "|  ";
-        //            }
-        //            log += $"|--- {LDB.items.Select(curNode.itemId).name}";
-        //            Debug.Log(log);
-
-        //            //if (!itemNodes.ContainsKey(curNode.itemId))
-        //            //    Debug.LogWarning("Not contains");
-        //            //if(curNode.unsolvedCount != 0)
-        //            //{
-        //            //    Debug.LogWarning($"not zero {curNode.itemId} is {curNode.unsolvedCount}");
-        //            //}
-        //            //else
-        //            //{
-        //            //    Debug.Log("ok");
-        //            //}
-
-        //            for (int i = 0; i < curNode.children.Count; i++)
-        //            {
-        //                stack.Add(curNode.children[i]);
-        //                levelStack.Add(curLevel+1);
-        //            }
-        //        }
-        //    }
-        //}
-
-        //public void TestLog2()
-        //{
-        //    if (DSPCalculatorPlugin.developerMode)
-        //    {
-        //        List<ItemNode> stack = new List<ItemNode>();
-        //        stack.Add(root);
-        //        Dictionary<int, ItemNode> visitedNodes = new Dictionary<int,ItemNode>();
-        //        while (stack.Count > 0)
-        //        {
-        //            ItemNode oriNode = stack[stack.Count - 1];
-        //            ItemNode curNode = itemNodes[oriNode.itemId];
-        //            if(!visitedNodes.ContainsKey(curNode.itemId))
-        //            {
-        //                visitedNodes.Add(curNode.itemId, curNode);
-
-        //                // 输出
-        //                string log = "";
-        //                if (curNode.mainRecipe != null)
-        //                {
-        //                    log = $"{LDB.items.Select(curNode.itemId).name} 需求{curNode.needSpeed}  产出{curNode.satisfiedSpeed}    主要配方：{curNode.mainRecipe.recipeNorm.oriProto.name}  + {curNode.mainRecipe.GetOutputSpeedByChangedCount(curNode.itemId, curNode.mainRecipe.count)}\n";
-        //                    for (int i = 0; i < curNode.byProductRecipes.Count; i++)
-        //                    {
-        //                        RecipeInfo rInfo = curNode.byProductRecipes[i];
-        //                        log += $"    来自配方{rInfo.recipeNorm.oriProto.name} +{rInfo.GetOutputSpeedByChangedCount(curNode.itemId, rInfo.count)}\n";
-        //                    }
-        //                }
-        //                else
-        //                {
-        //                    log = $"{LDB.items.Select(curNode.itemId).name} 原矿 需求{curNode.needSpeed}  产出{curNode.satisfiedSpeed}\n";
-        //                }
-        //                Debug.Log(log);
-        //            }
-        //            stack.RemoveAt(stack.Count - 1);
-
-        //            //string log = "";
-        //            //log += $"|--- {LDB.items.Select(curNode.itemId).name}";
-        //            //Debug.Log(log);
-
-        //            //if (!itemNodes.ContainsKey(curNode.itemId))
-        //            //    Debug.LogWarning("Not contains");
-        //            //if(curNode.unsolvedCount != 0)
-        //            //{
-        //            //    Debug.LogWarning($"not zero {curNode.itemId} is {curNode.unsolvedCount}");
-        //            //}
-        //            //else
-        //            //{
-        //            //    Debug.Log("ok");
-        //            //}
-
-        //            for (int i = 0; i < curNode.children.Count; i++)
-        //            {
-        //                stack.Add(curNode.children[i]);
-        //            }
-        //        }
-        //    }
-        //}
-
+        public void Import(BinaryReader r)
+        {
+            int dataVersionInt = r.ReadInt32();
+            int targetCount = r.ReadInt32();
+            targets.Clear();
+            for (int i = 0; i < targetCount; i++)
+            {
+                int id = r.ReadInt32();
+                double speed = r.ReadDouble();
+                targets.Add(new ItemTarget(id, speed));
+            }
+            userPreference.Import(r);
+        }
     }
 
 

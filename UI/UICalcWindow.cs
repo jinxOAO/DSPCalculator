@@ -5,12 +5,16 @@ using DSPCalculator.Logic;
 using NGPT;
 using System;
 using System.Collections.Generic;
+using System.IO.Compression;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Reflection.Emit;
+using MathNet.Numerics;
 
 namespace DSPCalculator.UI
 {
@@ -40,6 +44,8 @@ namespace DSPCalculator.UI
         public static Color accModeImageColor = new Color(0.9906f, 0.5897f, 0.3691f, 0.384f);
         public static Color incModeTextColor = new Color(0.282f, 0.845f, 1, 0.705f);
         public static Color accModeTextColor = new Color(0.9906f, 0.5897f, 0.3691f, 0.705f);
+        public static Color inProgressColor = new Color(0.9906f, 0.5897f, 0.3691f, 0.705f);
+        public static Color finishedProgressColor = new Color(0.282f, 0.845f, 1, 0.705f);
         public static float largeWindowWidth = 1340;
         public static float smallWindowWidth = 315;
         public static float largeWindowViewGroupWidth = 890;
@@ -88,6 +94,12 @@ namespace DSPCalculator.UI
         public static Sprite LSWhiteSprite = null;
         public static Sprite blueprintIconSprite = null;// 还有其他的比如traficc-icon  transport-icon可以加入
         public static Sprite newBPFloderSprite = null; // 18x18的大小
+        public static Sprite copySprite;
+        public static Sprite pasteSprite;
+        public static Sprite lockSprite;
+        public static Sprite listSprite;
+        public static Sprite doubleLayerSprite;
+        public static Sprite circleThinSprite;
 
         // UI元素
         public GameObject windowObj;
@@ -125,6 +137,7 @@ namespace DSPCalculator.UI
         public List<UIButton> sideInfoPanelSwitchUIBtns; // 右侧panel切换按钮
         public GameObject genBpButtonObj; // 生成黑盒蓝图的按钮Obj
         public UIButton genBpUIBtn;
+        public Image progressCircleImg;
 
         public Image cbBluebuff;
         public Image cbEnergyBurst;
@@ -223,7 +236,7 @@ namespace DSPCalculator.UI
             // 窗口大小切换按钮
             switchSizeButtonObj = GameObject.Instantiate(closeButtonObj, windowObj.transform.Find("panel-bg"));
             switchSizeButtonObj.name = "-";
-            switchSizeButtonObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(-43, -13); // 原本的x是-13, -13
+            switchSizeButtonObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(-37, -13); // 原本的x是-13, -13
             switchSizeButtonObj.GetComponent<Image>().sprite = leftTriangleSprite;
             switchSizeButtonObj.GetComponent<UIButton>().tips.tipTitle = "收起/展开".Translate() + UIHotkeySettingPatcher.GetFoldHotkeyString();
             switchSizeButtonObj.GetComponent<UIButton>().tips.corner = 3;
@@ -231,6 +244,51 @@ namespace DSPCalculator.UI
             Button switchSizeButton = switchSizeButtonObj.GetComponent<Button>();
             switchSizeButton.onClick.RemoveAllListeners();
             switchSizeButton.onClick.AddListener(() => { SwitchWindowSize(); });
+
+            Transform panelParent = windowObj.transform.Find("panel-bg");
+            // 保存当前配置为默认按钮
+            GameObject saveUserPreferenceButtonObj = GameObject.Instantiate(closeButtonObj);
+            saveUserPreferenceButtonObj.name = "save-all";
+            saveUserPreferenceButtonObj.transform.SetParent(panelParent, false);
+            saveUserPreferenceButtonObj.transform.localScale = Vector3.one;
+            saveUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(1, 1);
+            saveUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(1, 1);
+            saveUserPreferenceButtonObj.GetComponent<RectTransform>().pivot = new Vector2(1, 1);
+            saveUserPreferenceButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(-64, -14.5f, 0);
+            saveUserPreferenceButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(18, 18);
+            saveUserPreferenceButtonObj.GetComponent<Image>().sprite = UICalcWindow.doubleLayerSprite;
+            saveUserPreferenceButtonObj.GetComponent<Button>().onClick.AddListener(() => { SaveAllUserPreferenceAsDefault(); });
+            saveUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipTitle = "保存为默认配置标题".Translate();
+            saveUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipText = "保存为默认配置说明".Translate();
+            saveUserPreferenceButtonObj.GetComponent<UIButton>().tips.corner = 3;
+            saveUserPreferenceButtonObj.GetComponent<UIButton>().tips.width = 200;
+            saveUserPreferenceButtonObj.GetComponent<UIButton>().audios.enterName = "ui-hover-0";
+            saveUserPreferenceButtonObj.GetComponent<UIButton>().audios.downName = "ui-click-0";
+            //saveUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0, 0, 1);
+            //saveUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.6f, 0, 0, 1);
+            //saveUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.9f, 0.2f, 0.2f, 1);
+
+            // 还原所有配置按钮
+            GameObject resetUserPreferenceButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
+            resetUserPreferenceButtonObj.name = "reset-all";
+            resetUserPreferenceButtonObj.transform.SetParent(panelParent, false);
+            resetUserPreferenceButtonObj.transform.localScale = Vector3.one;
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(1, 1);
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(1, 1);
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().pivot = new Vector2(1, 1);
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(-89, -14.5f, 0);
+            resetUserPreferenceButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(18, 18);
+            resetUserPreferenceButtonObj.GetComponent<Image>().sprite = UICalcWindow.resetSprite;
+            resetUserPreferenceButtonObj.GetComponent<Button>().onClick.AddListener(() => { ClearAllUserPreference(); });
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipTitle = "还原默认配置标题".Translate();
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipText = "还原默认配置说明".Translate();
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.corner = 3;
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.width = 200;
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0, 0, 1);
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.6f, 0, 0, 1);
+            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.9f, 0.2f, 0.2f, 1);
+
+
 
             viewGroupObj = windowObj.transform.Find("view-group").gameObject;
             // 下面调整至以左下角为基准，且调整一下大小
@@ -268,7 +326,6 @@ namespace DSPCalculator.UI
 
             titleText.text = "量化计算器".Translate(); // 一定要在设置active之后进行
 
-            Transform panelParent = windowObj.transform.Find("panel-bg");
 
 
             // 可编辑标题
@@ -330,6 +387,41 @@ namespace DSPCalculator.UI
             targetProductTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(25, 318, 0);
             targetProductTextObj.GetComponent<Text>().text = "设置目标产物".Translate();
             targetProductTextObj.GetComponent<Text>().fontSize = 16;
+            // 复制粘贴按钮，作为设置目标产物文本的子对象
+            GameObject copyButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip, targetProductTextObj.transform);
+            copyButtonObj.name = "copy"; 
+            copyButtonObj.transform.localScale = Vector3.one;
+            copyButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.5f);
+            copyButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(0, 0.5f);
+            copyButtonObj.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
+            copyButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(100, -1, 0);
+            copyButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(16, 16);
+            copyButtonObj.GetComponent<Image>().sprite = UICalcWindow.copySprite;
+            copyButtonObj.GetComponent<Button>().onClick.AddListener(() => { OnCopyButtonClick(); });
+            copyButtonObj.GetComponent<UIButton>().tips.tipTitle = "calc复制标题".Translate();
+            copyButtonObj.GetComponent<UIButton>().tips.tipText = "calc复制说明".Translate();
+            copyButtonObj.GetComponent<UIButton>().tips.corner = 3;
+            copyButtonObj.GetComponent<UIButton>().tips.width = 200;
+            copyButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0.6f, 0.6f, 1);
+            copyButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.4f, 0.4f, 0.4f, 1);
+            copyButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.8f, 0.8f, 0.8f, 1);
+            GameObject pasteButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip, targetProductTextObj.transform);
+            pasteButtonObj.name = "paste";
+            pasteButtonObj.transform.localScale = Vector3.one;
+            pasteButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.5f);
+            pasteButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(0, 0.5f);
+            pasteButtonObj.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
+            pasteButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, -1, 0);
+            pasteButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(16, 16);
+            pasteButtonObj.GetComponent<Image>().sprite = UICalcWindow.pasteSprite;
+            pasteButtonObj.GetComponent<Button>().onClick.AddListener(() => { OnPasteButtonClick(); });
+            pasteButtonObj.GetComponent<UIButton>().tips.tipTitle = "calc粘贴标题".Translate();
+            pasteButtonObj.GetComponent<UIButton>().tips.tipText = "calc粘贴说明".Translate();
+            pasteButtonObj.GetComponent<UIButton>().tips.corner = 3;
+            pasteButtonObj.GetComponent<UIButton>().tips.width = 200;
+            pasteButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0.6f, 0.6f, 1);
+            pasteButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.4f, 0.4f, 0.4f, 1);
+            pasteButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.8f, 0.8f, 0.8f, 1);
 
             // 目标产物图标
             GameObject oriItemIconObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Station Window/storage-box-0/storage-icon-empty");
@@ -357,6 +449,22 @@ namespace DSPCalculator.UI
                 targetProductIcon.sprite = Resources.Load<Sprite>("ui/textures/sprites/icons/controlpanel-icon-40"); // 是循环箭头环绕的齿轮，去掉40则是64*64大小的相同图标
 
                 targetProductIconUIBtn = targetProductIconObj.GetComponent<UIButton>();
+
+                // 进度百分比环形图标
+                GameObject progressCircleObj = new GameObject("circle-progress");
+                progressCircleImg = progressCircleObj.AddComponent<Image>();
+                progressCircleObj.transform.SetParent(targetProductIconObj.transform, false);
+                progressCircleObj.transform.localScale = Vector3.one;
+                progressCircleObj.GetComponent<RectTransform>().anchoredPosition3D = Vector3.zero;
+                progressCircleObj.GetComponent<RectTransform>().sizeDelta = new Vector2(54, 54);
+                progressCircleImg.sprite = circleThinSprite;
+                progressCircleImg.type = Image.Type.Filled;
+                progressCircleImg.fillMethod = Image.FillMethod.Radial360;
+                progressCircleImg.fillAmount = 0;
+                progressCircleImg.fillOrigin = 2;
+                progressCircleImg.material = targetProductIcon.material;
+                progressCircleImg.color = inProgressColor;
+
             }
             else
             {
@@ -560,15 +668,15 @@ namespace DSPCalculator.UI
                 genBpButtonObj.transform.localScale = Vector3.one;
                 genBpButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(0, 1);
                 genBpButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(0, 1);
-                genBpButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(250, -80, 0);
+                genBpButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(245, -80, 0);
                 if(CompatManager.GB)
                     genBpButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(240, -80, 0);
-                genBpButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 30);
+                genBpButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(25, 25);
                 genBpButtonObj.GetComponent<Image>().sprite = UICalcWindow.blueprintIconSprite;
                 genBpButtonObj.GetComponent<Button>().onClick.AddListener(() => { GenerateBlackboxBpAndPaste(); });
                 genBpUIBtn = genBpButtonObj.GetComponent<UIButton>();
                 genBpButtonObj.GetComponent<UIButton>().tips.tipTitle = "生成黑盒蓝图标题".Translate();
-                genBpButtonObj.GetComponent<UIButton>().tips.tipText = "生成黑盒蓝图描述".Translate();
+                genBpButtonObj.GetComponent<UIButton>().tips.tipText = "生成黑盒蓝图说明".Translate();
                 genBpButtonObj.GetComponent<UIButton>().tips.corner = 3;
                 genBpButtonObj.GetComponent<UIButton>().tips.width = 270;
                 Navigation nvg_gbp0 = new Navigation();
@@ -653,25 +761,8 @@ namespace DSPCalculator.UI
             assemblersDemandsGroupObj.transform.localPosition = new Vector3(13, -110, 0);
             // 实际创建工厂信息由RefreshAssemblerDemands()完成
 
-            // 还原所有配置按钮
-            GameObject resetUserPreferenceButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip);
-            resetUserPreferenceButtonObj.name = "reset-all";
-            resetUserPreferenceButtonObj.transform.SetParent(panelParent, false);
-            resetUserPreferenceButtonObj.transform.localScale = Vector3.one;
-            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMin = new Vector2(1, 1);
-            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchorMax = new Vector2(1, 1);
-            resetUserPreferenceButtonObj.GetComponent<RectTransform>().pivot = new Vector2(1, 1);
-            resetUserPreferenceButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(-75, -15, 0);
-            resetUserPreferenceButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(18, 18);
-            resetUserPreferenceButtonObj.GetComponent<Image>().sprite = UICalcWindow.resetSprite;
-            resetUserPreferenceButtonObj.GetComponent<Button>().onClick.AddListener(() => { ClearAllUserPreference(); });
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipTitle = "还原默认配置标题".Translate();
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.tipText = "还原默认配置说明".Translate();
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.corner = 3;
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().tips.width = 200;
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0, 0, 1);
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.6f, 0, 0, 1);
-            resetUserPreferenceButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.9f, 0.2f, 0.2f, 1);
+
+           
 
             // 右侧可调整元驱动等配置信息                         
             GameObject checkBoxGroupObj = new GameObject();
@@ -837,6 +928,9 @@ namespace DSPCalculator.UI
             RefreshAssemblerButtonDisplay();
             RefreshProliferatorButtonDisplay();
             RefreshBpGenButton();
+            RefreshProgressCircle();
+
+            TryLoadDefault();
         }
 
         public static void TryInitStaticPrefabs()
@@ -968,6 +1062,12 @@ namespace DSPCalculator.UI
                 LSWhiteSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/logistics-station-40-icon");
                 blueprintIconSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/blueprint-icon");
                 newBPFloderSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/new-bpfolder-icon");
+                copySprite = Resources.Load<Sprite>("ui/textures/sprites/icons/copy");
+                pasteSprite = Resources.Load<Sprite>("ui/textures/sprites/icons/paste");
+                lockSprite = Resources.Load<Sprite>("ui/textures/sprites/dashboard/menu/lock");
+                listSprite = Resources.Load<Sprite>("ui/textures/sprites/test/test-list-alt");
+                doubleLayerSprite = Resources.Load<Sprite>("ui/textures/sprites/dashboard/menu/top");
+                circleThinSprite = Resources.Load<Sprite>("ui/textures/sprites/sci-fi/circle-thin");
             }
         }
 
@@ -1006,17 +1106,22 @@ namespace DSPCalculator.UI
         public Image uibtnIcon_bpStack3;
         public Image uibtnIcon_bpStack2;
         public Image uibtnIcon_bpStack1;
+        public Image uibtnIcon_bpBlackboxConnectCoater;
+        public Image uibtnIcon_bpBlackboxNotConnectCoater;
 
         public void InitBpPreferceUI(Transform parent)
         {
             // 行数、喷涂机、传送带使用和科技、分拣器使用和科技
 
+            float lineBeginY = -20;
+            float lineSpacing = 23; // 实际是减去lineSpaceing，所以向下扩展保持lineSpacing为正数即可
+
             // 行数
             if (true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title1";
-                titleObj1.transform.localPosition = new Vector3(15, -20, 0);
+                titleObj1.name = "title0";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY, 0);
                 titleObj1.GetComponent<Text>().text = "蓝图行数".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1044,86 +1149,13 @@ namespace DSPCalculator.UI
                 cb2.GetComponent<UIButton>().tips.width = 300;
                 cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "蓝图行数双行";
             }
-            // 喷涂机
-            if (true)
-            {
-                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title2";
-                titleObj1.transform.localPosition = new Vector3(15, -45, 0);
-                titleObj1.GetComponent<Text>().text = "生成喷涂机".Translate();
-                titleObj1.GetComponent<Text>().fontSize = 14;
-
-                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
-                cb1.name = "cb1";
-                uibtnIcon_bpCoaterAuto = cb1.GetComponent<Image>();
-                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, -0, 0);
-                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(0); });
-                cb1.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机自动".Translate();
-                cb1.GetComponent<UIButton>().tips.tipText = "生成喷涂机自动说明".Translate();
-                cb1.GetComponent<UIButton>().tips.corner = 1;
-                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
-                cb1.GetComponent<UIButton>().tips.width = 300;
-                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机自动";
-
-                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
-                cb2.name = "cb2";
-                uibtnIcon_bpCoaterAlways = cb2.GetComponent<Image>();
-                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
-                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(1); });
-                //cb2.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机总是".Translate();
-                //cb2.GetComponent<UIButton>().tips.tipText = "生成喷涂机总是说明".Translate();
-                cb2.GetComponent<UIButton>().tips.corner = 1;
-                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
-                cb2.GetComponent<UIButton>().tips.width = 300;
-                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机总是";
-
-                GameObject cb3 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
-                cb3.name = "cb3";
-                uibtnIcon_bpCoaterNever = cb3.GetComponent<Image>();
-                cb3.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(280, 0, 0);
-                cb3.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(-1); });
-                //cb3.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机从不".Translate();
-                //cb3.GetComponent<UIButton>().tips.tipText = "生成喷涂机从不说明".Translate();
-                cb3.GetComponent<UIButton>().tips.corner = 1;
-                cb3.GetComponent<UIButton>().tips.delay = 0.1f;
-                cb3.GetComponent<UIButton>().tips.width = 300;
-                cb3.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机从不";
-            } 
-            // 为产物生成喷涂机
-            if (true)
-            {
-                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title2";
-                titleObj1.transform.localPosition = new Vector3(15, -70, 0);
-                titleObj1.GetComponent<Text>().text = "生成产物喷涂机".Translate();
-                titleObj1.GetComponent<Text>().fontSize = 14;
-
-                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
-                cb1.name = "cb1";
-                uibtnIcon_bpProductCoaterAlways = cb1.GetComponent<Image>();
-                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
-                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpProductCoaterSet(true); });
-                cb1.GetComponent<UIButton>().tips.corner = 1;
-                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
-                cb1.GetComponent<UIButton>().tips.width = 300;
-                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机总是";
-
-                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
-                cb2.name = "cb2";
-                uibtnIcon_bpProductCoaterNever = cb2.GetComponent<Image>();
-                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
-                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpProductCoaterSet(false); });
-                cb2.GetComponent<UIButton>().tips.corner = 1;
-                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
-                cb2.GetComponent<UIButton>().tips.width = 300;
-                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机从不";
-            }
+            
             // 物流塔预留增产剂槽位吗
             if (true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title3";
-                titleObj1.transform.localPosition = new Vector3(15, -95, 0);
+                titleObj1.name = "title1";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 1 * lineSpacing, 0);
                 titleObj1.GetComponent<Text>().text = "物流塔提供增产剂".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1157,8 +1189,8 @@ namespace DSPCalculator.UI
             if (true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title4";
-                titleObj1.transform.localPosition = new Vector3(15, -120, 0);
+                titleObj1.name = "title2";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 2 * lineSpacing, 0);
                 titleObj1.GetComponent<Text>().text = "首选传送带".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1190,8 +1222,8 @@ namespace DSPCalculator.UI
             if (true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title5";
-                titleObj1.transform.localPosition = new Vector3(15, -145, 0);
+                titleObj1.name = "title3";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 3 * lineSpacing, 0);
                 titleObj1.GetComponent<Text>().text = "传送带科技限制".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1224,8 +1256,8 @@ namespace DSPCalculator.UI
             if (true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title6";
-                titleObj1.transform.localPosition = new Vector3(15, -170, 0);
+                titleObj1.name = "title4";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 4 * lineSpacing, 0);
                 titleObj1.GetComponent<Text>().text = "首选分拣器".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1257,8 +1289,8 @@ namespace DSPCalculator.UI
             if (true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title7";
-                titleObj1.transform.localPosition = new Vector3(15, -195, 0);
+                titleObj1.name = "title5";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 5 * lineSpacing, 0);
                 titleObj1.GetComponent<Text>().text = "分拣器科技限制".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1291,8 +1323,8 @@ namespace DSPCalculator.UI
             if(true)
             {
                 GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
-                titleObj1.name = "title8";
-                titleObj1.transform.localPosition = new Vector3(15, -220, 0);
+                titleObj1.name = "title6";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 6 * lineSpacing, 0);
                 titleObj1.GetComponent<Text>().text = "传送带堆叠".Translate();
                 titleObj1.GetComponent<Text>().fontSize = 14;
 
@@ -1347,6 +1379,115 @@ namespace DSPCalculator.UI
                 cb1.GetComponent<UIButton>().tips.delay = 0.1f;
                 cb1.GetComponent<UIButton>().tips.width = 0;
                 cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "1";
+            }
+            // 为原材料生成喷涂机
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title7";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 7 * lineSpacing, 0);
+                titleObj1.GetComponent<Text>().text = "生成喷涂机".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpCoaterAuto = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, -0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(0); });
+                cb1.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机自动".Translate();
+                cb1.GetComponent<UIButton>().tips.tipText = "生成喷涂机自动说明".Translate();
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 300;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机自动";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpCoaterAlways = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(1); });
+                //cb2.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机总是".Translate();
+                //cb2.GetComponent<UIButton>().tips.tipText = "生成喷涂机总是说明".Translate();
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机总是";
+
+                GameObject cb3 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb3.name = "cb3";
+                uibtnIcon_bpCoaterNever = cb3.GetComponent<Image>();
+                cb3.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(280, 0, 0);
+                cb3.GetComponent<Button>().onClick.AddListener(() => { OnBpCoaterSet(-1); });
+                //cb3.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机从不".Translate();
+                //cb3.GetComponent<UIButton>().tips.tipText = "生成喷涂机从不说明".Translate();
+                cb3.GetComponent<UIButton>().tips.corner = 1;
+                cb3.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb3.GetComponent<UIButton>().tips.width = 300;
+                cb3.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机从不";
+            }
+            // 为产物生成喷涂机
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title8";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 8 * lineSpacing, 0);
+                titleObj1.GetComponent<Text>().text = "生成产物喷涂机".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpProductCoaterAlways = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpProductCoaterSet(true); });
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 300;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机总是";
+                cb1.GetComponent<UIButton>().tips.tipTitle = "生成喷涂机总是".Translate();
+                cb1.GetComponent<UIButton>().tips.tipText = "产物生成喷涂机说明".Translate();
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpProductCoaterNever = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpProductCoaterSet(false); });
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "生成喷涂机从不";
+            }
+            // 黑盒喷涂机是否连接供给带子
+            if (true)
+            {
+                GameObject titleObj1 = GameObject.Instantiate(TextObj, parent);
+                titleObj1.name = "title9";
+                titleObj1.transform.localPosition = new Vector3(15, lineBeginY - 9 * lineSpacing, 0);
+                titleObj1.GetComponent<Text>().text = "黑盒连接喷涂机进料口".Translate();
+                titleObj1.GetComponent<Text>().fontSize = 14;
+
+                GameObject cb1 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb1.name = "cb1";
+                uibtnIcon_bpBlackboxConnectCoater = cb1.GetComponent<Image>();
+                cb1.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(120, 0, 0);
+                cb1.GetComponent<Button>().onClick.AddListener(() => { OnBpBlackboxCoaterConnectSet(true); });
+                cb1.GetComponent<UIButton>().tips.tipTitle = "黑盒连接喷涂机进料口标题".Translate();
+                cb1.GetComponent<UIButton>().tips.tipText = "黑盒连接喷涂机进料口说明".Translate();
+                cb1.GetComponent<UIButton>().tips.corner = 1;
+                cb1.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb1.GetComponent<UIButton>().tips.width = 300;
+                cb1.transform.Find("text").GetComponent<Localizer>().stringKey = "黑盒连接喷涂机生成";
+
+                GameObject cb2 = GameObject.Instantiate(checkBoxObj, titleObj1.transform);
+                cb2.name = "cb2";
+                uibtnIcon_bpBlackboxNotConnectCoater = cb2.GetComponent<Image>();
+                cb2.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(200, 0, 0);
+                cb2.GetComponent<Button>().onClick.AddListener(() => { OnBpBlackboxCoaterConnectSet(false); });
+                cb2.GetComponent<UIButton>().tips.tipTitle = "黑盒不连接喷涂机进料口标题".Translate();
+                cb2.GetComponent<UIButton>().tips.tipText = "黑盒不连接喷涂机进料口说明".Translate();
+                cb2.GetComponent<UIButton>().tips.corner = 1;
+                cb2.GetComponent<UIButton>().tips.delay = 0.1f;
+                cb2.GetComponent<UIButton>().tips.width = 300;
+                cb2.transform.Find("text").GetComponent<Localizer>().stringKey = "黑盒连接喷涂机不生成";
             }
         }
 
@@ -1438,11 +1579,13 @@ namespace DSPCalculator.UI
                 nextFrameRecalc = false;
                 if(solution.targets.Count > 0)
                 {
-                    targetProductIcon.sprite = LDB.items.Select(solution.targets[0].itemId)?.iconSprite;
+                    if (solution.targets[0].itemId > 0)
+                        targetProductIcon.sprite = LDB.items.Select(solution.targets[0].itemId)?.iconSprite;
                     speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString();
                 }
-
-                solution.ReSolve(Convert.ToDouble(speedInputObj.GetComponent<InputField>().text));
+                double forceSpeed;
+                double.TryParse(speedInputObj.GetComponent<InputField>().text, out forceSpeed);
+                solution.ReSolve(forceSpeed);
                 RefreshAll();
             }
 
@@ -1668,7 +1811,8 @@ namespace DSPCalculator.UI
                 targetProductIconUIBtn.tips.corner = 3;
                 targetProductIconUIBtn.tips.itemId = item.ID;
                 targetProductIconUIBtn.tips.delay = 0.1f;
-                double newTargetSpeed = Convert.ToDouble(speedInputObj.GetComponent<InputField>().text);
+                double newTargetSpeed = 0;
+                double.TryParse(speedInputObj.GetComponent<InputField>().text, out newTargetSpeed);
                 solution.SetTargetAndSolve(0, item.ID, newTargetSpeed);
                 //solution.SetTargetItemAndBeginSolve(item.ID);
                 RefreshAll();
@@ -1679,7 +1823,8 @@ namespace DSPCalculator.UI
         {
             try
             {
-                double newTargetSpeed = Convert.ToDouble(num);
+                double newTargetSpeed;
+                double.TryParse(num, out newTargetSpeed);
                 solution.ChangeTargetSpeed0AndSolve(newTargetSpeed);
                 RefreshAll();
             }
@@ -1717,8 +1862,9 @@ namespace DSPCalculator.UI
 
         public void RefreshAll()
         {
-            if (solution.targets.Count == 0)
+            if (solution.targets.Count == 0 || solution.targets[0].itemId == 0)
                 targetProductIcon.sprite = itemNotSelectedSprite;
+
             RefreshProductContent();
             RefreshResourceNeedAndByProductContent();
             RefreshFinalInfoText();
@@ -1729,6 +1875,7 @@ namespace DSPCalculator.UI
             RefreshCheckBoxes();
             RefreshSideInfoPanels();
             RefreshBpGenButton();
+            RefreshProgressCircle();
             refreshIndex = 0;
         }
 
@@ -1908,7 +2055,10 @@ namespace DSPCalculator.UI
                 if (solution.targets[i].itemId > 0 && solution.targets[i].speed > 0)
                 {
                     int index = i;
-                    UIItemNodeTarget uiTargetNode = new UIItemNodeTarget(index, solution.targets[i].itemId, solution.targets[i].speed, this);
+                    double speed = solution.targets[i].speed;
+                    if (solution.tempNotShrinkRoot && i == 0 && solution.itemNodes.ContainsKey(solution.targets[i].itemId))
+                        speed = solution.itemNodes[solution.targets[i].itemId].needSpeed;
+                    UIItemNodeTarget uiTargetNode = new UIItemNodeTarget(index, solution.targets[i].itemId, speed, this);
                     uiSideItemNodes.Add(uiTargetNode);
                     count++;
                 }
@@ -2095,7 +2245,21 @@ namespace DSPCalculator.UI
                 return false;
             }
         }
+        public bool AddOrUpdateTargetButNotResolve(int index, int targetItem, double targetSpeed)
+        {
+            if (solution.AddOrUpdateTarget(index, targetItem, targetSpeed))
+            {
+                solution.MergeDuplicateTargets();
+                speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString(); // 这里不能直接用targetSpeed因为有可能merge之后这个速度变了
 
+                nextFrameRecalc = false;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
 
         public void RefreshSideInfoPanels()
         {
@@ -2214,6 +2378,16 @@ namespace DSPCalculator.UI
                 uibtnIcon_bpSorterLimit.sprite = checkboxOffSprite;
                 uibtnIcon_bpSorterUnlimit.sprite = checkboxOnSprite;
             }
+            if(solution.userPreference.bpConnectBlackboxCoater)
+            {
+                uibtnIcon_bpBlackboxConnectCoater.sprite = checkboxOnSprite;
+                uibtnIcon_bpBlackboxNotConnectCoater.sprite= checkboxOffSprite;
+            }
+            else
+            {
+                uibtnIcon_bpBlackboxConnectCoater.sprite = checkboxOffSprite;
+                uibtnIcon_bpBlackboxNotConnectCoater.sprite = checkboxOnSprite;
+            }
 
             uibtnIcon_bpStack1.sprite = solution.userPreference.bpStackSetting == 1 ? checkboxOnSprite: checkboxOffSprite;
             uibtnIcon_bpStack2.sprite = solution.userPreference.bpStackSetting == 2 ? checkboxOnSprite : checkboxOffSprite;
@@ -2248,10 +2422,13 @@ namespace DSPCalculator.UI
                     continue;
                 int assemblerItemId = recipeInfo.assemblerItemId;
                 long ceilingCount =(long) Math.Ceiling(recipeInfo.assemblerCount);
-                if (!counts.ContainsKey(assemblerItemId))
-                    counts[assemblerItemId] = ceilingCount;
-                else
-                    counts[assemblerItemId] += ceilingCount;
+                if (!solution.userPreference.finishedRecipes.ContainsKey(recipeInfo.ID) || !DSPCalculatorPlugin.OnlyCountUnfinishedFacilities.Value)
+                {
+                    if (!counts.ContainsKey(assemblerItemId))
+                        counts[assemblerItemId] = ceilingCount;
+                    else
+                        counts[assemblerItemId] += ceilingCount;
+                }
             }
 
             // 创建图标和数量文本
@@ -2488,8 +2665,58 @@ namespace DSPCalculator.UI
         public void ClearAllUserPreference()
         {
             solution.ClearUserPreference();
-            solution.ReSolve(Convert.ToDouble(speedInputObj.GetComponent<InputField>().text));
+            double forceSpeed;
+            double.TryParse(speedInputObj.GetComponent<InputField>().text, out forceSpeed);
+            solution.ReSolve(forceSpeed);
             RefreshAll();
+        }
+
+        public void SaveAllUserPreferenceAsDefault()
+        {
+            if(Input.GetKey(KeyCode.LeftControl)||Input.GetKey(KeyCode.RightControl))
+            {
+                DSPCalculatorPlugin.DefaultNewWindowData.Value = "";
+                DSPCalculatorPlugin.DefaultNewWindowData.ConfigFile.Save();
+                UIRealtimeTip.Popup("calc设置成功提示".Translate());
+            }
+            else
+            {
+                string data = Copy();
+                if (data.Length > 13)
+                {
+                    UIRealtimeTip.Popup("calc设置成功提示".Translate());
+                    DSPCalculatorPlugin.DefaultNewWindowData.Value = data;
+                    DSPCalculatorPlugin.DefaultNewWindowData.ConfigFile.Save();
+                }
+                else
+                {
+                    UIRealtimeTip.Popup("Unknown Error");
+                }
+            }
+
+        }
+
+        public void TryLoadDefault()
+        {
+            string data = DSPCalculatorPlugin.DefaultNewWindowData.Value;
+            if (data != null && data.Length > 13)
+            {
+                try
+                {
+                    if(!TryPaste(data))
+                    {
+                        ClearAllUserPreference();
+                        DSPCalculatorPlugin.DefaultNewWindowData.Value = "";
+                        DSPCalculatorPlugin.DefaultNewWindowData.ConfigFile.Save();
+                    }
+                }
+                catch (Exception)
+                {
+                    ClearAllUserPreference();
+                    DSPCalculatorPlugin.DefaultNewWindowData.Value = "";
+                    DSPCalculatorPlugin.DefaultNewWindowData.ConfigFile.Save();
+                }
+            }
         }
 
         public void RefreshCheckBoxes()
@@ -2533,6 +2760,7 @@ namespace DSPCalculator.UI
                 else
                     cbIncMilli.sprite = checkboxOffSprite;
                 txtIncMilli.text = "强制增产效能".Translate();
+                incInput.text = ((int)Math.Round(solution.userPreference.incMilliOverride * 100)).ToString();
 
             }
             if(cbAccMilli != null)
@@ -2542,6 +2770,7 @@ namespace DSPCalculator.UI
                 else
                     cbAccMilli.sprite = checkboxOffSprite;
                 txtAccMilli.text = "强制加速效能".Translate();
+                accInput.text = ((int)Math.Round(solution.userPreference.accMilliOverride * 100)).ToString();
             }
             if(cbRoundUp != null)
             {
@@ -2572,7 +2801,15 @@ namespace DSPCalculator.UI
 
         public void GenerateBlackboxBpAndPaste()
         {
-
+            int genLevel = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) ? 1 : 0;
+            BpConnector connector = new BpConnector(this, genLevel);
+            if (connector.succeeded)
+            {
+                // 暂时关闭窗口以便粘贴
+                CloseWindow();
+                WindowsManager.temporaryCloseBecausePasteBp = true;
+                GameMain.mainPlayer.controller.OpenBlueprintPasteMode(connector.blueprintData, GameConfig.blueprintFolder + "DSPCalcBPTemp.txt");
+            }
         }
 
         public void RefreshBpGenButton()
@@ -2581,7 +2818,7 @@ namespace DSPCalculator.UI
             {
                 if(BpConnector.enabled)
                 {
-                    if (solution.targets.Count > 0)
+                    if (solution.targets.Count > 0 && solution.targets[0].itemId > 0)
                         genBpButtonObj.SetActive(true);
                     else
                         genBpButtonObj.SetActive(false);
@@ -2593,6 +2830,71 @@ namespace DSPCalculator.UI
             }
         }
 
+        public void RefreshProgressCircle()
+        {
+            double totalFacilityCount = 0;
+            double finishedFacilityCount = 0;
+            foreach (var item in solution.recipeInfos)
+            {
+                RecipeInfo recipeInfo = item.Value;
+                if(recipeInfo.count > 0.0001f)
+                {
+                    totalFacilityCount += recipeInfo.assemblerCount;
+                    if(solution.userPreference.finishedRecipes.ContainsKey(item.Key))
+                    {
+                        finishedFacilityCount += recipeInfo.assemblerCount;
+                    }
+                }
+
+            }
+
+            double progress = 0;
+            if(totalFacilityCount > 0)
+                progress = finishedFacilityCount / totalFacilityCount;
+
+            progressCircleImg.fillAmount = (float)progress;
+            if (progress >= 1)
+                progressCircleImg.color = finishedProgressColor;
+            else
+                progressCircleImg.color = inProgressColor;
+        }
+
+
+        public void FocusTargetNode(int itemId)
+        {
+            if (uiItemNodeOrders.ContainsKey(itemId))
+            {
+                int order = uiItemNodeOrders[itemId];
+                int totalCount = uiItemNodeOrders.Count;
+                if (order >= 0 && order < uiItemNodeOrders.Count)
+                {
+                    // 跳转到目标位置，小于8不需要跳转
+                    if (totalCount >= 8)
+                    {
+                        int calcOrder = order - 3;
+                        int calcTotal = totalCount - 7;
+                        if (calcOrder < 0)
+                            calcOrder = 0;
+                        if (calcOrder > calcTotal)
+                            calcOrder = calcTotal;
+                        float vPos = 1f - (1.0f * calcOrder / calcTotal);
+                        targetVerticalPosition = vPos;
+                        //parentCalcWindow.contentScrollRect.verticalNormalizedPosition = vPos;
+                    }
+
+
+                    UIItemNode targetNode = uiItemNodes[order];
+                    Color oldColor = targetNode.backgroundImg.color;
+                    targetNode.backgroundImg.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f); // 让他闪烁一次
+                }
+            }
+            if (uiItemSimplesByItemId.ContainsKey(itemId))
+            {
+                UIItemNodeSimple targetNodeSimple = uiItemSimplesByItemId[itemId];
+                Color oldColor = targetNodeSimple.backgroundImg.color;
+                targetNodeSimple.backgroundImg.color = new Color(oldColor.r, oldColor.g, oldColor.b, 1f); // 闪烁一次
+            }
+        }
         public void OnBluebuffClick()
         {
             solution.userPreference.bluebuff = !solution.userPreference.bluebuff;
@@ -2763,6 +3065,160 @@ namespace DSPCalculator.UI
         {
             solution.userPreference.bpStackSetting = stack;
             RefreshBpPreferences();
+        }
+
+        public void OnBpBlackboxCoaterConnectSet(bool connect)
+        {
+            solution.userPreference.bpConnectBlackboxCoater = connect;
+            RefreshBpPreferences();
+        }
+
+        public void OnCopyButtonClick()
+        {
+            string data = Copy();
+            if (data.Length > 13)
+            {
+                GUIUtility.systemCopyBuffer = data;
+                UIRealtimeTip.Popup("calc复制成功提示".Translate());
+            }
+            else
+            {
+                UIRealtimeTip.Popup("calc复制失败提示".Translate());
+            }
+        }
+
+        public string Copy()
+        {
+            string header = "DSPCalcData,";
+            for (int i = 0; i < solution.targets.Count; i++)
+            {
+                header += Utils.GetItemName(solution.targets[i].itemId) + ":" + solution.targets[i].speed.ToString();
+                header += ",";
+            }
+            header += "\"";
+            string final = "";
+            try
+            {
+                StringBuilder stringBuilder = new StringBuilder(1024);
+                using (MemoryStream memoryStream = new MemoryStream())
+                {
+                    using (BinaryWriter binaryWriter = new BinaryWriter(memoryStream))
+                    {
+                        solution.Export(binaryWriter);
+                        memoryStream.Position = 0L;
+                        using (MemoryStream memoryStream2 = new MemoryStream())
+                        {
+                            using (GZipStream gzipStream = new GZipStream(memoryStream2, CompressionMode.Compress))
+                            {
+                                memoryStream.CopyTo(gzipStream);
+                            }
+                            byte[] inArray = memoryStream2.ToArray();
+                            stringBuilder.Append(header);
+                            stringBuilder.Append(Convert.ToBase64String(inArray));
+                            string value = MD5F.Compute(stringBuilder.ToString());
+                            stringBuilder.Append("\"");
+                            stringBuilder.Append(value);
+                            final = stringBuilder.ToString();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError(ex.ToString().Replace("Exception", "Excption"));
+                return "";
+            }
+            return final;
+        }
+
+        public void OnPasteButtonClick()
+        {
+            string systemCopyBuffer = GUIUtility.systemCopyBuffer;
+            if (!TryPaste(systemCopyBuffer))
+            {
+                ClearAllUserPreference();
+                UIRealtimeTip.Popup("calc粘贴失败提示".Translate());
+            }
+            else
+            {
+                UIRealtimeTip.Popup("calc粘贴成功提示".Translate());
+            }
+
+        }
+
+        public bool TryPaste(string str)
+        {
+            string legalHeader = "DSPCalcData,";
+            if (str.Length <= legalHeader.Length)
+                return false;
+            for (int i = 0; i < legalHeader.Length; i++)
+            {
+                if (legalHeader[i] != str[i])
+                    return false;
+            }
+            if (LoadFromBase64String(str))
+            {
+                RefreshAll();
+                nextFrameRecalc = true;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public bool LoadFromBase64String(string str)
+        {
+            try
+            {
+                int begin = -1;
+                int end = -1;
+                for (int i = 0; i < str.Length; i++)
+                {
+                    if (str[i] == '"')
+                    {
+                        begin = i;
+                        break;
+                    }
+                }
+                if (begin < 0)
+                {
+                    return false;
+                }
+                for (int i = str.Length - 1; i >= 0; i--)
+                {
+                    if (str[i] == '"')
+                    {
+                        end = i;
+                        break;
+                    }
+                }
+                if (end < begin + 2)
+                {
+                    return false;
+                }
+                using (MemoryStream memoryStream = new MemoryStream(Convert.FromBase64String(str.Substring(begin + 1, end - begin - 1))))
+                {
+                    using (MemoryStream memoryStream2 = new MemoryStream())
+                    {
+                        using (GZipStream gzipStream = new GZipStream(memoryStream, CompressionMode.Decompress))
+                        {
+                            gzipStream.CopyTo(memoryStream2);
+                        }
+                        memoryStream2.Position = 0L;
+                        using (BinaryReader binaryReader = new BinaryReader(memoryStream2))
+                        {
+                            solution.Import(binaryReader);
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+            return true;
         }
     }
 }

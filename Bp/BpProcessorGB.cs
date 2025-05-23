@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 using static UnityEngine.TouchScreenKeyboard;
 
 namespace DSPCalculator.Bp
@@ -12,6 +13,7 @@ namespace DSPCalculator.Bp
     public class BpProcessorGB
     {
         public BpProcessor processor;
+        public BpBlockProcessor blockProcessor;
         public SolutionTree solution { get { return processor.solution; } }
         public List<BpGBCargoInfo> cargoInfos;
         public List<int> beltLines;
@@ -31,10 +33,17 @@ namespace DSPCalculator.Bp
         public BpProcessorGB(BpProcessor processor)
         {
             this.processor = processor;
+            this.blockProcessor = null;
+            cargoInfos = new List<BpGBCargoInfo>();
+        }
+        public BpProcessorGB(BpBlockProcessor blockProcessor)
+        {
+            this.blockProcessor = blockProcessor;
+            this.processor = blockProcessor;
             cargoInfos = new List<BpGBCargoInfo>();
         }
 
-        public void PreProcess()
+        public void PreProcess(bool singleBeltEachCargo = false)
         {
             int stack = processor.solution.userPreference.bpStack;
             RecipeProto recipeProto = processor.recipeInfo.recipeNorm.oriProto;
@@ -97,6 +106,12 @@ namespace DSPCalculator.Bp
             {
                 processor.supportAssemblerCount = (int)Math.Ceiling(processor.recipeInfo.assemblerCount);
             }
+            else if (singleBeltEachCargo) // 在block生成条件下，必须要求每种材料只能单带运送，所以一旦单带不能满足需求，直接返回失败结果
+            {
+                processor.supportAssemblerCount = 0;
+                processor.bpCountToSatisfy = -1;
+                return;
+            }
             else // 只有每种原材料都单带不能满足，并且有富裕带位可以供某一种或几种物品增加带子时，考虑某些物品用多带的方案
             {
 
@@ -153,8 +168,6 @@ namespace DSPCalculator.Bp
                     foreach (var ci in cargoInfos)
                     {
                         freeBeltLineCount -= ci.beltLineCount;
-
-                        Utils.logger.LogInfo($"cargo {LDB.items.Select(ci.itemId).name} already has {ci.beltLineCount}");
                     }
                     while(freeBeltLineCount > 0)
                     {
@@ -208,6 +221,9 @@ namespace DSPCalculator.Bp
 
         public bool GenerateBlueprints(int genLevel)
         {
+            if (processor.supportAssemblerCount <= 0)
+                return false;
+
             // 然后根据预处理过的cargoInfos里面各物品需要的带子数，分配带子，带子顺序如下
             //   -----5（物流塔进巨塔口）     5-----下一个巨塔5流通口
             //        |  3-----------------3  |
@@ -247,10 +263,20 @@ namespace DSPCalculator.Bp
                 ConnectMegaAssemblerToLast(i);
             }
 
+            // 如果是block蓝图，则需要在最后一个巨塔放置额外的出入带
+            if (blockProcessor != null)
+            {
+                BuildTailTerminals();
+            }
+
             GenTerminalBeltsAndPLS(genLevel);
 
             GenDesc();
-            processor.PostProcess();
+            if (blockProcessor != null)
+                blockProcessor.PostProcess();
+            else
+                processor.PostProcess();
+
             return true;
         }
 
@@ -276,6 +302,93 @@ namespace DSPCalculator.Bp
             processor.gridMap.SetBuilding(x, y, b.index);
             megaAssemblers.Add(b.index);
             return b.index;
+        }
+
+        // 如果是block蓝图，则需要在最后一个巨塔放置额外的出入带
+        public void BuildTailTerminals()
+        {
+            BlueprintBuilding cur = processor.buildings[megaAssemblers.Last()];
+            int beltItemId = solution.beltsAvailable.Last().itemId;
+            int paramBegin = 192;
+            for (int i = 0; i < beltLines.Count; i++)
+            {
+                int cargoIndex = beltLines[i];
+                BpGBCargoInfo cargoInfo = cargoInfos[cargoIndex];
+                int lastSlot = lastMegaSlotByBeltLinesIndex[i];
+                int megaListIndex = megaAssemblers.Count - 1;
+                bool isResources = cargoInfo.isResource;
+                if (i == 5)
+                {
+                    lastSlot = curSlotIndex5[(megaListIndex + 1) % 2];
+                }
+                if (i <= 2)
+                {
+                    if (isResources)
+                    {
+                        int storageIndex = processor.recipeInfo.recipeNorm.oriProto.Results.Length + cargoInfo.itemIndex + 1;
+                        float curRightSidePortX = cur.localOffset_x + prefabDesc.portPoses[lastSlot].position.x / 1.3f;
+                        float curRightSidePortY = cur.localOffset_y + prefabDesc.portPoses[lastSlot].position.z / 1.3f;
+                        float rightTerminalX0 = cur.localOffset_x + 4;
+                        float rightTerminalX1 = cur.localOffset_x + 3;
+                        BlueprintBuilding terminal = AddSingleBelt(beltItemId, rightTerminalX0, curRightSidePortY, 0, 0, null, null, 0, 0);
+                        BlueprintBuilding mid = AddSingleBelt(beltItemId, rightTerminalX1, curRightSidePortY, 0, 0, null, terminal, 0, 1);
+                        AddSingleBelt(beltItemId, curRightSidePortX, curRightSidePortY, 0, 0, cur, mid, lastSlot, 1);
+                        cur.parameters[paramBegin + 4 * lastSlot] = 1;
+                        cur.parameters[paramBegin + 4 * lastSlot + 1] = storageIndex;
+
+                        blockProcessor.outputBelts[cargoInfo.itemId] = terminal;
+                    }
+                    else
+                    {
+                        float curRightSidePortX = cur.localOffset_x + prefabDesc.portPoses[lastSlot].position.x / 1.3f;
+                        float curRightSidePortY = cur.localOffset_y + prefabDesc.portPoses[lastSlot].position.z / 1.3f;
+                        float rightTerminalX0 = cur.localOffset_x + 4;
+                        float rightTerminalX1 = cur.localOffset_x + 3;
+
+                        BlueprintBuilding beltInto = AddSingleBelt(beltItemId, curRightSidePortX, curRightSidePortY, 0, 0, null, cur, 0, lastSlot);
+                        BlueprintBuilding mid = AddSingleBelt(beltItemId, rightTerminalX1, curRightSidePortY, 0, 0, null, beltInto, 0, 1);
+                        BlueprintBuilding terminal = AddSingleBelt(beltItemId, rightTerminalX0, curRightSidePortY, 0, 0, null, mid, 0, 1);
+                        cur.parameters[paramBegin + 4 * lastSlot] = 2;
+
+                        blockProcessor.inputBelts[cargoInfo.itemId] = terminal;
+                    }
+                }
+                else if (i <= 5)
+                {
+                    int outerSlot = lastSlot;
+                    if (i == 5)
+                        outerSlot = curSlotIndex5[(megaListIndex + 1) % 2];
+
+                    int upDown = prefabDesc.portPoses[outerSlot].position.z > 0 ? 1 : -1;
+
+                    float x = cur.localOffset_x + prefabDesc.portPoses[outerSlot].position.x / 1.3f;
+                    float yConn = cur.localOffset_y + prefabDesc.portPoses[outerSlot].position.z / 1.3f;
+                    float yMid = cur.localOffset_y + upDown * 3;
+                    float yTerminal = cur.localOffset_y + upDown * 4;
+                    if (isResources)
+                    {
+                        BlueprintBuilding terminal = AddSingleBelt(beltItemId, x, yTerminal, 0, 0, null, null, 0, 0);
+                        BlueprintBuilding mid = AddSingleBelt(beltItemId, x, yMid, 0, 0, null, terminal, 0, 1);
+                        BlueprintBuilding conn = AddSingleBelt(beltItemId, x, yConn, 0, 0, cur, mid, outerSlot, 1);
+
+                        cur.parameters[paramBegin + 4 * outerSlot] = 1;
+                        cur.parameters[paramBegin + 4 * outerSlot + 1] = cargoInfo.itemIndex + processor.recipeInfo.recipeNorm.oriProto.Results.Length + 1;
+
+                        blockProcessor.outputBelts[cargoInfo.itemId] = terminal;
+                    }
+                    else
+                    {
+                        BlueprintBuilding conn = AddSingleBelt(beltItemId, x, yConn, 0, 0, null, cur, 0, outerSlot);
+                        BlueprintBuilding mid = AddSingleBelt(beltItemId, x, yMid, 0, 0, null, conn, 0, 1);
+                        BlueprintBuilding terminal = AddSingleBelt(beltItemId, x, yTerminal, 0, 0, null, mid, 0, 1);
+
+                        cur.parameters[paramBegin + 4 * outerSlot] = 2;
+
+                        blockProcessor.inputBelts[cargoInfo.itemId] = terminal;
+                    }
+
+                }
+            }
         }
 
         public void ConnectMegaAssemblerToLast(int megaListIndex)
@@ -325,6 +438,7 @@ namespace DSPCalculator.Bp
                             last.parameters[paramBegin + 4 * lastSlot] = 1;
                             last.parameters[paramBegin + 4 * lastSlot + 1] = storageIndex;
                             cur.parameters[paramBegin + 4 * curSlot] = 2;
+
                         }
                         else
                         {
@@ -344,6 +458,8 @@ namespace DSPCalculator.Bp
                             last.parameters[paramBegin + 4 * lastSlot] = 2;
                             cur.parameters[paramBegin + 4 * curSlot] = 1;
                             cur.parameters[paramBegin + 4 * curSlot + 1] = storageIndex;
+
+                            
                         }
                     }
                     else if (i <= 5)
@@ -421,7 +537,7 @@ namespace DSPCalculator.Bp
                         }
                         beginBelt.outputObj = bb0;
                         beginBelt.outputToSlot = 1;
-                        
+
                     }
                 }
             }
@@ -433,9 +549,9 @@ namespace DSPCalculator.Bp
             int beltItemId = solution.beltsAvailable.Last().itemId;
             List<int> beltLineTerminals = new List<int> { -1, -1, -1, -1, -1, -1 };
 
-            if (processor.genCoater || genLevel >= 1)
+            if (processor.genCoater || genLevel >= 1 || blockProcessor != null)
             {
-                int prolifSupplyX = -7;
+                int prolifSupplyX = -4 - BpDB.coaterBeltBackwardLen + BpDB.coaterOffsetX - 1;
                 for (int i = 0; i < beltLines.Count; i++)
                 {
                     BpGBCargoInfo cargoInfo = cargoInfos[beltLines[i]];
@@ -492,7 +608,15 @@ namespace DSPCalculator.Bp
                         if (processor.productGenCoater)
                             processor.AddCoater(terminalX0 + BpDB.coaterOffsetX, (int)Math.Round(processor.buildings[beltLineTerminals[i]].localOffset_y));
                     }
-
+                    BlueprintBuilding terminalBuilding = processor.buildings[beltLineTerminals[i]];
+                    if (isResource)
+                    {
+                        processor.inputBelts[cargoInfo.itemId] = terminalBuilding;
+                    }
+                    else
+                    {
+                        processor.outputBelts[cargoInfo.itemId] = terminalBuilding;
+                    }
                 }
 
                 if(genLevel >= 1)
@@ -660,7 +784,42 @@ namespace DSPCalculator.Bp
 
                 }
 
-                
+                if (genLevel == 0 && blockProcessor != null && blockProcessor.solution.userPreference.bpConnectBlackboxCoater) // 专门针对生成黑盒时，生成供给喷涂机的传送带
+                {
+                    List<int> lineIndexToY = new List<int> { -1, 0, 1, 4, -4, 5 };
+                    int endY = -999;
+                    int beginY = 999;
+                    //int prolifSupplyY = -5;
+                    for (int i = beltLines.Count - 1; i >= 0; i--)
+                    {
+                        BpGBCargoInfo cargoInfo = cargoInfos[beltLines[i]];
+                        if (cargoInfo.isResource && processor.resourceGenCoater || !cargoInfo.isResource && processor.productGenCoater)
+                        {
+                            int curY = lineIndexToY[i];
+                            if (curY > endY)
+                                endY = curY;
+                            if(curY < beginY)
+                                beginY = curY;
+                        }
+                    }
+                    endY++;
+                    beginY--;
+                    if (endY > beginY)
+                    {
+                        processor.AddBelts(solution.beltsAvailable.Last().itemId, prolifSupplyX, beginY, 1, prolifSupplyX, endY, 1, -1, -1, 0, 0, true);
+
+                        int proliferatorId = 1143;
+                        if (processor.resourceGenCoater && CalcDB.proliferatorAbilityToId.ContainsKey(processor.recipeInfo.incLevel))
+                        {
+                            proliferatorId = CalcDB.proliferatorAbilityToId[processor.recipeInfo.incLevel];
+                        }
+
+                        blockProcessor.proliferatorInputBelts[proliferatorId] = processor.buildings[processor.gridMap.GetBuilding(prolifSupplyX, beginY)];
+                        blockProcessor.proliferatorOutputBelts[proliferatorId] = processor.buildings[processor.gridMap.GetBuilding(prolifSupplyX, endY)];
+                        //Utils.logger.LogInfo($"in z ={blockProcessor.proliferatorInputBelts[proliferatorId].localOffset_z}, out z = {blockProcessor.proliferatorOutputBelts[proliferatorId].localOffset_z}");
+                    }
+                }
+
             }
         }
 

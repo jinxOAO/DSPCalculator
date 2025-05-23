@@ -99,6 +99,9 @@ namespace DSPCalculator.UI
 
             // 设置图标
             GameObject targetProductIconObj = GameObject.Instantiate(parentCalcWindow.targetProductIconObj, mainInfoGroupObj.transform);
+            GameObject progressCircleObj = targetProductIconObj.transform.Find("circle-progress")?.gameObject;
+            if(progressCircleObj != null)
+                GameObject.DestroyImmediate(progressCircleObj);
             targetProductIconObj.transform.localScale = Vector3.one;
             RectTransform rect = targetProductIconObj.GetComponent<RectTransform>();
             rect.anchorMax = new Vector2(0, 1);
@@ -346,7 +349,8 @@ namespace DSPCalculator.UI
 
         public void OnSpeedEndEdit(string text)
         {
-            double newTargetSpeed = Convert.ToDouble(speedInputObj.GetComponent<InputField>().text);
+            double newTargetSpeed;
+            double.TryParse(speedInputObj.GetComponent<InputField>().text, out newTargetSpeed);
             if (targetSpeed > 0 && newTargetSpeed <= 0)
             {
                 RemoveThisFromTargets();
@@ -384,7 +388,7 @@ namespace DSPCalculator.UI
                 targetProductIconUIBtn.tips.itemId = item.ID;
                 targetProductIconUIBtn.tips.delay = 0.1f;
                 itemId = item.ID;
-                targetSpeed = Convert.ToDouble(speedInputObj.GetComponent<InputField>().text);
+                double.TryParse(speedInputObj.GetComponent<InputField>().text, out targetSpeed);
                 CheckAndRecalc();
             }
         }

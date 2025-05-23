@@ -12,7 +12,8 @@ namespace DSPCalculator.Bp
     {
         // outputSlot = 1才能连接到下一个Belt
         // 如果只需要造一格的传送带，根据其方向传入一个类似于2.9,3,0到3,3,0这样的坐标就可以，就是方向向右但是只有一格。并且以end为准！
-        public static void AddBelts(this BpProcessor processor, int itemId, float startX, float startY, float startZ, float endX, float endY, float endZ, int inputFromBelt = -1 , int outputToBelt = -1, int beginIcon = 0, int endIcon = 0)
+        // forceRecord为true时，忽略带子的z，一定会记录进grid
+        public static void AddBelts(this BpProcessor processor, int itemId, float startX, float startY, float startZ, float endX, float endY, float endZ, int inputFromBelt = -1 , int outputToBelt = -1, int beginIcon = 0, int endIcon = 0, bool forceRecord = false)
         {
             ref List<BlueprintBuilding> list = ref processor.buildings;
             ref Dictionary<int, Dictionary<int, int>> gridMap = ref processor.gridMap;
@@ -81,7 +82,7 @@ namespace DSPCalculator.Bp
                         endIcon = 0;
                     }
                     list.Add(b);
-                    if (b.localOffset_z == 0)
+                    if (b.localOffset_z == 0 || forceRecord)
                         gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                     endX += bumpX;
                 }
@@ -130,7 +131,7 @@ namespace DSPCalculator.Bp
                         endIcon = 0;
                     }
                     list.Add(b);
-                    if (b.localOffset_z == 0)
+                    if (b.localOffset_z == 0 || forceRecord)
                         gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                     endY += bumpY;
                 }
@@ -190,7 +191,7 @@ namespace DSPCalculator.Bp
                     }
 
                     list.Add(b);
-                    if (b.localOffset_z == 0)
+                    if (b.localOffset_z == 0 || forceRecord)
                         gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                     endZ += bumpZ;
                 }
@@ -289,7 +290,7 @@ namespace DSPCalculator.Bp
             return groundLevelIndex;
         }
 
-        public static int AddPLS(this BpProcessor processor, int x, int y)
+        public static int AddPLS(this BpBuildingList processor, int x, int y)
         {
             int itemId = BpDB.PLS;
             BlueprintBuilding b = new BlueprintBuilding();
@@ -346,7 +347,7 @@ namespace DSPCalculator.Bp
         /// <summary>
         /// 只支持直线正对连接,storageIndex从0开始
         /// </summary>
-        public static void ConnectPLSToBelt(this BpProcessor processor, int PLSBuildingIndex, int PLSSlot, int storageIndex, int beltIndex)
+        public static void ConnectPLSToBelt(this BpBuildingList processor, int PLSBuildingIndex, int PLSSlot, int storageIndex, int beltIndex)
         {
             int PLSX = (int)Math.Round(processor.buildings[PLSBuildingIndex].localOffset_x);
             int PLSY = (int)Math.Round(processor.buildings[PLSBuildingIndex].localOffset_y);
@@ -586,7 +587,7 @@ namespace DSPCalculator.Bp
         public static void AssemblerConnectToBelt(this BpProcessor processor, int assemblerIndex, int slot, int sorterId, int distance, bool isInput, int filter, bool beltDirectionEast = true)
         {
             int assemblerItemId = processor.buildings[assemblerIndex].itemId;
-            BpAssemblerInfo bpa = BpDB.assemblerInfos[assemblerItemId];
+            BpAssemblerBuildingInfo bpa = BpDB.assemblerInfos[assemblerItemId];
 
             int centerX = (int)processor.buildings[assemblerIndex].localOffset_x;
             int centerY = (int)processor.buildings[assemblerIndex].localOffset_y;
@@ -624,12 +625,12 @@ namespace DSPCalculator.Bp
             }
         }
 
-        public static int GetPLSItemByStorageIndex(this BpProcessor processor, int PLSIndex, int storageIndex)
+        public static int GetPLSItemByStorageIndex(this BpBuildingList processor, int PLSIndex, int storageIndex)
         {
             return processor.buildings[PLSIndex].parameters[storageIndex * 6];
         }
 
-        public static void SetPLSStorage(this BpProcessor processor, int PLSIndex, int storageIndex, int itemId, bool isNeed)
+        public static void SetPLSStorage(this BpBuildingList processor, int PLSIndex, int storageIndex, int itemId, bool isNeed)
         {
             processor.buildings[PLSIndex].parameters[storageIndex * 6] = itemId;
             processor.buildings[PLSIndex].parameters[storageIndex * 6 + 1] = isNeed ? 2 : 1;
@@ -667,7 +668,7 @@ namespace DSPCalculator.Bp
             return bp;
         }
 
-        public static bool SetOrGetPLSStorage(this BpProcessor processor, int PLSBuildingIndex, int itemId, bool isNeed, out int index)
+        public static bool SetOrGetPLSStorage(this BpBuildingList processor, int PLSBuildingIndex, int itemId, bool isNeed, out int index)
         {
             for (int i = 0; i < BpDB.PLSMaxStorageKinds; i++)
             {
@@ -698,6 +699,8 @@ namespace DSPCalculator.Bp
                 gridMap[x] = new Dictionary<int, int>();
             if (!gridMap[x].ContainsKey(y))
                 gridMap[x].Add(y, index);
+            else
+                gridMap[x][y] = index;
         }
 
         public static int GetBuilding(this Dictionary<int, Dictionary<int, int>> gridMap, int x, int y)

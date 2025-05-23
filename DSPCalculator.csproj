@@ -76,6 +76,10 @@
       <HintPath>D:\SteamLibrary\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>D:\SteamLibrary\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.TextRenderingModule">
       <HintPath>D:\SteamLibrary\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>False</Private>
@@ -90,12 +94,15 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bp\BpBlockProcessor.cs" />
     <Compile Include="Bp\BpBuilder.cs" />
+    <Compile Include="Bp\BpBuildingList.cs" />
     <Compile Include="Bp\BpConnector.cs" />
     <Compile Include="Bp\BpDB.cs" />
     <Compile Include="Bp\BpPrefabs.cs" />
     <Compile Include="Bp\BpProcessor.cs" />
     <Compile Include="Bp\BpProcessorGB.cs" />
+    <Compile Include="Bp\Segment.cs" />
     <Compile Include="Bp\TestPatchers.cs" />
     <Compile Include="Compatibility\CompatManager.cs" />
     <Compile Include="Compatibility\GBCompat.cs" />
@@ -117,6 +124,7 @@
     <Compile Include="UI\UINode.cs" />
     <Compile Include="UI\UIPauseBarPatcher.cs" />
     <Compile Include="UI\WindowsManager.cs" />
+    <Compile Include="Utils\API.cs" />
     <Compile Include="Utils\Localizations.cs" />
     <Compile Include="Utils\Utils.cs" />
   </ItemGroup>

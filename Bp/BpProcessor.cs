@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace DSPCalculator.Bp
 {
-    public class BpProcessor
+    public class BpProcessor : BpBuildingList
     {
         public static bool enabled = true;
 
@@ -53,9 +53,6 @@ namespace DSPCalculator.Bp
         public bool genCoater { get { return resourceGenCoater || productGenCoater; } } // 有喷涂机
         public bool PLSProvideProliferator { get { return genCoater && solution.userPreference.bpStationProlifSlot; } } // PLS提供增产剂
 
-        public Dictionary<int, Dictionary<int, int>> gridMap;
-        public List<BlueprintBuilding> buildings;
-        public List<int> PLSs;
 
         public BlueprintData blueprintData;
 
@@ -66,15 +63,15 @@ namespace DSPCalculator.Bp
 
         public int width { get { return blueprintData != null ? blueprintData.areas[0].width : 0; } }
         public int height { get { return blueprintData != null ? blueprintData.areas[0].height : 0; } }
-        public BpProcessor() 
-        {
-            gridMap = new Dictionary<int, Dictionary<int, int>>();
-            buildings = new List<BlueprintBuilding>();
-            blueprintData = BpBuilder.CreateEmpty();
-            PLSs = new List<int>();
-            share3Belts = false;
-            bpPrefabId = 0;
-        }
+        //public BpProcessor() 
+        //{
+        //    gridMap = new Dictionary<int, Dictionary<int, int>>();
+        //    buildings = new List<BlueprintBuilding>();
+        //    blueprintData = BpBuilder.CreateEmpty();
+        //    PLSs = new List<int>();
+        //    share3Belts = false;
+        //    bpPrefabId = 0;
+        //}
 
         public BpProcessor(RecipeInfo recipeInfo, SolutionTree solution)
         {
@@ -82,6 +79,19 @@ namespace DSPCalculator.Bp
             this.recipeInfo = recipeInfo;
             cargoCount = recipeInfo.recipeNorm.oriProto.Items.Length + recipeInfo.recipeNorm.oriProto.Results.Length;
             doubleRow = solution.userPreference.bpRowCount == 2 && cargoCount < 6; // cargoCount == 6一定不能做双行的
+            insufficientSorterItems = new List<int>();
+            share3Belts = false;
+            bpPrefabId = 0;
+            prePocessed = false;
+            // PreProcess();
+        }
+
+        public BpProcessor(RecipeInfo recipeInfo, SolutionTree solution, int forceRowCount)
+        {
+            this.solution = solution;
+            this.recipeInfo = recipeInfo;
+            cargoCount = recipeInfo.recipeNorm.oriProto.Items.Length + recipeInfo.recipeNorm.oriProto.Results.Length;
+            doubleRow = forceRowCount == 2 && cargoCount < 6;
             insufficientSorterItems = new List<int>();
             share3Belts = false;
             bpPrefabId = 0;
@@ -386,7 +396,7 @@ namespace DSPCalculator.Bp
                 assemblerCountSecondRow = groupCount - assemblerCountFirstRow;
             }
             int assemblerId = recipeInfo.assemblerItemId;
-            BpAssemblerInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
+            BpAssemblerBuildingInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
 
             List<int> assemblersFirstRow = new List<int>(); // 暂存所有的第一排工厂的index
             List<int> assemblersSecondRow = new List<int>(); // 暂存所有的第二排工厂（如果有）的index
@@ -685,7 +695,7 @@ namespace DSPCalculator.Bp
             if (PLSProvideProliferator && genCoater)
                 totalItemCount++;
             int assemblerId = recipeInfo.assemblerItemId;
-            BpAssemblerInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
+            BpAssemblerBuildingInfo assemblerInfo = BpDB.assemblerInfos[assemblerId];
             int x1;
             int y1;
             GetPLSPos(0, assemblerInfo, out x1, out y1);
@@ -898,14 +908,14 @@ namespace DSPCalculator.Bp
                 buildings[i].localOffset_y2 -= minY;
             }
 
-            blueprintData.dragBoxSize_x = (int)Math.Ceiling(maxX - minX);
-            blueprintData.dragBoxSize_y = (int)Math.Ceiling(maxY - minY);
+            blueprintData.dragBoxSize_x = (int)Math.Ceiling(maxX - minX) + 1;
+            blueprintData.dragBoxSize_y = (int)Math.Ceiling(maxY - minY) + 1;
             blueprintData.areas[0].width = blueprintData.dragBoxSize_x;
             blueprintData.areas[0].height = blueprintData.dragBoxSize_y;
             blueprintData.buildings = buildings.ToArray();
         }
 
-        public int GetAssemblerY(bool isFirstAssemblerRow, BpAssemblerInfo assemblerInfo)
+        public int GetAssemblerY(bool isFirstAssemblerRow, BpAssemblerBuildingInfo assemblerInfo)
         {
             if (isFirstAssemblerRow)
                 return 0;
@@ -919,7 +929,7 @@ namespace DSPCalculator.Bp
             return y;
         }
 
-        public int GetCargoBeltY(int normIndex, BpAssemblerInfo assemblerInfo, bool isFirstAssemblerRow)
+        public int GetCargoBeltY(int normIndex, BpAssemblerBuildingInfo assemblerInfo, bool isFirstAssemblerRow)
         {
             int centerY = GetAssemblerY(isFirstAssemblerRow, assemblerInfo);
 
@@ -965,15 +975,17 @@ namespace DSPCalculator.Bp
             return 0;
         }
 
-        public void GetPLSPos(int PLSListIndex, BpAssemblerInfo assemblerInfo, out int x, out int y)
+        public void GetPLSPos(int PLSListIndex, BpAssemblerBuildingInfo assemblerInfo, out int x, out int y)
         {
             x = -7 - assemblerInfo.hitboxExtendX - (genCoater ? BpDB.coaterBeltBackwardLen : 0) - PLSListIndex * BpDB.PLSDistance; 
             y = GetCargoBeltY(2, assemblerInfo, true);
         }
 
-        public int GetBeltLeftX(BpAssemblerInfo assemblerInfo)
+        public int GetBeltLeftX(BpAssemblerBuildingInfo assemblerInfo)
         {
             int leftExtend = assemblerInfo.slotConnectBeltXPositions.Min() - 1; // 最左格子对应的传送带的坐标，再额外延长一格
+            if (assemblerInfo.vanillaRecipeType == ERecipeType.Research && !genCoater) // 对于研究站，由于堆叠放置特别高，需要将端口延长出来一节，但是如果生成喷涂机的话就不需要了
+                leftExtend -= 1;
             int reserveForCoater = BpDB.coaterBeltBackwardLen;
             if (!genCoater)
                 reserveForCoater = 0;
