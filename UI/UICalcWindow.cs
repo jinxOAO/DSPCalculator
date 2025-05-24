@@ -1865,7 +1865,19 @@ namespace DSPCalculator.UI
             if (solution.targets.Count == 0 || solution.targets[0].itemId == 0)
                 targetProductIcon.sprite = itemNotSelectedSprite;
 
-            RefreshProductContent();
+            // 检查是否使用了线性规划结果
+            // 如果solution.root为空但有itemNodes，说明使用了线性规划
+            bool usingLinearResults = solution.root.Count == 0 && solution.itemNodes.Count > 0;
+            
+            if (usingLinearResults)
+            {
+                RefreshProductCountByLinearResults();
+            }
+            else
+            {
+                RefreshProductContent();
+            }
+            
             RefreshResourceNeedAndByProductContent();
             RefreshFinalInfoText();
             RefreshAssemblerDemandsDisplay();
@@ -2020,6 +2032,54 @@ namespace DSPCalculator.UI
                         }
                     }
                 }
+            }
+        }
+
+        public void RefreshProductCountByLinearResults()
+        {
+            // 清理已存在的元素
+            for (int i = 0; i < uiItemNodes.Count; i++)
+            {
+                GameObject.DestroyImmediate(uiItemNodes[i].obj);
+            }
+            ClearNodes();
+            
+            if (solution.itemNodes.Count == 0)
+            {
+                return;
+            }
+
+            int nodeOrder = 0;
+            
+            // 遍历itemNodes字典，直接显示所有有意义的物品
+            // 先收集所有非原矿的物品
+            var itemsToShow = new List<ItemNode>();
+            
+            foreach (var itemKvp in solution.itemNodes)
+            {
+                var itemNode = itemKvp.Value;
+                
+                // 只显示非原矿的物品，或者在混带模式下显示原矿
+                if (!itemNode.IsOre(solution.userPreference) && itemNode.needSpeed > 0.001f)
+                {
+                    itemsToShow.Add(itemNode);
+                }
+                else if (solution.userPreference.showMixBeltInfo && itemNode.IsOre(solution.userPreference) && itemNode.needSpeed > 0.001f)
+                {
+                    itemsToShow.Add(itemNode);
+                }
+            }
+            
+            // 按物品ID排序，确保显示顺序的一致性
+            itemsToShow.Sort((a, b) => a.itemId.CompareTo(b.itemId));
+            
+            // 创建UI节点
+            foreach (var itemNode in itemsToShow)
+            {
+                UIItemNode uiNode = new UIItemNode(itemNode, this);
+                uiItemNodes.Add(uiNode);
+                uiItemNodeOrders[itemNode.itemId] = nodeOrder;
+                nodeOrder++;
             }
         }
 

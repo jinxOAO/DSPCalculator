@@ -114,6 +114,7 @@
     <Compile Include="Logic\RecipeInfo.cs" />
     <Compile Include="Logic\RecipePickerPatcher.cs" />
     <Compile Include="Logic\SolutionTree.cs" />
+    <Compile Include="Logic\SolutionLinear.cs" />
     <Compile Include="Logic\UserPreference.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UI\UICalcWindow.cs" />

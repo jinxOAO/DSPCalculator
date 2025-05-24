@@ -176,12 +176,29 @@ namespace DSPCalculator.Logic
             return Solve();
         }
 
+
+        public bool SolveLinear()
+        {
+            bool result = false;
+            SolutionLinear solutionLinear = new SolutionLinear();
+            solutionLinear.CopyFromTree(this);
+            result = solutionLinear.Solve();
+            this.itemNodes = solutionLinear.itemNodes;
+            this.recipeInfos = solutionLinear.recipeInfos;
+            return result;
+        }
+
         public bool Solve()
         {
             MergeDuplicateTargets();
             if (targets.Count > 0)
             {
                 RefreshBlueprintDicts(); // 根据userPreference生成后续节点蓝图生成所需的相关字典信息
+                if (SolveLinear())
+                {
+                    CalcProliferator();
+                    return true;
+                }
 
                 // 如果需要计算增产剂生产线，还需要解决增产剂的路线
                 if(userPreference.solveProliferators)
@@ -233,6 +250,7 @@ namespace DSPCalculator.Logic
             }
             return false;
         }
+
 
         /// <summary>
         /// 解决物品合成路径（找到一个无环有向图）
