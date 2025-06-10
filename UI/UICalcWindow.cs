@@ -1580,7 +1580,12 @@ namespace DSPCalculator.UI
                 if(solution.targets.Count > 0)
                 {
                     if (solution.targets[0].itemId > 0)
+                    {
                         targetProductIcon.sprite = LDB.items.Select(solution.targets[0].itemId)?.iconSprite;
+                        targetProductIconUIBtn.tips.corner = 3;
+                        targetProductIconUIBtn.tips.itemId = solution.targets[0].itemId;
+                        targetProductIconUIBtn.tips.delay = 0.1f;
+                    }
                     speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString();
                 }
                 double forceSpeed;
