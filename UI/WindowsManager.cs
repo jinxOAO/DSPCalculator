@@ -19,7 +19,6 @@ namespace DSPCalculator.UI
         //public static GameObject calcWindowGroupObj;
         public static bool hasOpenedWindow;
 
-
         public static Transform inGameWindows;
 
         public static bool temporaryCloseBecausePasteBp = false; // 由于粘贴蓝图，而暂时关闭了计算器窗口，会在粘贴完成后（退出蓝图粘贴窗口时）自动打开
@@ -130,9 +129,12 @@ namespace DSPCalculator.UI
                     UIPauseBarPatcher.pauseBarObj.SetActive(true);
                 else
                 {
-                    UIPauseBarPatcher.pauseBarObj.SetActive(false);
-                    if (GameMain.instance != null) // 关闭暂停顶条的时候，取消暂停状态
-                        GameMain.instance._fullscreenPaused = false;
+                    if (UIPauseBarPatcher.pauseBarObj.activeSelf) // 隐藏暂停顶条的时候，取消暂停状态（仅执行一次）
+                    {
+                        UIPauseBarPatcher.pauseBarObj.SetActive(false);
+                        if (GameMain.instance != null)
+                            GameMain.instance._fullscreenPaused = false;
+                    }
                 }
             }
             //if (Input.GetKeyDown(KeyCode.L))

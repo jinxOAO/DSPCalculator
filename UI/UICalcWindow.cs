@@ -1727,7 +1727,7 @@ namespace DSPCalculator.UI
             obj.SetActive(true);
         }
 
-        // 将窗口关闭时，永远会保留一个最后关闭的窗口
+        // 将窗口关闭时，永远会保留x个最后关闭的窗口
         public void CloseWindow()
         {
             WindowsManager.windows.Remove(this);

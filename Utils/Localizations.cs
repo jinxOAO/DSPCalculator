@@ -140,7 +140,7 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("首选分拣器最高级", "Highest", "最高", "Highest");
             LocalizationModule.RegisterTranslation("首选分拣器最高级说明", "Only use the highest level sorter.", "只使用最高级分拣器。", "Only use the highest level sorter.");
             LocalizationModule.RegisterTranslation("首选分拣器最便宜", "Cheapest", "低价", "Cheapest");
-            LocalizationModule.RegisterTranslation("首选分拣器最便宜说明", "On the premise of ensuring compliance with the production line, use the lowest level sorter.", "在保证满足产线的情况下，使用最低级的传送带。", "On the premise of ensuring compliance with the production line, use the lowest level sorter.");
+            LocalizationModule.RegisterTranslation("首选分拣器最便宜说明", "On the premise of ensuring compliance with the production line, use the lowest level sorter.", "在保证满足产线的情况下，使用最低级的分拣器。", "On the premise of ensuring compliance with the production line, use the lowest level sorter.");
             LocalizationModule.RegisterTranslation("分拣器科技限制", "Sorter Tech Limit", "分拣器科技限制", "Sorter Tech Limit");
             LocalizationModule.RegisterTranslation("分拣器科技限制无限制", "No Limit", "无限制", "No Limit");
             LocalizationModule.RegisterTranslation("分拣器科技限制当前科技", "Current Tech", "当前科技", "Current Tech");
