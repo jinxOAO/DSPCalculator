@@ -422,6 +422,24 @@ namespace DSPCalculator.UI
             pasteButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0.6f, 0.6f, 1);
             pasteButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.4f, 0.4f, 0.4f, 1);
             pasteButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.8f, 0.8f, 0.8f, 1);
+            // 提前设置为原矿图标
+            GameObject orePresetButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip, targetProductTextObj.transform);
+            orePresetButtonObj.name = "pre-set-ore";
+            orePresetButtonObj.transform.localScale = Vector3.one;
+            orePresetButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(141, 0, 0);
+            orePresetButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(20, 20);
+            orePresetButtonObj.GetComponent<Image>().sprite = oreSprite;
+            //orePresetButtonObj.GetComponent<Button>().onClick.AddListener(() => { OnPresetOreButtonClick(); });
+            orePresetButtonObj.GetComponent<UIButton>().onClick += (x) => { OnPresetOreButtonClick(); };
+            orePresetButtonObj.GetComponent<UIButton>().onRightClick += (x) => { OnPresetOreButtonRightClick(); };
+            orePresetButtonObj.GetComponent<UIButton>().tips.tipTitle = "预先设置原矿标题".Translate();
+            orePresetButtonObj.GetComponent<UIButton>().tips.tipText = "预先设置原矿说明".Translate();
+            orePresetButtonObj.GetComponent<UIButton>().tips.corner = 3;
+            orePresetButtonObj.GetComponent<UIButton>().tips.width = 200;
+            Navigation nvg = new Navigation();
+            nvg.mode = Navigation.Mode.None;
+            orePresetButtonObj.GetComponent<Button>().navigation = nvg;
+
 
             // 目标产物图标
             GameObject oriItemIconObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Station Window/storage-box-0/storage-icon-empty");
@@ -3092,6 +3110,45 @@ namespace DSPCalculator.UI
             else
             {
                 UIRealtimeTip.Popup("calc复制失败提示".Translate());
+            }
+        }
+
+        public void OnPresetOreButtonClick()
+        {
+            UIItemPicker.showAll = true;
+            if (windowObj.GetComponent<RectTransform>().anchoredPosition.x > -150 && !isLargeWindow)
+                UIItemPicker.Popup(new Vector2(-300f, 100f), OnRawOreSelected);
+            else
+                UIItemPicker.Popup(windowObj.GetComponent<RectTransform>().anchoredPosition + new Vector2(300f, -200f), OnRawOreSelected);
+        }
+
+        public void OnPresetOreButtonRightClick()
+        {
+            VFAudio.Create("ui-click-0", null, Vector3.zero, true, 4, -1, -1L);
+            if (solution.userPreference.itemConfigs.Count > 0)
+            {
+                foreach (var itemConfig in solution.userPreference.itemConfigs)
+                {
+                    solution.userPreference.itemConfigs[itemConfig.Key].consideredAsOre = false;
+                    solution.userPreference.itemConfigs[itemConfig.Key].forceNotOre = false;
+                }
+                nextFrameRecalc = true;
+            }
+            UIRealtimeTip.Popup("还原配置成功".Translate(),false);
+        }
+
+        public void OnRawOreSelected(ItemProto item)
+        {
+            UIItemPicker.showAll = false;
+            if (item != null)
+            {
+                if(!solution.userPreference.itemConfigs.ContainsKey(item.ID))
+                    solution.userPreference.itemConfigs[item.ID] = new ItemConfig(item.ID);
+                solution.userPreference.itemConfigs[item.ID].consideredAsOre = true;
+                solution.userPreference.itemConfigs[item.ID].forceNotOre = false;
+                nextFrameRecalc = true;
+                UIRealtimeTip.Popup("已设置为原矿".Translate(),false);
+                VFAudio.Create("ui-click-0", null, Vector3.zero, true, 4, -1, -1L);
             }
         }
 

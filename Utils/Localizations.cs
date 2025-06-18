@@ -200,7 +200,11 @@ namespace DSPCalculator
             LocalizationModule.RegisterTranslation("保存为默认配置标题", "Save as Dafault", "保存为默认配置", "Save as Dafault");
             LocalizationModule.RegisterTranslation("保存为默认配置说明", "Save all configurations and target products of the current window as the default configuration, and all newly opened windows in the future (even after restarting the game) will load this configuration and targets by default.\nHold Ctrl and click to clear the saved configurations. Future windows will be blank windows.", "将当前窗口的所有配置和目标产物保存为默认配置，未来所有新打开的窗口（包括重启游戏后），都将默认加载此目标产线及其配置。\n按住Ctrl点击，则清除已保存的自定义配置，未来打开的窗口将为空窗口。", "Save all configurations and target products of the current window as the default configuration, and all newly opened windows in the future (even after restarting the game) will load this configuration and targets by default.\nHold Ctrl and click to clear the saved configurations. Future windows will be blank windows.");
 
+            LocalizationModule.RegisterTranslation("预先设置原矿标题", "Add Raw Ore", "添加原矿", "Add Raw Ore");
+            LocalizationModule.RegisterTranslation("预先设置原矿说明", "Click to select an item and treat it as raw ore.\nRight click to restore all raw ore settings to default configuration.", "点击以选择一种物品，将其视为原矿。\n右键点击则还原所有原矿设定为默认状态。", "Click to select an item and treat it as raw ore.\nRight click to restore all raw ore settings to default configuration.");
 
+            LocalizationModule.RegisterTranslation("还原配置成功", "Raw ore configuration restored", "原矿配置已还原", "Raw ore configuration restored");
+            LocalizationModule.RegisterTranslation("已设置原矿", "Raw ore has been set", "原矿已设定", "Raw ore has been set");
         }
     }
 }
