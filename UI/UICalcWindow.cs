@@ -503,7 +503,7 @@ namespace DSPCalculator.UI
             // 切换增产按钮
             incToggleObj = GameObject.Instantiate(incTogglePrefabObj, panelParent);
             incToggleObj.name = "inc-setting";
-            incToggleObj.transform.localPosition = new Vector3(-38, 287, 0);
+            incToggleObj.transform.localPosition = new Vector3(-38, 287, 0); 
             incToggleObj.transform.Find("inc-switch").GetComponent<Button>().onClick.AddListener(() => { OnGlobalIncToggleClick(); });
             incText = incToggleObj.transform.Find("inc-effect-type-text").GetComponent<Text>();
             GameObject incToggleThumb = incToggleObj.transform.Find("inc-switch/switch-thumb").gameObject;
@@ -1025,6 +1025,7 @@ namespace DSPCalculator.UI
 
                 // 增产切换按钮
                 incTogglePrefabObj = GameObject.Instantiate(GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Assembler Window/produce/inc-info"));
+                incTogglePrefabObj.transform.Find("inc-switch").GetComponent<Button>().interactable = true; // 不加这一行，会导致如果第一次开启计算器前，最后一个浏览的制造台窗口是锁定只能加速的配方，则后续的计算器饿的切换按钮都无法互动。
                 incTogglePrefabObj.transform.Find("inc-switch").GetComponent<Button>().onClick.RemoveAllListeners();
                 GameObject.DestroyImmediate(incTogglePrefabObj.transform.Find("inc-label").gameObject);
                 GameObject.DestroyImmediate(incTogglePrefabObj.transform.Find("inc-effect-value-text").gameObject);
