@@ -1869,8 +1869,10 @@ namespace DSPCalculator.UI
         public void RefreshAll()
         {
             if (solution.targets.Count == 0 || solution.targets[0].itemId == 0)
+            {
                 targetProductIcon.sprite = itemNotSelectedSprite;
-
+                targetProductIconUIBtn.tips.itemId = 0;
+            }
             RefreshProductContent();
             RefreshResourceNeedAndByProductContent();
             RefreshFinalInfoText();
