@@ -10,6 +10,7 @@ using CommonAPI;
 using CommonAPI.Systems;
 using CommonAPI.Systems.ModLocalization;
 using DSPCalculator.Bp;
+using DSPCalculator.Compatibility;
 using DSPCalculator.Logic;
 using DSPCalculator.UI;
 using HarmonyLib;
@@ -20,6 +21,9 @@ namespace DSPCalculator
 {
     [BepInPlugin(GUID, NAME, VERSION)]
     [BepInDependency(CommonAPIPlugin.GUID)]
+    [BepInDependency(GB_GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(MMS_GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(TCFV_GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [CommonAPISubmoduleDependency(nameof(ProtoRegistry))]
     [CommonAPISubmoduleDependency(nameof(TabSystem))]
     [CommonAPISubmoduleDependency(nameof(LocalizationModule))]
@@ -33,6 +37,10 @@ namespace DSPCalculator
         // ---------------------------------------------------------------------------
         public static bool developerMode = false; //           发布前修改             |
         // ---------------------------------------------------------------------------
+
+        public const string GB_GUID = "org.LoShin.GenesisBook";
+        public const string MMS_GUID = "Gnimaerd.DSP.plugin.MoreMegaStructure";
+        public const string TCFV_GUID = "com.ckcz123.DSP_Battle";
 
         public static ConfigEntry<KeyCode> OpenWindowHotKey;
         public static ConfigEntry<KeyCode> SwitchWindowSizeHotKey;
@@ -79,6 +87,14 @@ namespace DSPCalculator
                 Harmony.CreateAndPatchAll(typeof(TestPatchers));
             }
             Localizations.AddLocalizations();
+
+
+            if (BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(GB_GUID))
+                CompatManager.GB = true;
+            if (BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(MMS_GUID))
+                CompatManager.MMS = true;
+            if (BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(TCFV_GUID))
+                CompatManager.TCFV = true;
         }
 
         public void Start()
