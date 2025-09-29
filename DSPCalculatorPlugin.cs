@@ -32,7 +32,7 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.5.17";
+        public const string VERSION = "0.5.18";
         public const int VERSIONINT = 512;
 
         // ---------------------------------------------------------------------------
