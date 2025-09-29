@@ -21,6 +21,7 @@ namespace DSPCalculator
 {
     [BepInPlugin(GUID, NAME, VERSION)]
     [BepInDependency(CommonAPIPlugin.GUID)]
+    [BepInDependency("starfi5h.plugin.ModFixerOne")]
     [BepInDependency(GB_GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(MMS_GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(TCFV_GUID, BepInDependency.DependencyFlags.SoftDependency)]
