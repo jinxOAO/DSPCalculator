@@ -502,7 +502,7 @@ namespace DSPCalculator.UI
             speedInputObj.GetComponent<InputField>().transition = Selectable.Transition.None; // 要不然鼠标不在上面时颜色会很浅，刚打开容易找不到，不够明显
             speedInputObj.GetComponent<InputField>().onEndEdit.RemoveAllListeners();
             speedInputObj.GetComponent<InputField>().onEndEdit.AddListener((x) => OnTargetSpeedChange(x));
-            speedInputObj.GetComponent<Image>().color = new Color(0, 0, 0, 0.5f);
+            speedInputObj.GetComponent<Image>().color = new Color(1, 1, 1, 1f);
             speedInputObj.transform.Find("value-text").GetComponent<Text>().color = Color.white;
             speedInputObj.transform.Find("value-text").GetComponent<Text>().fontSize = 16;
             speedInputObj.GetComponent<UIButton>().tips.tipTitle = "";
