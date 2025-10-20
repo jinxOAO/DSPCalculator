@@ -132,7 +132,7 @@ namespace DSPCalculator.UI
                 {
                     UIPauseBarPatcher.pauseBarObj.SetActive(false);
                     if (GameMain.instance != null) // 关闭暂停顶条的时候，取消暂停状态
-                        GameMain.instance._fullscreenPaused = false;
+                        HarmonyLib.AccessTools.Field(typeof(GameMain), "_fullscreenPaused")?.SetValue(GameMain.instance, false);
                 }
             }
             //if (Input.GetKeyDown(KeyCode.L))
@@ -227,7 +227,7 @@ namespace DSPCalculator.UI
                 string[] nameArray = __instance.dragTrans.gameObject.name.Split(' ');
                 if (nameArray.Length > 0 && nameArray[0] == "calc-window")
                 {
-                    __instance.moving = false;
+                    HarmonyLib.AccessTools.Field(typeof(UIWindowDrag), "moving")?.SetValue(__instance, false);
                 }
             }
 

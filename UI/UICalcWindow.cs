@@ -1015,7 +1015,7 @@ namespace DSPCalculator.UI
                 icon.name = "icon"; // 图标子对象
                 icon.transform.SetParent(imageButtonObj.transform, false);
                 Image img = icon.AddComponent<Image>();
-                img.sprite = LDB.items.Select(1101)._iconSprite;
+                img.sprite = LDB.items.Select(1101).iconSprite;
                 icon.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 0.5f);
                 icon.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.5f);
                 icon.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 0.5f);
@@ -1770,7 +1770,7 @@ namespace DSPCalculator.UI
                 {
                     UIPauseBarPatcher.pauseBarObj.SetActive(false);
                     if (GameMain.instance != null) // 关闭暂停顶条的时候，取消暂停状态
-                        GameMain.instance._fullscreenPaused = false;
+                        HarmonyLib.AccessTools.Field(typeof(GameMain), "_fullscreenPaused")?.SetValue(GameMain.instance, false);
                 }
             }
         }
@@ -2644,10 +2644,11 @@ namespace DSPCalculator.UI
                             {
                                 try
                                 {
-                                    float enterTime = aData.Value.enterTime;
+                                    var enterTimeField = HarmonyLib.AccessTools.Field(typeof(UIButton), "enterTime");
+                                    float enterTime = (float)(enterTimeField?.GetValue(aData.Value) ?? 0f);
                                     aData.Value.OnPointerExit(null);
                                     aData.Value.OnPointerEnter(null);
-                                    aData.Value.enterTime = enterTime;
+                                    enterTimeField?.SetValue(aData.Value, enterTime);
                                 }
                                 catch (Exception)
                                 { }

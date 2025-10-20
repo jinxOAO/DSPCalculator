@@ -246,7 +246,9 @@ namespace DSPCalculator.UI
                         calcInNewWindowUIBtn.transitions[0].normalColor = new Color(0.4f, 0.4f, 0.7f, 1);
                         calcInNewWindowUIBtn.transitions[0].pressedColor = new Color(0.4f, 0.4f, 0.7f, 1);
                         calcInNewWindowUIBtn.transitions[0].mouseoverColor = new Color(0.5f, 0.5f, 0.8f, 1);
-                        calcInNewWindowIcon.color = (calcInNewWindowUIBtn.isPointerEnter && !calcInNewWindowUIBtn.isPointerDown) ? calcInNewWindowUIBtn.transitions[0].mouseoverColor : calcInNewWindowUIBtn.transitions[0].normalColor;
+                        bool isPointerEnter = (bool)(HarmonyLib.AccessTools.Field(typeof(UIButton), "isPointerEnter")?.GetValue(calcInNewWindowUIBtn) ?? false);
+                        bool isPointerDown = (bool)(HarmonyLib.AccessTools.Field(typeof(UIButton), "isPointerDown")?.GetValue(calcInNewWindowUIBtn) ?? false);
+                        calcInNewWindowIcon.color = (isPointerEnter && !isPointerDown) ? calcInNewWindowUIBtn.transitions[0].mouseoverColor : calcInNewWindowUIBtn.transitions[0].normalColor;
                     }
                 }
                 else
@@ -256,7 +258,9 @@ namespace DSPCalculator.UI
                         calcInNewWindowUIBtn.transitions[0].normalColor = new Color(0.7f, 0.4f, 0.2f, 1);
                         calcInNewWindowUIBtn.transitions[0].pressedColor = new Color(0.7f, 0.4f, 0.2f, 1);
                         calcInNewWindowUIBtn.transitions[0].mouseoverColor = new Color(0.8f, 0.5f, 0.2f, 1);
-                        calcInNewWindowIcon.color = (calcInNewWindowUIBtn.isPointerEnter && !calcInNewWindowUIBtn.isPointerDown) ? calcInNewWindowUIBtn.transitions[0].mouseoverColor : calcInNewWindowUIBtn.transitions[0].normalColor;
+                        bool isPointerEnter = (bool)(HarmonyLib.AccessTools.Field(typeof(UIButton), "isPointerEnter")?.GetValue(calcInNewWindowUIBtn) ?? false);
+                        bool isPointerDown = (bool)(HarmonyLib.AccessTools.Field(typeof(UIButton), "isPointerDown")?.GetValue(calcInNewWindowUIBtn) ?? false);
+                        calcInNewWindowIcon.color = (isPointerEnter && !isPointerDown) ? calcInNewWindowUIBtn.transitions[0].mouseoverColor : calcInNewWindowUIBtn.transitions[0].normalColor;
                     }
                 }
             }

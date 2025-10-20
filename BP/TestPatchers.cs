@@ -46,17 +46,20 @@ namespace DSPCalculator.Bp
             {
                 segmentCnt = _planet.aux.activeGrid.segment;
             }
-            BPGratBox boundingRange = BlueprintUtils.GetBoundingRange(_planet, _auxData, _objIds, _objCount, _divideLongitude);
+            BPGratBox boundingRange = BlueprintUtils.GetBoundingRange(_planet, _auxData, _objIds, _objCount, _divideLongitude, null);
             int areaCount = BlueprintUtils.GetAreaCount(boundingRange.y, boundingRange.w, segmentCnt);
             Debug.Log($"area count = {areaCount}");
             BPGratBox[] array = new BPGratBox[areaCount];
             BPGratBox[] array2 = new BPGratBox[areaCount];
             BlueprintUtils.SplitGratBoxInTropicAreas(boundingRange, array, array2, segmentCnt);
-            if (BlueprintUtils._tmp_building_dict == null)
+            var tmpBuildingDictField = HarmonyLib.AccessTools.Field(typeof(BlueprintUtils), "_tmp_building_dict");
+            Dictionary<int, BlueprintBuilding> tmpBuildingDict = (Dictionary<int, BlueprintBuilding>)tmpBuildingDictField?.GetValue(null);
+            if (tmpBuildingDict == null)
             {
-                BlueprintUtils._tmp_building_dict = new Dictionary<int, BlueprintBuilding>();
+                tmpBuildingDict = new Dictionary<int, BlueprintBuilding>();
+                tmpBuildingDictField?.SetValue(null, tmpBuildingDict);
             }
-            BlueprintUtils._tmp_building_dict.Clear();
+            tmpBuildingDict.Clear();
             _blueprintData.areas = new BlueprintArea[areaCount];
             _blueprintData.buildings = new BlueprintBuilding[_objCount];
             for (int i = 0; i < _objCount; i++)
@@ -64,7 +67,7 @@ namespace DSPCalculator.Bp
                 _blueprintData.buildings[i] = new BlueprintBuilding();
                 _blueprintData.buildings[i].index = i;
                 _blueprintData.buildings[i].areaIndex = -1;
-                BlueprintUtils._tmp_building_dict[_objIds[i]] = _blueprintData.buildings[i];
+                tmpBuildingDict[_objIds[i]] = _blueprintData.buildings[i];
             }
             int num = 0;
             int num2 = 0;
@@ -196,17 +199,17 @@ namespace DSPCalculator.Bp
                                 int num5;
                                 int num6;
                                 factory.ReadObjectConn(num3, 1, out flag4, out num5, out num6);
-                                if (num5 != 0 && BlueprintUtils._tmp_building_dict.ContainsKey(num5))
+                                if (num5 != 0 && tmpBuildingDict.ContainsKey(num5))
                                 {
-                                    _blueprintData.buildings[k].inputObj = BlueprintUtils._tmp_building_dict[num5];
+                                    _blueprintData.buildings[k].inputObj = tmpBuildingDict[num5];
                                     ModelProto modelProto2 = (num5 > 0) ? LDB.models.Select((int)factory.GetEntityData(num5).modelIndex) : LDB.models.Select((int)factory.GetPrebuildData(-num5).modelIndex);
                                     _blueprintData.buildings[k].inputFromSlot = (modelProto2.prefabDesc.isBelt ? -1 : num6);
                                     _blueprintData.buildings[k].inputOffset = (int)(flag ? prebuildPool[-num3].pickOffset : factory.factorySystem.inserterPool[entityPool[num3].inserterId].pickOffset);
                                 }
                                 factory.ReadObjectConn(num3, 0, out flag4, out num5, out num6);
-                                if (num5 != 0 && BlueprintUtils._tmp_building_dict.ContainsKey(num5))
+                                if (num5 != 0 && tmpBuildingDict.ContainsKey(num5))
                                 {
-                                    _blueprintData.buildings[k].outputObj = BlueprintUtils._tmp_building_dict[num5];
+                                    _blueprintData.buildings[k].outputObj = tmpBuildingDict[num5];
                                     ModelProto modelProto3 = (num5 > 0) ? LDB.models.Select((int)factory.GetEntityData(num5).modelIndex) : LDB.models.Select((int)factory.GetPrebuildData(-num5).modelIndex);
                                     _blueprintData.buildings[k].outputToSlot = (modelProto3.prefabDesc.isBelt ? -1 : num6);
                                     _blueprintData.buildings[k].outputOffset = (int)(flag ? prebuildPool[-num3].insertOffset : factory.factorySystem.inserterPool[entityPool[num3].inserterId].insertOffset);
@@ -229,15 +232,15 @@ namespace DSPCalculator.Bp
                                 int num8;
                                 int num9;
                                 factory.ReadObjectConn(num3, 1, out flag5, out num8, out num9);
-                                if (num8 != 0 && BlueprintUtils._tmp_building_dict.ContainsKey(num8) && !((num8 > 0) ? LDB.models.Select((int)factory.GetEntityData(num8).modelIndex) : LDB.models.Select((int)factory.GetPrebuildData(-num8).modelIndex)).prefabDesc.isBelt)
+                                if (num8 != 0 && tmpBuildingDict.ContainsKey(num8) && !((num8 > 0) ? LDB.models.Select((int)factory.GetEntityData(num8).modelIndex) : LDB.models.Select((int)factory.GetPrebuildData(-num8).modelIndex)).prefabDesc.isBelt)
                                 {
-                                    _blueprintData.buildings[k].inputObj = BlueprintUtils._tmp_building_dict[num8];
+                                    _blueprintData.buildings[k].inputObj = tmpBuildingDict[num8];
                                     _blueprintData.buildings[k].inputFromSlot = num9;
                                 }
                                 factory.ReadObjectConn(num3, 0, out flag5, out num8, out num9);
-                                if (num8 != 0 && BlueprintUtils._tmp_building_dict.ContainsKey(num8))
+                                if (num8 != 0 && tmpBuildingDict.ContainsKey(num8))
                                 {
-                                    _blueprintData.buildings[k].outputObj = BlueprintUtils._tmp_building_dict[num8];
+                                    _blueprintData.buildings[k].outputObj = tmpBuildingDict[num8];
                                     _blueprintData.buildings[k].outputToSlot = num9;
                                 }
                             }
@@ -251,9 +254,9 @@ namespace DSPCalculator.Bp
                                 int num10;
                                 int inputFromSlot;
                                 factory.ReadObjectConn(num3, 14, out flag6, out num10, out inputFromSlot);
-                                if (num10 != 0 && BlueprintUtils._tmp_building_dict.ContainsKey(num10))
+                                if (num10 != 0 && tmpBuildingDict.ContainsKey(num10))
                                 {
-                                    _blueprintData.buildings[k].inputObj = BlueprintUtils._tmp_building_dict[num10];
+                                    _blueprintData.buildings[k].inputObj = tmpBuildingDict[num10];
                                     _blueprintData.buildings[k].inputFromSlot = inputFromSlot;
                                 }
                             }
@@ -264,9 +267,9 @@ namespace DSPCalculator.Bp
                                 int num11;
                                 int inputFromSlot2;
                                 factory.ReadObjectConn(num3, 0, out flag7, out num11, out inputFromSlot2);
-                                if (num11 != 0 && BlueprintUtils._tmp_building_dict.ContainsKey(num11))
+                                if (num11 != 0 && tmpBuildingDict.ContainsKey(num11))
                                 {
-                                    _blueprintData.buildings[k].inputObj = BlueprintUtils._tmp_building_dict[num11];
+                                    _blueprintData.buildings[k].inputObj = tmpBuildingDict[num11];
                                     _blueprintData.buildings[k].inputFromSlot = inputFromSlot2;
                                 }
                             }
@@ -364,7 +367,7 @@ namespace DSPCalculator.Bp
             }
             _blueprintData.cursorTargetArea = num;
             _blueprintData.primaryAreaIdx = num;
-            BlueprintUtils._tmp_building_dict.Clear();
+            tmpBuildingDict.Clear();
             return false;
         }
 
@@ -551,7 +554,7 @@ namespace DSPCalculator.Bp
             bp.ResetAsEmpty();
             bp.layout = EIconLayout.OneIcon;
             bp.icon0 = 41508; // 戴森球计划白色标志
-            bp.patch = 1;
+            HarmonyLib.AccessTools.Field(typeof(BlueprintData), "patch")?.SetValue(bp, 1);
             bp.cursorOffset_x = 0;
             bp.cursorOffset_y = 0;
             bp.shortDesc = "DSPCalc_Quick";

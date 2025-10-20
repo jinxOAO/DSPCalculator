@@ -43,12 +43,16 @@ namespace DSPCalculator.UI
 
         public static void SwitchGamePause(int forceSet = 0)
         {
+            var fullscreenPausedField = HarmonyLib.AccessTools.Field(typeof(GameMain), "_fullscreenPaused");
+            bool currentPaused = (bool)(fullscreenPausedField?.GetValue(GameMain.instance) ?? false);
+            
             if (forceSet == 0)
-                GameMain.instance._fullscreenPaused = !GameMain.instance._fullscreenPaused;
+                fullscreenPausedField?.SetValue(GameMain.instance, !currentPaused);
             else
-                GameMain.instance._fullscreenPaused = forceSet == -1;
+                fullscreenPausedField?.SetValue(GameMain.instance, forceSet == -1);
 
-            if(GameMain.instance._fullscreenPaused)
+            bool isPaused = (bool)(fullscreenPausedField?.GetValue(GameMain.instance) ?? false);
+            if(isPaused)
             {
             }
             else
@@ -62,7 +66,9 @@ namespace DSPCalculator.UI
             {
                 if(pauseBarObj.activeSelf)
                 {
-                    if (GameMain.instance._fullscreenPaused)
+                    var fullscreenPausedField = HarmonyLib.AccessTools.Field(typeof(GameMain), "_fullscreenPaused");
+                    bool isPaused = (bool)(fullscreenPausedField?.GetValue(GameMain.instance) ?? false);
+                    if (isPaused)
                     {
                         pauseBarUIBtn.highlighted = false;
                         pauseBarImage.sprite = pauseIconSprite;

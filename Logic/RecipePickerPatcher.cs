@@ -19,12 +19,20 @@ namespace DSPCalculator.Logic
         [HarmonyPatch(typeof(UIRecipePicker), "RefreshIcons")]
         public static bool RecipePickerPrefix(ref UIRecipePicker __instance)
         {
-            if((int)__instance.filter >= 0)
+            var filter = AccessTools.Field(typeof(UIRecipePicker), "filter")?.GetValue(__instance);
+            if(filter == null || (int)filter >= 0)
                 return true;
 
-            int itemId = -(int)__instance.filter; 
-            Array.Clear(__instance.indexArray, 0, __instance.indexArray.Length);
-            Array.Clear(__instance.protoArray, 0, __instance.protoArray.Length);
+            int itemId = -(int)filter; 
+            var indexArray = (int[])AccessTools.Field(typeof(UIRecipePicker), "indexArray")?.GetValue(__instance);
+            var protoArray = (RecipeProto[])AccessTools.Field(typeof(UIRecipePicker), "protoArray")?.GetValue(__instance);
+            var currentType = (int)AccessTools.Field(typeof(UIRecipePicker), "currentType")?.GetValue(__instance);
+            
+            if(indexArray == null || protoArray == null)
+                return true;
+                
+            Array.Clear(indexArray, 0, indexArray.Length);
+            Array.Clear(protoArray, 0, protoArray.Length);
             IconSet iconSet = GameMain.iconSet;
             List<NormalizedRecipe> recipes = CalcDB.itemDict[itemId].recipes;
             for (int i = 0; i < recipes.Count; i++)
@@ -38,10 +46,10 @@ namespace DSPCalculator.Logic
                     if (num2 >= 0 && num3 >= 0 && num2 < 8 && num3 < 14)
                     {
                         int num4 = num2 * 14 + num3;
-                        if (num4 >= 0 && num4 < __instance.indexArray.Length && num == __instance.currentType)
+                        if (num4 >= 0 && num4 < indexArray.Length && num == currentType)
                         {
-                            __instance.indexArray[num4] = iconSet.recipeIconIndex[recipeProto.ID];
-                            __instance.protoArray[num4] = recipeProto;
+                            indexArray[num4] = (int)iconSet.recipeIconIndex[recipeProto.ID];
+                            protoArray[num4] = recipeProto;
                         }
                     }
                 }
