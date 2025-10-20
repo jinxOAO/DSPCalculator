@@ -135,7 +135,7 @@ namespace DSPCalculator.UI
             speedInputObj.GetComponent<RectTransform>().sizeDelta = new Vector2(80, 25); // 100 30
             speedInputObj.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
             speedInputObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(-20, 0, 0);
-            speedInputObj.GetComponent<InputField>().text = ((long)speed).ToString();
+            speedInputObj.GetComponent<InputField>().text = speed.ToString();
             speedInputObj.GetComponent<InputField>().contentType = InputField.ContentType.DecimalNumber;
             speedInputObj.GetComponent<InputField>().characterLimit = 12;
             speedInputObj.GetComponent<InputField>().transition = Selectable.Transition.None; // 要不然鼠标不在上面时颜色会很浅，刚打开容易找不到，不够明显

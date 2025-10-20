@@ -1605,7 +1605,7 @@ namespace DSPCalculator.UI
                         targetProductIconUIBtn.tips.itemId = solution.targets[0].itemId;
                         targetProductIconUIBtn.tips.delay = 0.1f;
                     }
-                    speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString();
+                    speedInputObj.GetComponent<InputField>().text = (solution.targets[0].speed).ToString();
                 }
                 double forceSpeed;
                 double.TryParse(speedInputObj.GetComponent<InputField>().text, out forceSpeed);
@@ -2261,7 +2261,7 @@ namespace DSPCalculator.UI
             if(solution.AddOrUpdateTarget(index, targetItem, targetSpeed))
             {
                 solution.MergeDuplicateTargets();
-                speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString(); // 这里不能直接用targetSpeed因为有可能merge之后这个速度变了
+                speedInputObj.GetComponent<InputField>().text = (solution.targets[0].speed).ToString(); // 这里不能直接用targetSpeed因为有可能merge之后这个速度变了
                 
                 nextFrameRecalc = true;
                 return true;
@@ -2276,7 +2276,7 @@ namespace DSPCalculator.UI
             if (solution.AddOrUpdateTarget(index, targetItem, targetSpeed))
             {
                 solution.MergeDuplicateTargets();
-                speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString(); // 这里不能直接用targetSpeed因为有可能merge之后这个速度变了
+                speedInputObj.GetComponent<InputField>().text = (solution.targets[0].speed).ToString(); // 这里不能直接用targetSpeed因为有可能merge之后这个速度变了
 
                 nextFrameRecalc = false;
                 return true;

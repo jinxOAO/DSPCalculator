@@ -32,7 +32,7 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.5.19";
+        public const string VERSION = "0.5.20";
         public const int VERSIONINT = 512;
 
         // ---------------------------------------------------------------------------
@@ -88,7 +88,8 @@ namespace DSPCalculator
                 Harmony.CreateAndPatchAll(typeof(TestPatchers));
             }
             Localizations.AddLocalizations();
-
+            Localizations.AddPtBr();
+            Localizations.LoadCustomTranslation();
 
             if (BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(GB_GUID))
                 CompatManager.GB = true;
