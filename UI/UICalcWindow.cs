@@ -2578,11 +2578,14 @@ namespace DSPCalculator.UI
                 // 然后对每个独立的recipeConfig进行更改
                 foreach (var recipeConfigData in solution.userPreference.recipeConfigs)
                 {
-                    int configType = CalcDB.recipeDict[recipeConfigData.Value.ID].type;
-                    if (configType == typeInt)
+                    if (CalcDB.recipeDict.ContainsKey(recipeConfigData.Value.ID))
                     {
-                        solution.userPreference.recipeConfigs[recipeConfigData.Key].assemblerItemId = assemblerItemId;
-                        solution.userPreference.recipeConfigs[recipeConfigData.Key].forceUseIA = false; // 取消该配方使用IA的设定
+                        int configType = CalcDB.recipeDict[recipeConfigData.Value.ID].type;
+                        if (configType == typeInt)
+                        {
+                            solution.userPreference.recipeConfigs[recipeConfigData.Key].assemblerItemId = assemblerItemId;
+                            solution.userPreference.recipeConfigs[recipeConfigData.Key].forceUseIA = false; // 取消该配方使用IA的设定
+                        }
                     }
                 }
             }

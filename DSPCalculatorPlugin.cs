@@ -21,7 +21,6 @@ namespace DSPCalculator
 {
     [BepInPlugin(GUID, NAME, VERSION)]
     [BepInDependency(CommonAPIPlugin.GUID)]
-    [BepInDependency("starfi5h.plugin.ModFixerOne")]
     [BepInDependency(GB_GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(MMS_GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(TCFV_GUID, BepInDependency.DependencyFlags.SoftDependency)]
@@ -32,7 +31,7 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.5.20";
+        public const string VERSION = "0.5.21";
         public const int VERSIONINT = 512;
 
         // ---------------------------------------------------------------------------
