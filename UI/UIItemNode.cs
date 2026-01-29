@@ -875,7 +875,8 @@ namespace DSPCalculator.UI
             }
             else
             {
-                UIRecipePicker.Popup(new Vector2(100f, 200f), OnRecipePickerReturn, (ERecipeType)(-itemNode.itemId));
+                RecipePickerPatcher.itemIdFilter = itemNode.itemId;
+                UIRecipePicker.Popup(new Vector2(100f, 200f), OnRecipePickerReturn, (ERecipeType)255);
             }
         }
 
@@ -895,6 +896,7 @@ namespace DSPCalculator.UI
                 }
                 parentCalcWindow.RefreshAll();
             }
+            RecipePickerPatcher.itemIdFilter = 0;
         }
 
         public void OnClearRecipePreferenceButtonClick()

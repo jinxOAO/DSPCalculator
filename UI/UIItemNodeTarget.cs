@@ -56,6 +56,8 @@ namespace DSPCalculator.UI
         public UIButton calcInNewWindowUIBtn;
         public Image calcInNewWindowIcon;
 
+        public int time;
+
         /// <summary>
         /// 专门用于创建增加一个目标产物的按钮
         /// </summary>
@@ -148,6 +150,9 @@ namespace DSPCalculator.UI
             speedInputObj.GetComponent<UIButton>().tips.tipText = "";
             speedInputObj.SetActive(false);
             speedInputObj.SetActive(true); // 这样切一次颜色才能显示正常
+            speedInputObj.transform.Find("value-text").GetComponent<Text>().enabled = false;
+            //speedInputObj.transform.Find("value-text").GetComponent<Text>().enabled = false;
+            //speedInputObj.transform.Find("value-text").GetComponent<Text>().enabled = true;
 
             // 从目标中移除按钮，以及在新窗口中计算按钮
             if (targetsIndex < parentCalcWindow.solution.targets.Count)
@@ -233,6 +238,7 @@ namespace DSPCalculator.UI
                 obj.SetActive(false);
                 obj.SetActive(true);
             }
+            time = 0;
         }
 
         public override void OnUpdate(bool isMoving)
@@ -259,6 +265,12 @@ namespace DSPCalculator.UI
                         calcInNewWindowIcon.color = (calcInNewWindowUIBtn.isPointerEnter && !calcInNewWindowUIBtn.isPointerDown) ? calcInNewWindowUIBtn.transitions[0].mouseoverColor : calcInNewWindowUIBtn.transitions[0].normalColor;
                     }
                 }
+            }
+            if(time <=10)
+            {
+                time += 1;
+                if(time == 2)
+                    speedInputObj.transform.Find("value-text").GetComponent<Text>().enabled = true;
             }
         }
 

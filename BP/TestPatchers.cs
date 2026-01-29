@@ -122,8 +122,8 @@ namespace DSPCalculator.Bp
                                 int inserterId = entityPool[num3].inserterId;
                                 if (inserterId != 0)
                                 {
-                                    vector3 = factorySystem.inserterPool[inserterId].pos2;
-                                    rhs2 = factorySystem.inserterPool[inserterId].rot2;
+                                    //vector3 = factorySystem.inserterPool[inserterId].pos2;
+                                    //rhs2 = factorySystem.inserterPool[inserterId].rot2;
                                 }
                                 tilt = entityPool[num3].tilt;
                             }

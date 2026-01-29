@@ -15,6 +15,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Reflection.Emit;
 using MathNet.Numerics;
+using UnityEngine.UI.Youthcat;
 
 namespace DSPCalculator.UI
 {
@@ -71,6 +72,7 @@ namespace DSPCalculator.UI
         public static GameObject imageButtonObj; // 只有图片的按钮
         public static GameObject incTogglePrefabObj; // 增产切换按钮
         public static GameObject checkBoxObj;
+        public static GameObject oriInputFieldObjNoSelIcon; // 全局调用的InputField
         public static Sprite itemNotSelectedSprite;
         public static Sprite leftTriangleSprite;
         public static Sprite rightTriangleSprite;
@@ -333,8 +335,33 @@ namespace DSPCalculator.UI
             if (oriInputFieldObj == null)
                 oriInputFieldObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser/inspector-group/BP-panel-scroll(Clone)/Viewport/pane/group-1/input-short-text");
             if (oriInputFieldObj == null)
-                Debug.LogError("Error when init oriInputField because some other mods has changed the Blueprint Browser UI. Please check if you've install the BluePrintTweaks and then contant jinxOAO.");
-            customTitleInputObj = GameObject.Instantiate(oriInputFieldObj, windowObj.transform);
+                Debug.LogError("Error when init oriInputField because some other mods has changed the Blueprint Browser UI. Please check if you've install the BluePrintTweaks and then contact jinxOAO.");
+
+            oriInputFieldObjNoSelIcon = GameObject.Instantiate(oriInputFieldObj);
+            GameObject.DestroyImmediate(oriInputFieldObjNoSelIcon.transform.Find("sel-icon-btn").gameObject);
+            Component externalTargetComp = oriInputFieldObjNoSelIcon.GetComponent<SelectableExternalTarget>();
+            if (externalTargetComp != null)
+            {
+                GameObject.DestroyImmediate(externalTargetComp);
+            }
+
+            Transform valueOverTrans = oriInputFieldObjNoSelIcon.transform.Find("value-over");
+            if(valueOverTrans != null)
+            {
+                GameObject.DestroyImmediate(valueOverTrans.gameObject);
+            }
+            Transform valueTextTrans = oriInputFieldObjNoSelIcon.transform.Find("value-text");
+            if (valueTextTrans != null)
+            {
+                if (valueTextTrans.gameObject.GetComponent<TextEventTrigger>() != null)
+                {
+                    GameObject.DestroyImmediate(valueTextTrans.gameObject.GetComponent<TextEventTrigger>());
+                }
+                //valueTextTrans.gameObject.GetComponent<Text>().enabled = false;
+                valueTextTrans.gameObject.GetComponent<Text>().enabled = true; // 不知道为什么这里不重置一次的话，右侧的ItemNodeTarget的目标速度数字会显示不出来。除非打开计算器窗口前打开过一次蓝图窗口且点击过一个蓝图（显示出来了我复制的inputfield里面的本体过）
+            }
+
+            customTitleInputObj = GameObject.Instantiate(oriInputFieldObjNoSelIcon, windowObj.transform);
             customTitleInputObj.name = "inputfield-title";
             customTitleInputObj.GetComponent<RectTransform>().sizeDelta = new Vector2(200, 30);
             customTitleInputObj.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 1f);
@@ -490,7 +517,7 @@ namespace DSPCalculator.UI
             }
 
             // 目标速度输入的文本框
-            speedInputObj = GameObject.Instantiate(oriInputFieldObj, panelParent);
+            speedInputObj = GameObject.Instantiate(oriInputFieldObjNoSelIcon, panelParent);
             speedInputObj.name = "speed-input";
             speedInputObj.transform.localPosition = new Vector3(120, 0, 0);
             speedInputObj.GetComponent<RectTransform>().sizeDelta = new Vector2(100, 30);
@@ -842,9 +869,9 @@ namespace DSPCalculator.UI
             customIncMilliCbObj.GetComponent<UIButton>().tips.corner = 1;
             customIncMilliCbObj.GetComponent<UIButton>().tips.delay = 0.1f;
             customIncMilliCbObj.GetComponent<UIButton>().tips.width = 400;
-            GameObject customIncInput = GameObject.Instantiate(oriInputFieldObj,checkBoxGroupObj.transform);
+            GameObject customIncInput = GameObject.Instantiate(oriInputFieldObjNoSelIcon,checkBoxGroupObj.transform);
             customIncInput.name = "inputfield-inc";
-            customIncInput.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 20);
+            customIncInput.GetComponent<RectTransform>().sizeDelta = new Vector2(50, 20);
             customIncInput.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
             customIncInput.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(212, 0, 0);
             incInput = customIncInput.GetComponent<InputField>();
@@ -878,9 +905,9 @@ namespace DSPCalculator.UI
             customAccMilliCbObj.GetComponent<UIButton>().tips.corner = 1;
             customAccMilliCbObj.GetComponent<UIButton>().tips.delay = 0.1f;
             customAccMilliCbObj.GetComponent<UIButton>().tips.width = 400;
-            GameObject customAccInput = GameObject.Instantiate(oriInputFieldObj, checkBoxGroupObj.transform);
+            GameObject customAccInput = GameObject.Instantiate(oriInputFieldObjNoSelIcon, checkBoxGroupObj.transform);
             customAccInput.name = "inputfield-acc";
-            customAccInput.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 20);
+            customAccInput.GetComponent<RectTransform>().sizeDelta = new Vector2(50, 20);
             customAccInput.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
             customAccInput.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(212, -20, 0);
             accInput = customAccInput.GetComponent<InputField>();
