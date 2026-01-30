@@ -144,15 +144,14 @@ namespace DSPCalculator.UI
             speedInputObj.GetComponent<InputField>().onEndEdit.RemoveAllListeners();
             speedInputObj.GetComponent<InputField>().onEndEdit.AddListener((x) => OnSpeedEndEdit(x));
             speedInputObj.GetComponent<Image>().color = new Color(0, 0, 0, 0.5f);
-            speedInputObj.transform.Find("value-text").GetComponent<Text>().color = Color.white;
-            speedInputObj.transform.Find("value-text").GetComponent<Text>().fontSize = 16;
+            speedInputObj.transform.Find(UICalcWindow.sonTextObjName).GetComponent<Text>().fontSize = 16;
             speedInputObj.GetComponent<UIButton>().tips.tipTitle = "";
             speedInputObj.GetComponent<UIButton>().tips.tipText = "";
-            speedInputObj.SetActive(false);
-            speedInputObj.SetActive(true); // 这样切一次颜色才能显示正常
-            speedInputObj.transform.Find("value-text").GetComponent<Text>().enabled = false;
-            //speedInputObj.transform.Find("value-text").GetComponent<Text>().enabled = false;
-            //speedInputObj.transform.Find("value-text").GetComponent<Text>().enabled = true;
+            //speedInputObj.SetActive(false);
+            //speedInputObj.SetActive(true); // 这样切一次颜色才能显示正常
+            //speedInputObj.transform.Find(UICalcWindow.sonTextObjName).GetComponent<Text>().enabled = false;
+            //speedInputObj.transform.Find(UICalcWindow.sonTextObjName).GetComponent<Text>().enabled = false;
+            //speedInputObj.transform.Find(UICalcWindow.sonTextObjName).GetComponent<Text>().enabled = true;
 
             // 从目标中移除按钮，以及在新窗口中计算按钮
             if (targetsIndex < parentCalcWindow.solution.targets.Count)
@@ -235,10 +234,7 @@ namespace DSPCalculator.UI
             {
                 obj.transform.SetParent(calcWindow.sideContentTrans, false);
                 obj.transform.localScale = Vector3.one;
-                obj.SetActive(false);
-                obj.SetActive(true);
             }
-            time = 0;
         }
 
         public override void OnUpdate(bool isMoving)
@@ -265,12 +261,6 @@ namespace DSPCalculator.UI
                         calcInNewWindowIcon.color = (calcInNewWindowUIBtn.isPointerEnter && !calcInNewWindowUIBtn.isPointerDown) ? calcInNewWindowUIBtn.transitions[0].mouseoverColor : calcInNewWindowUIBtn.transitions[0].normalColor;
                     }
                 }
-            }
-            if(time <=10)
-            {
-                time += 1;
-                if(time == 2)
-                    speedInputObj.transform.Find("value-text").GetComponent<Text>().enabled = true;
             }
         }
 
