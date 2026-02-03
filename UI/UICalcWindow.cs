@@ -549,7 +549,7 @@ namespace DSPCalculator.UI
             speedInputObj.GetComponent<UIButton>().tips.tipTitle = "";
             speedInputObj.GetComponent<UIButton>().tips.tipText = "";
             //speedInputObj.SetActive(false);
-            //speedInputObj.SetActive(true); // 这样切一次颜色才能显示正常
+            speedInputObj.SetActive(true);
 
             perMinTextObj = GameObject.Instantiate(TextObj, panelParent);
             perMinTextObj.name = "per-minute";
