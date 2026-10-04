@@ -56,6 +56,8 @@ namespace DSPCalculator.UI
         public UIButton calcInNewWindowUIBtn;
         public Image calcInNewWindowIcon;
 
+        public int time;
+
         /// <summary>
         /// 专门用于创建增加一个目标产物的按钮
         /// </summary>
@@ -135,19 +137,21 @@ namespace DSPCalculator.UI
             speedInputObj.GetComponent<RectTransform>().sizeDelta = new Vector2(80, 25); // 100 30
             speedInputObj.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
             speedInputObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(-20, 0, 0);
-            speedInputObj.GetComponent<InputField>().text = ((long)speed).ToString();
+            speedInputObj.GetComponent<InputField>().text = speed.ToString();
             speedInputObj.GetComponent<InputField>().contentType = InputField.ContentType.DecimalNumber;
             speedInputObj.GetComponent<InputField>().characterLimit = 12;
             speedInputObj.GetComponent<InputField>().transition = Selectable.Transition.None; // 要不然鼠标不在上面时颜色会很浅，刚打开容易找不到，不够明显
             speedInputObj.GetComponent<InputField>().onEndEdit.RemoveAllListeners();
             speedInputObj.GetComponent<InputField>().onEndEdit.AddListener((x) => OnSpeedEndEdit(x));
             speedInputObj.GetComponent<Image>().color = new Color(0, 0, 0, 0.5f);
-            speedInputObj.transform.Find("value-text").GetComponent<Text>().color = Color.white;
-            speedInputObj.transform.Find("value-text").GetComponent<Text>().fontSize = 16;
+            speedInputObj.transform.Find(UICalcWindow.sonTextObjName).GetComponent<Text>().fontSize = 16;
             speedInputObj.GetComponent<UIButton>().tips.tipTitle = "";
             speedInputObj.GetComponent<UIButton>().tips.tipText = "";
-            speedInputObj.SetActive(false);
-            speedInputObj.SetActive(true); // 这样切一次颜色才能显示正常
+            //speedInputObj.SetActive(false);
+            //speedInputObj.SetActive(true); // 这样切一次颜色才能显示正常
+            //speedInputObj.transform.Find(UICalcWindow.sonTextObjName).GetComponent<Text>().enabled = false;
+            //speedInputObj.transform.Find(UICalcWindow.sonTextObjName).GetComponent<Text>().enabled = false;
+            //speedInputObj.transform.Find(UICalcWindow.sonTextObjName).GetComponent<Text>().enabled = true;
 
             // 从目标中移除按钮，以及在新窗口中计算按钮
             if (targetsIndex < parentCalcWindow.solution.targets.Count)
@@ -230,8 +234,6 @@ namespace DSPCalculator.UI
             {
                 obj.transform.SetParent(calcWindow.sideContentTrans, false);
                 obj.transform.localScale = Vector3.one;
-                obj.SetActive(false);
-                obj.SetActive(true);
             }
         }
 

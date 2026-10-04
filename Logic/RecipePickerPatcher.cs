@@ -10,8 +10,10 @@ namespace DSPCalculator.Logic
 {
     public class RecipePickerPatcher
     {
+        public static int itemIdFilter = 0;
+
         /// <summary>
-        /// 通过将filter设置为负数，用来表示只显示某些物品的配方
+        /// 通过将filter设置为255，用来表示只显示某些物品的配方
         /// </summary>
         /// <param name="__instance"></param>
         /// <returns></returns>
@@ -19,10 +21,14 @@ namespace DSPCalculator.Logic
         [HarmonyPatch(typeof(UIRecipePicker), "RefreshIcons")]
         public static bool RecipePickerPrefix(ref UIRecipePicker __instance)
         {
-            if((int)__instance.filter >= 0)
+            if ((int)__instance.filter != 255) // 255为计算器特别调用用于过滤特定物品的标志
                 return true;
 
-            int itemId = -(int)__instance.filter; 
+            int itemId = itemIdFilter; 
+
+            if(itemId == 0) 
+                return true;
+
             Array.Clear(__instance.indexArray, 0, __instance.indexArray.Length);
             Array.Clear(__instance.protoArray, 0, __instance.protoArray.Length);
             IconSet iconSet = GameMain.iconSet;
@@ -49,5 +55,7 @@ namespace DSPCalculator.Logic
             return false;
         }
 
+
+        
     }
 }

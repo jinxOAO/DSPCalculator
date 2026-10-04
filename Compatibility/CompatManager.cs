@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BepInEx;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,4 +13,5 @@ namespace DSPCalculator.Compatibility
         public static bool TCFV = false;
         public static bool MMS = false;
     }
+
 }

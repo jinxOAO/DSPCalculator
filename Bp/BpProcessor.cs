@@ -1,6 +1,7 @@
 ﻿using DSPCalculator.Bp;
 using DSPCalculator.Compatibility;
 using DSPCalculator.Logic;
+using MathNet.Numerics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -299,7 +300,6 @@ namespace DSPCalculator.Bp
                     c.beltSpeedRequiredPerAssembler = recipeInfo.GetOutputSpeedOriProto(i, recipeInfo.count) / recipeInfo.assemblerCount;
 
                 c.maxSupportAssemblerCount = (long)(solution.beltsAvailable.Last().speedPerMin / c.beltSpeedRequiredPerAssembler);
-                
 
                 if (sorterMk4Available)
                     c.maxSorterDistance = 3;
@@ -477,6 +477,34 @@ namespace DSPCalculator.Bp
                             insufficientSorterItems.Add(cargoInfo.itemId); // 将这个配方记录为分拣器无法满足，需要用户自行调整（比如换成两个低级爪子）
                         }
                         cargoInfo.useSorterItemId = sorterId;
+
+                        // 处理输出货物前几个分拣器可以不用最高级的设定
+                        if(!solution.userPreference.bpSorterHighest && !cargoInfo.isResource)
+                        {
+                            for (int s = 0; s < solution.sortersAvailable.Count; s++)
+                            {
+                                if (solution.sortersAvailable[s].grade >= 4) // 不考虑集装分拣器
+                                    break;
+                                if (solution.sortersAvailable[s].Satisfy(cargoInfo.beltSpeedRequiredPerAssembler * solution.userPreference.bpSorterMk4OutputStack * (isLab ? maxLevel : 1), i / 2 + 1)) // 这里对belt速度的需求可就是无堆叠了，所以要乘回来sorterMk4的堆叠数
+                                {
+                                    cargoInfo.outMinSorterItemId = solution.sortersAvailable[s].itemId;
+                                    cargoInfo.firstNOutSorterNoMk4 = (int)(BpDB.beltInfos[cargoInfo.useBeltItemId].speedPerMin / (cargoInfo.beltSpeedRequiredPerAssembler * solution.userPreference.bpSorterMk4OutputStack));
+                                    if(doubleRow) // 双行共享带的话数量要减半哦
+                                    {
+                                        if(share3Belts)
+                                        {
+                                            if (i == 0 || i == 2 || i == 5)
+                                                cargoInfo.firstNOutSorterNoMk4 /= 2;
+                                        }
+                                        else if ( i == 2)
+                                        {
+                                            cargoInfo.firstNOutSorterNoMk4 /= 2;
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
                 if (genLevel >= 0)
@@ -525,7 +553,10 @@ namespace DSPCalculator.Bp
                             if (cargoInfo != null)
                             {
                                 int slot = assemblerInfo.cargoNormIndex2SlotMap_FirstRow[c];
-                                this.AssemblerConnectToBelt(assemblerBuildingIndex, slot, cargoInfo.useSorterItemId, 1 + c / 2, cargoInfo.isResource, cargoInfo.isResource ? 0 : cargoInfo.itemId, cargoInfo.isResource);
+                                if(!cargoInfo.isResource && assemblersFirstRow.Count - i <= cargoInfo.firstNOutSorterNoMk4 && cargoInfo.outMinSorterItemId > 0) // 输出物前几个如果需要用低级的分拣器，则用低级的
+                                    this.AssemblerConnectToBelt(assemblerBuildingIndex, slot, cargoInfo.outMinSorterItemId, 1 + c / 2, cargoInfo.isResource, cargoInfo.isResource ? 0 : cargoInfo.itemId, cargoInfo.isResource);
+                                else
+                                    this.AssemblerConnectToBelt(assemblerBuildingIndex, slot, cargoInfo.useSorterItemId, 1 + c / 2, cargoInfo.isResource, cargoInfo.isResource ? 0 : cargoInfo.itemId, cargoInfo.isResource);
                             }
                         }
                     }
@@ -605,78 +636,118 @@ namespace DSPCalculator.Bp
                         }
                     }
                     // ------然后创建爪子，如果是3共享，必须专门判断每一个爪子id、filter和位置
-                    for (int i = 0; i < assemblersSecondRow.Count; i++)
-                    {
-                        int assemblerBuildingIndex = assemblersSecondRow[i];
-                        for (int c = 0; c < cargoInfoOrderByNorm.Count; c++)
-                        {
-                            BpCargoInfo cargoInfo = cargoInfoOrderByNorm[c];
-                            if (cargoInfo != null)
-                            {
-                                bool isResource = cargoInfo.isResource;
-                                int cargoItemId = cargoInfo.itemId;
-                                int sorterId = cargoInfo.useSorterItemId;
-                                int mappedCargoIndex = c; // 如果3带共享，具体是什么cargo需要映射过去
-                                if(share3Belts) // 3共享的带子，不能直接读cargoInfoOrderByNorm的属性，因为和第一行不一样，是倒着的
-                                {
-                                    if(c == 0)
-                                    {
-                                        if (cargoInfoOrderByNorm[5] != null)
-                                        {
-                                            mappedCargoIndex = 5;
-                                        }
-                                        else if (cargoInfoOrderByNorm[2] != null)
-                                        {
-                                            mappedCargoIndex = 2;
-                                        }
-                                    }
-                                    else if (c == 2 && cargoInfoOrderByNorm[5] == null) // 这种特殊情况是只有两条带子共享
-                                    {
-                                        mappedCargoIndex = 0;
-                                    }
-                                    else if (c == 5)
-                                    {
-                                        mappedCargoIndex = 0;
-                                    }
-                                    isResource = cargoInfoOrderByNorm[mappedCargoIndex].isResource;
-                                    cargoItemId = cargoInfoOrderByNorm[mappedCargoIndex].itemId;
 
-                                    // 要独立计算分拣器使用！，既不能用
-                                    if (solution.userPreference.bpSorterHighest || (solution.sortersAvailable.Last().grade >= 4 && !isResource))
+                    for (int c = 0; c < cargoInfoOrderByNorm.Count; c++)
+                    {
+                        BpCargoInfo cargoInfo = cargoInfoOrderByNorm[c];
+                        if (cargoInfo != null)
+                        {
+                            bool isResource = cargoInfo.isResource;
+                            int cargoItemId = cargoInfo.itemId;
+                            int sorterId = cargoInfo.useSorterItemId;
+                            int mappedCargoIndex = c; // 如果3带共享，具体是什么cargo需要映射过去
+                            if (share3Belts) // 3共享的带子，不能直接读cargoInfoOrderByNorm的属性，因为和第一行不一样，是倒着的
+                            {
+                                if (c == 0)
+                                {
+                                    if (cargoInfoOrderByNorm[5] != null)
                                     {
-                                        sorterId = solution.sortersAvailable.Last().itemId;
+                                        mappedCargoIndex = 5;
                                     }
-                                    else  // 否则尽可能使用便宜的
+                                    else if (cargoInfoOrderByNorm[2] != null)
                                     {
-                                        int distance = c / 2 + 1;
-                                        for (int s = 0; s < solution.sortersAvailable.Count; s++)
+                                        mappedCargoIndex = 2;
+                                    }
+                                }
+                                else if (c == 2 && cargoInfoOrderByNorm[5] == null) // 这种特殊情况是只有两条带子共享
+                                {
+                                    mappedCargoIndex = 0;
+                                }
+                                else if (c == 5)
+                                {
+                                    mappedCargoIndex = 0;
+                                }
+                                isResource = cargoInfoOrderByNorm[mappedCargoIndex].isResource;
+                                cargoItemId = cargoInfoOrderByNorm[mappedCargoIndex].itemId;
+
+                                // 要独立计算分拣器使用！，既不能用
+                                if (solution.userPreference.bpSorterHighest || (solution.sortersAvailable.Last().grade >= 4 && !isResource))
+                                {
+                                    sorterId = solution.sortersAvailable.Last().itemId;
+                                }
+                                else  // 否则尽可能使用便宜的
+                                {
+                                    int distance = c / 2 + 1;
+                                    for (int s = 0; s < solution.sortersAvailable.Count; s++)
+                                    {
+                                        if (solution.sortersAvailable[s].Satisfy(cargoInfoOrderByNorm[mappedCargoIndex].beltSpeedRequiredPerAssembler * (isLab ? maxLevel : 1), distance))
                                         {
-                                            if (solution.sortersAvailable[s].Satisfy(cargoInfoOrderByNorm[mappedCargoIndex].beltSpeedRequiredPerAssembler * (isLab ? maxLevel : 1), distance))
+                                            sorterId = solution.sortersAvailable[s].itemId;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (sorterId < 0) // 最快的一个可用爪子（但是会受限于科技）都不能满足一个工厂的进料
+                                {
+                                    sorterId = BpDB.sortersAscending.Last().itemId; // 直接使用集装分拣器
+                                    if (!insufficientSorterItems.Contains(cargoItemId))
+                                        insufficientSorterItems.Add(cargoItemId); // 将这个配方记录为分拣器无法满足，需要用户自行调整（比如换成两个低级爪子）
+                                }
+                            }
+                            int slot = assemblerInfo.cargoNormIndex2SlotMap_SecondRow[c];
+                            if (share3Belts && onlyShare2Belts) // 只共享了两条袋子的话，用三条带子的slot分配会冲突，要全部右移一格
+                            {
+                                if (c == 0)
+                                    slot = assemblerInfo.cargoNormIndex2SlotMap_SecondRow[2];
+                                else if (c == 2)
+                                    slot = assemblerInfo.cargoNormIndex2SlotMap_SecondRow[5];
+                            }
+
+                            // 处理输出货物前几个分拣器可以不用最高级的设定
+                            int tempFirstNOutSorterNoMk4 = -1;
+                            int tempOutMinSorterItemId = -1;
+                            if (!solution.userPreference.bpSorterHighest && !isResource)
+                            {
+                                for (int s = 0; s < solution.sortersAvailable.Count; s++)
+                                {
+                                    if (solution.sortersAvailable[s].grade >= 4) // 不考虑集装分拣器
+                                        break;
+                                    if (solution.sortersAvailable[s].Satisfy(cargoInfoOrderByNorm[mappedCargoIndex].beltSpeedRequiredPerAssembler * solution.userPreference.bpSorterMk4OutputStack * (isLab ? maxLevel : 1), c / 2 + 1)) // 这里对belt速度的需求可就是无堆叠了，所以要乘回来sorterMk4的堆叠数
+                                    {
+                                        tempOutMinSorterItemId = solution.sortersAvailable[s].itemId;
+                                        tempFirstNOutSorterNoMk4 = (int)(BpDB.beltInfos[cargoInfoOrderByNorm[mappedCargoIndex].useBeltItemId].speedPerMin / (cargoInfoOrderByNorm[mappedCargoIndex].beltSpeedRequiredPerAssembler * solution.userPreference.bpSorterMk4OutputStack));
+                                        if (doubleRow) // 双行共享带的话数量要减半哦
+                                        {
+                                            if (share3Belts)
                                             {
-                                                sorterId = solution.sortersAvailable[s].itemId;
-                                                break;
+                                                if (mappedCargoIndex == 0 || mappedCargoIndex == 2 || mappedCargoIndex == 5)
+                                                    tempFirstNOutSorterNoMk4 /= 2;
+                                            }
+                                            else if (mappedCargoIndex == 2)
+                                            {
+                                                tempFirstNOutSorterNoMk4 /= 2;
                                             }
                                         }
-                                    }
-                                    if (sorterId < 0) // 最快的一个可用爪子（但是会受限于科技）都不能满足一个工厂的进料
-                                    {
-                                        sorterId = BpDB.sortersAscending.Last().itemId; // 直接使用集装分拣器
-                                        if(!insufficientSorterItems.Contains(cargoItemId))
-                                            insufficientSorterItems.Add(cargoItemId); // 将这个配方记录为分拣器无法满足，需要用户自行调整（比如换成两个低级爪子）
+                                        break;
                                     }
                                 }
-                                int slot = assemblerInfo.cargoNormIndex2SlotMap_SecondRow[c];
-                                if(share3Belts && onlyShare2Belts) // 只共享了两条袋子的话，用三条带子的slot分配会冲突，要全部右移一格
+                            }
+
+                            for (int i = 0; i < assemblersSecondRow.Count; i++)
+                            {
+                                int assemblerBuildingIndex = assemblersSecondRow[i];
+                                if (!isResource && assemblersFirstRow.Count - i <= tempFirstNOutSorterNoMk4 && tempOutMinSorterItemId > 0) // 输出物前几个如果需要用低级的分拣器，则用低级的
                                 {
-                                    if(c == 0)
-                                        slot = assemblerInfo.cargoNormIndex2SlotMap_SecondRow[2];
-                                    else if (c == 2)
-                                        slot = assemblerInfo.cargoNormIndex2SlotMap_SecondRow[5];
+                                    this.AssemblerConnectToBelt(assemblerBuildingIndex, slot, tempOutMinSorterItemId, 1 + c / 2, isResource, isResource ? 0 : cargoItemId, isResource);
                                 }
-                                this.AssemblerConnectToBelt(assemblerBuildingIndex, slot, sorterId, 1 + c / 2, isResource, isResource ? 0 : cargoItemId, isResource);
+                                else
+                                {
+                                    this.AssemblerConnectToBelt(assemblerBuildingIndex, slot, sorterId, 1 + c / 2, isResource, isResource ? 0 : cargoItemId, isResource);
+                                }
                             }
                         }
                     }
+                    
                 }
             }
             if (genLevel > 0)
@@ -1061,6 +1132,8 @@ namespace DSPCalculator.Bp
         // 以下在初次实例化时并未赋值，创建蓝图时才会赋值
         public int useBeltItemId; // 使用的传送带ItemId
         public int useSorterItemId; // 使用的分拣器的ItemId
+        public int outMinSorterItemId; // 输出时，如果用最低级分拣器，分拣器的ItemId
+        public int firstNOutSorterNoMk4; // 在用户要求使用尽可能低等级的分拣器时，前几个（传送带起始端的前几个，实际上从左到右是尾部几个）输出分拣器可以不用mk4的集装分拣器
     }
 
     public class BpCargoBeltPos

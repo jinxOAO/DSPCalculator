@@ -21,7 +21,7 @@ namespace DSPCalculator.Bp
 
         //[HarmonyPrefix]
         //[HarmonyPatch(typeof(BlueprintUtils), "GenerateBlueprintData")]
-        public static bool TestLog(BlueprintData _blueprintData, PlanetData _planet, PlanetAuxData _auxData, int[] _objIds, int _objCount, float _divideLongitude)
+        public static bool TestLog(BlueprintData _blueprintData, PlanetData _planet, PlanetAuxData _auxData, int[] _objIds, int _objCount, float _divideLongitude, uint[] _reformIds)
         {
             return true;
             _blueprintData.ResetContentAsEmpty();
@@ -46,7 +46,7 @@ namespace DSPCalculator.Bp
             {
                 segmentCnt = _planet.aux.activeGrid.segment;
             }
-            BPGratBox boundingRange = BlueprintUtils.GetBoundingRange(_planet, _auxData, _objIds, _objCount, _divideLongitude);
+            BPGratBox boundingRange = BlueprintUtils.GetBoundingRange(_planet, _auxData, _objIds, _objCount, _divideLongitude, _reformIds);
             int areaCount = BlueprintUtils.GetAreaCount(boundingRange.y, boundingRange.w, segmentCnt);
             Debug.Log($"area count = {areaCount}");
             BPGratBox[] array = new BPGratBox[areaCount];
@@ -122,8 +122,8 @@ namespace DSPCalculator.Bp
                                 int inserterId = entityPool[num3].inserterId;
                                 if (inserterId != 0)
                                 {
-                                    vector3 = factorySystem.inserterPool[inserterId].pos2;
-                                    rhs2 = factorySystem.inserterPool[inserterId].rot2;
+                                    //vector3 = factorySystem.inserterPool[inserterId].pos2;
+                                    //rhs2 = factorySystem.inserterPool[inserterId].rot2;
                                 }
                                 tilt = entityPool[num3].tilt;
                             }
@@ -551,7 +551,7 @@ namespace DSPCalculator.Bp
             bp.ResetAsEmpty();
             bp.layout = EIconLayout.OneIcon;
             bp.icon0 = 41508; // 戴森球计划白色标志
-            bp.patch = 1;
+            bp.Patch = 1;
             bp.cursorOffset_x = 0;
             bp.cursorOffset_y = 0;
             bp.shortDesc = "DSPCalc_Quick";

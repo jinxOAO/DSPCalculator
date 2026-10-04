@@ -645,7 +645,7 @@ namespace DSPCalculator.Bp
             bp.ResetAsEmpty();
             bp.layout = EIconLayout.OneIcon;
             bp.icon0 = 41508; // 戴森球计划白色标志
-            bp.patch = 1;
+            bp.Patch = 1;
             bp.cursorOffset_x = 0;
             bp.cursorOffset_y = 0;
             bp.shortDesc = "DSPCalc_Quick";

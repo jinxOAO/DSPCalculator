@@ -71,6 +71,7 @@ namespace DSPCalculator.UI
         public static GameObject imageButtonObj; // 只有图片的按钮
         public static GameObject incTogglePrefabObj; // 增产切换按钮
         public static GameObject checkBoxObj;
+        public static GameObject oriInputFieldObjNoSelIcon; // 全局调用的InputField
         public static Sprite itemNotSelectedSprite;
         public static Sprite leftTriangleSprite;
         public static Sprite rightTriangleSprite;
@@ -100,6 +101,7 @@ namespace DSPCalculator.UI
         public static Sprite listSprite;
         public static Sprite doubleLayerSprite;
         public static Sprite circleThinSprite;
+        public static string sonTextObjName = "number-text"; //"value-text";
 
         // UI元素
         public GameObject windowObj;
@@ -329,12 +331,53 @@ namespace DSPCalculator.UI
 
 
             // 可编辑标题
-            GameObject oriInputFieldObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser/inspector-group/Scroll View/Viewport/Content/group-1/input-short-text");
+            //GameObject oriInputFieldObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser/inspector-group/Scroll View/Viewport/Content/group-1/input-short-text");
+            GameObject oriInputFieldObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Belt Window/number-input");
+            //if (oriInputFieldObj == null)
+            //    oriInputFieldObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser/inspector-group/BP-panel-scroll(Clone)/Viewport/pane/group-1/input-short-text");
             if (oriInputFieldObj == null)
-                oriInputFieldObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Blueprint Browser/inspector-group/BP-panel-scroll(Clone)/Viewport/pane/group-1/input-short-text");
-            if (oriInputFieldObj == null)
-                Debug.LogError("Error when init oriInputField because some other mods has changed the Blueprint Browser UI. Please check if you've install the BluePrintTweaks and then contant jinxOAO.");
-            customTitleInputObj = GameObject.Instantiate(oriInputFieldObj, windowObj.transform);
+                Debug.LogError("Error when init oriInputField because some other mods has changed the Blueprint Browser UI. Please check if you've install the BluePrintTweaks and then contact jinxOAO.");
+
+            oriInputFieldObjNoSelIcon = GameObject.Instantiate(oriInputFieldObj);
+            oriInputFieldObjNoSelIcon.GetComponent<RectTransform>().anchorMax = new Vector2(0, 1);
+            oriInputFieldObjNoSelIcon.GetComponent<RectTransform>().anchorMin = new Vector2(0, 1);
+            if(oriInputFieldObjNoSelIcon.GetComponent<UIButton>().transitions.Length > 0)
+            {
+                oriInputFieldObjNoSelIcon.GetComponent<UIButton>().transitions[0].normalColor = new Color(0, 0, 0, 0.4f);
+            }
+            oriInputFieldObjNoSelIcon.GetComponent<Image>().sprite = Resources.Load<Sprite>("ui/textures/sprites/sci-fi/litter-panel-cc");
+            oriInputFieldObjNoSelIcon.GetComponent<InputField>().contentType = InputField.ContentType.Standard;
+            oriInputFieldObjNoSelIcon.GetComponent<InputField>().characterValidation = InputField.CharacterValidation.None;
+            oriInputFieldObjNoSelIcon.transform.Find(sonTextObjName).GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
+            oriInputFieldObjNoSelIcon.transform.Find(sonTextObjName).GetComponent<Text>().color = new Color(1, 1, 1, 0.5f);
+            oriInputFieldObjNoSelIcon.transform.Find(sonTextObjName).GetComponent<RectTransform>().anchorMax = new Vector2(0.92f, 1);
+            oriInputFieldObjNoSelIcon.transform.Find(sonTextObjName).GetComponent<RectTransform>().anchorMin = new Vector2(0.08f, 0);
+            oriInputFieldObjNoSelIcon.transform.Find(sonTextObjName).GetComponent<RectTransform>().anchoredPosition3D = Vector3.zero;
+            //GameObject.DestroyImmediate(oriInputFieldObjNoSelIcon.transform.Find("sel-icon-btn").gameObject);
+            //Component externalTargetComp = oriInputFieldObjNoSelIcon.GetComponent<SelectableExternalTarget>();
+            //if (externalTargetComp != null)
+            //{
+            //    GameObject.DestroyImmediate(externalTargetComp);
+            //}
+
+            //Transform valueOverTrans = oriInputFieldObjNoSelIcon.transform.Find("value-over");
+            //if(valueOverTrans != null)
+            //{
+            //    GameObject.DestroyImmediate(valueOverTrans.gameObject);
+            //}
+            //Transform valueTextTrans = oriInputFieldObjNoSelIcon.transform.Find("value-text");
+            //if (valueTextTrans != null)
+            //{
+            //    if (valueTextTrans.gameObject.GetComponent<TextEventTrigger>() != null)
+            //    {
+            //        GameObject.DestroyImmediate(valueTextTrans.gameObject.GetComponent<TextEventTrigger>());
+            //    }
+            //    //valueTextTrans.gameObject.GetComponent<Text>().enabled = false;
+            //    valueTextTrans.gameObject.GetComponent<Text>().enabled = true; // 不知道为什么这里不重置一次的话，右侧的ItemNodeTarget的目标速度数字会显示不出来。除非打开计算器窗口前打开过一次蓝图窗口且点击过一个蓝图（显示出来了我复制的inputfield里面的本体过）
+            //}
+
+
+            customTitleInputObj = GameObject.Instantiate(oriInputFieldObjNoSelIcon, windowObj.transform);
             customTitleInputObj.name = "inputfield-title";
             customTitleInputObj.GetComponent<RectTransform>().sizeDelta = new Vector2(200, 30);
             customTitleInputObj.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 1f);
@@ -348,10 +391,9 @@ namespace DSPCalculator.UI
             titleInput.transition = Selectable.Transition.None; // 要不然鼠标不在上面时颜色会很浅，刚打开容易找不到，不够明显
             titleInput.onEndEdit.RemoveAllListeners();
             customTitleInputObj.GetComponent<Image>().color = new Color(0, 0, 0, 0.5f);
-            customTitleInputObj.transform.Find("value-text").GetComponent<Text>().color = Color.white;
-            customTitleInputObj.transform.Find("value-text").GetComponent<Text>().fontSize = 18;
-            customTitleInputObj.transform.Find("value-text").GetComponent<Text>().font = titleText.font;
-            customTitleInputObj.transform.Find("value-text").GetComponent<Text>().alignment = TextAnchor.MiddleCenter;
+            customTitleInputObj.transform.Find(sonTextObjName).GetComponent<Text>().fontSize = 18;
+            customTitleInputObj.transform.Find(sonTextObjName).GetComponent<Text>().font = titleText.font;
+            customTitleInputObj.transform.Find(sonTextObjName).GetComponent<Text>().alignment = TextAnchor.MiddleCenter;
             customTitleInputObj.GetComponent<UIButton>().tips.tipTitle = "";
             customTitleInputObj.GetComponent<UIButton>().tips.tipText = "";
             customTitleInputObj.SetActive(false);
@@ -422,6 +464,24 @@ namespace DSPCalculator.UI
             pasteButtonObj.GetComponent<UIButton>().transitions[0].normalColor = new Color(0.6f, 0.6f, 0.6f, 1);
             pasteButtonObj.GetComponent<UIButton>().transitions[0].pressedColor = new Color(0.4f, 0.4f, 0.4f, 1);
             pasteButtonObj.GetComponent<UIButton>().transitions[0].mouseoverColor = new Color(0.8f, 0.8f, 0.8f, 1);
+            // 提前设置为原矿图标
+            GameObject orePresetButtonObj = GameObject.Instantiate(UICalcWindow.iconObj_ButtonTip, targetProductTextObj.transform);
+            orePresetButtonObj.name = "pre-set-ore";
+            orePresetButtonObj.transform.localScale = Vector3.one;
+            orePresetButtonObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(141, 0, 0);
+            orePresetButtonObj.GetComponent<RectTransform>().sizeDelta = new Vector2(20, 20);
+            orePresetButtonObj.GetComponent<Image>().sprite = oreSprite;
+            //orePresetButtonObj.GetComponent<Button>().onClick.AddListener(() => { OnPresetOreButtonClick(); });
+            orePresetButtonObj.GetComponent<UIButton>().onClick += (x) => { OnPresetOreButtonClick(); };
+            orePresetButtonObj.GetComponent<UIButton>().onRightClick += (x) => { OnPresetOreButtonRightClick(); };
+            orePresetButtonObj.GetComponent<UIButton>().tips.tipTitle = "预先设置原矿标题".Translate();
+            orePresetButtonObj.GetComponent<UIButton>().tips.tipText = "预先设置原矿说明".Translate();
+            orePresetButtonObj.GetComponent<UIButton>().tips.corner = 3;
+            orePresetButtonObj.GetComponent<UIButton>().tips.width = 200;
+            Navigation nvg = new Navigation();
+            nvg.mode = Navigation.Mode.None;
+            orePresetButtonObj.GetComponent<Button>().navigation = nvg;
+
 
             // 目标产物图标
             GameObject oriItemIconObj = GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Station Window/storage-box-0/storage-icon-empty");
@@ -472,25 +532,24 @@ namespace DSPCalculator.UI
             }
 
             // 目标速度输入的文本框
-            speedInputObj = GameObject.Instantiate(oriInputFieldObj, panelParent);
+            speedInputObj = GameObject.Instantiate(oriInputFieldObjNoSelIcon, panelParent);
             speedInputObj.name = "speed-input";
             speedInputObj.transform.localPosition = new Vector3(120, 0, 0);
-            speedInputObj.GetComponent<RectTransform>().sizeDelta = new Vector2(100, 30);
+            speedInputObj.GetComponent<RectTransform>().sizeDelta = new Vector2(110, 30);
             speedInputObj.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-            speedInputObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(100, targetIconAnchoredPosYLargeWindow, 0); 
+            speedInputObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(90, targetIconAnchoredPosYLargeWindow, 0); 
             speedInputObj.GetComponent<InputField>().text = "3600";
             speedInputObj.GetComponent<InputField>().contentType = InputField.ContentType.DecimalNumber;
             speedInputObj.GetComponent<InputField>().characterLimit = 12;
             speedInputObj.GetComponent<InputField>().transition = Selectable.Transition.None; // 要不然鼠标不在上面时颜色会很浅，刚打开容易找不到，不够明显
             speedInputObj.GetComponent<InputField>().onEndEdit.RemoveAllListeners();
             speedInputObj.GetComponent<InputField>().onEndEdit.AddListener((x) => OnTargetSpeedChange(x));
-            speedInputObj.GetComponent<Image>().color = new Color(0, 0, 0, 0.5f);
-            speedInputObj.transform.Find("value-text").GetComponent<Text>().color = Color.white;
-            speedInputObj.transform.Find("value-text").GetComponent<Text>().fontSize = 16;
+            speedInputObj.GetComponent<Image>().color = new Color(1, 1, 1, 1f);
+            speedInputObj.transform.Find(sonTextObjName).GetComponent<Text>().fontSize = 16;
             speedInputObj.GetComponent<UIButton>().tips.tipTitle = "";
             speedInputObj.GetComponent<UIButton>().tips.tipText = "";
-            speedInputObj.SetActive(false);
-            speedInputObj.SetActive(true); // 这样切一次颜色才能显示正常
+            //speedInputObj.SetActive(false);
+            speedInputObj.SetActive(true);
 
             perMinTextObj = GameObject.Instantiate(TextObj, panelParent);
             perMinTextObj.name = "per-minute";
@@ -503,7 +562,7 @@ namespace DSPCalculator.UI
             // 切换增产按钮
             incToggleObj = GameObject.Instantiate(incTogglePrefabObj, panelParent);
             incToggleObj.name = "inc-setting";
-            incToggleObj.transform.localPosition = new Vector3(-38, 287, 0);
+            incToggleObj.transform.localPosition = new Vector3(-38, 287, 0); 
             incToggleObj.transform.Find("inc-switch").GetComponent<Button>().onClick.AddListener(() => { OnGlobalIncToggleClick(); });
             incText = incToggleObj.transform.Find("inc-effect-type-text").GetComponent<Text>();
             GameObject incToggleThumb = incToggleObj.transform.Find("inc-switch/switch-thumb").gameObject;
@@ -761,9 +820,6 @@ namespace DSPCalculator.UI
             assemblersDemandsGroupObj.transform.localPosition = new Vector3(13, -110, 0);
             // 实际创建工厂信息由RefreshAssemblerDemands()完成
 
-
-           
-
             // 右侧可调整元驱动等配置信息                         
             GameObject checkBoxGroupObj = new GameObject();
             checkBoxGroupObj.name = "checkbox-group";
@@ -824,11 +880,11 @@ namespace DSPCalculator.UI
             customIncMilliCbObj.GetComponent<UIButton>().tips.corner = 1;
             customIncMilliCbObj.GetComponent<UIButton>().tips.delay = 0.1f;
             customIncMilliCbObj.GetComponent<UIButton>().tips.width = 400;
-            GameObject customIncInput = GameObject.Instantiate(oriInputFieldObj,checkBoxGroupObj.transform);
+            GameObject customIncInput = GameObject.Instantiate(oriInputFieldObjNoSelIcon,checkBoxGroupObj.transform);
             customIncInput.name = "inputfield-inc";
-            customIncInput.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 20);
+            customIncInput.GetComponent<RectTransform>().sizeDelta = new Vector2(25, 20);
             customIncInput.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-            customIncInput.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(212, 0, 0);
+            customIncInput.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(215, 0, 0);
             incInput = customIncInput.GetComponent<InputField>();
             customIncInput.GetComponent<InputField>().text = "25";
             customIncInput.GetComponent<InputField>().contentType = InputField.ContentType.IntegerNumber;
@@ -837,12 +893,11 @@ namespace DSPCalculator.UI
             customIncInput.GetComponent<InputField>().onEndEdit.RemoveAllListeners();
             customIncInput.GetComponent<InputField>().onEndEdit.AddListener((x) => OnEndEditIncMilli(x));
             customIncInput.GetComponent<Image>().color = new Color(0, 0, 0, 0.5f);
-            customIncInput.transform.Find("value-text").GetComponent<Text>().color = Color.white;
-            customIncInput.transform.Find("value-text").GetComponent<Text>().fontSize = 12;
+            customIncInput.transform.Find(sonTextObjName).GetComponent<Text>().fontSize = 12;
             customIncInput.GetComponent<UIButton>().tips.tipTitle = "";
             customIncInput.GetComponent<UIButton>().tips.tipText = "";
-            customIncInput.SetActive(false);
-            customIncInput.SetActive(true);
+            //customIncInput.SetActive(false);
+            //customIncInput.SetActive(true);
 
             GameObject customAccMilliCbObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
             customAccMilliCbObj.name = "checkbox-custom-acc";
@@ -860,11 +915,11 @@ namespace DSPCalculator.UI
             customAccMilliCbObj.GetComponent<UIButton>().tips.corner = 1;
             customAccMilliCbObj.GetComponent<UIButton>().tips.delay = 0.1f;
             customAccMilliCbObj.GetComponent<UIButton>().tips.width = 400;
-            GameObject customAccInput = GameObject.Instantiate(oriInputFieldObj, checkBoxGroupObj.transform);
+            GameObject customAccInput = GameObject.Instantiate(oriInputFieldObjNoSelIcon, checkBoxGroupObj.transform);
             customAccInput.name = "inputfield-acc";
-            customAccInput.GetComponent<RectTransform>().sizeDelta = new Vector2(30, 20);
+            customAccInput.GetComponent<RectTransform>().sizeDelta = new Vector2(25, 20);
             customAccInput.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-            customAccInput.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(212, -20, 0);
+            customAccInput.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(215, -20, 0);
             accInput = customAccInput.GetComponent<InputField>();
             customAccInput.GetComponent<InputField>().text = "100";
             customAccInput.GetComponent<InputField>().contentType = InputField.ContentType.IntegerNumber;
@@ -873,12 +928,11 @@ namespace DSPCalculator.UI
             customAccInput.GetComponent<InputField>().onEndEdit.RemoveAllListeners();
             customAccInput.GetComponent<InputField>().onEndEdit.AddListener((x) => OnEndEditAccMilli(x));
             customAccInput.GetComponent<Image>().color = new Color(0, 0, 0, 0.5f);
-            customAccInput.transform.Find("value-text").GetComponent<Text>().color = Color.white;
-            customAccInput.transform.Find("value-text").GetComponent<Text>().fontSize = 12;
+            customAccInput.transform.Find(sonTextObjName).GetComponent<Text>().fontSize = 12;
             customAccInput.GetComponent<UIButton>().tips.tipTitle = "";
             customAccInput.GetComponent<UIButton>().tips.tipText = "";
-            customAccInput.SetActive(false);
-            customAccInput.SetActive(true);
+            //customAccInput.SetActive(false);
+            //customAccInput.SetActive(true);
 
 
             GameObject roundUpCbObj = GameObject.Instantiate(checkBoxObj, checkBoxGroupObj.transform);
@@ -1025,6 +1079,7 @@ namespace DSPCalculator.UI
 
                 // 增产切换按钮
                 incTogglePrefabObj = GameObject.Instantiate(GameObject.Find("UI Root/Overlay Canvas/In Game/Windows/Assembler Window/produce/inc-info"));
+                incTogglePrefabObj.transform.Find("inc-switch").GetComponent<Button>().interactable = true; // 不加这一行，会导致如果第一次开启计算器前，最后一个浏览的制造台窗口是锁定只能加速的配方，则后续的计算器饿的切换按钮都无法互动。
                 incTogglePrefabObj.transform.Find("inc-switch").GetComponent<Button>().onClick.RemoveAllListeners();
                 GameObject.DestroyImmediate(incTogglePrefabObj.transform.Find("inc-label").gameObject);
                 GameObject.DestroyImmediate(incTogglePrefabObj.transform.Find("inc-effect-value-text").gameObject);
@@ -1580,8 +1635,13 @@ namespace DSPCalculator.UI
                 if(solution.targets.Count > 0)
                 {
                     if (solution.targets[0].itemId > 0)
+                    {
                         targetProductIcon.sprite = LDB.items.Select(solution.targets[0].itemId)?.iconSprite;
-                    speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString();
+                        targetProductIconUIBtn.tips.corner = 3;
+                        targetProductIconUIBtn.tips.itemId = solution.targets[0].itemId;
+                        targetProductIconUIBtn.tips.delay = 0.1f;
+                    }
+                    speedInputObj.GetComponent<InputField>().text = (solution.targets[0].speed).ToString();
                 }
                 double forceSpeed;
                 double.TryParse(speedInputObj.GetComponent<InputField>().text, out forceSpeed);
@@ -1727,7 +1787,7 @@ namespace DSPCalculator.UI
             obj.SetActive(true);
         }
 
-        // 将窗口关闭时，永远会保留一个最后关闭的窗口
+        // 将窗口关闭时，永远会保留x个最后关闭的窗口
         public void CloseWindow()
         {
             WindowsManager.windows.Remove(this);
@@ -1863,8 +1923,10 @@ namespace DSPCalculator.UI
         public void RefreshAll()
         {
             if (solution.targets.Count == 0 || solution.targets[0].itemId == 0)
+            {
                 targetProductIcon.sprite = itemNotSelectedSprite;
-
+                targetProductIconUIBtn.tips.itemId = 0;
+            }
             RefreshProductContent();
             RefreshResourceNeedAndByProductContent();
             RefreshFinalInfoText();
@@ -2235,7 +2297,7 @@ namespace DSPCalculator.UI
             if(solution.AddOrUpdateTarget(index, targetItem, targetSpeed))
             {
                 solution.MergeDuplicateTargets();
-                speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString(); // 这里不能直接用targetSpeed因为有可能merge之后这个速度变了
+                speedInputObj.GetComponent<InputField>().text = (solution.targets[0].speed).ToString(); // 这里不能直接用targetSpeed因为有可能merge之后这个速度变了
                 
                 nextFrameRecalc = true;
                 return true;
@@ -2250,7 +2312,7 @@ namespace DSPCalculator.UI
             if (solution.AddOrUpdateTarget(index, targetItem, targetSpeed))
             {
                 solution.MergeDuplicateTargets();
-                speedInputObj.GetComponent<InputField>().text = ((long)solution.targets[0].speed).ToString(); // 这里不能直接用targetSpeed因为有可能merge之后这个速度变了
+                speedInputObj.GetComponent<InputField>().text = (solution.targets[0].speed).ToString(); // 这里不能直接用targetSpeed因为有可能merge之后这个速度变了
 
                 nextFrameRecalc = false;
                 return true;
@@ -2552,11 +2614,14 @@ namespace DSPCalculator.UI
                 // 然后对每个独立的recipeConfig进行更改
                 foreach (var recipeConfigData in solution.userPreference.recipeConfigs)
                 {
-                    int configType = CalcDB.recipeDict[recipeConfigData.Value.ID].type;
-                    if (configType == typeInt)
+                    if (CalcDB.recipeDict.ContainsKey(recipeConfigData.Value.ID))
                     {
-                        solution.userPreference.recipeConfigs[recipeConfigData.Key].assemblerItemId = assemblerItemId;
-                        solution.userPreference.recipeConfigs[recipeConfigData.Key].forceUseIA = false; // 取消该配方使用IA的设定
+                        int configType = CalcDB.recipeDict[recipeConfigData.Value.ID].type;
+                        if (configType == typeInt)
+                        {
+                            solution.userPreference.recipeConfigs[recipeConfigData.Key].assemblerItemId = assemblerItemId;
+                            solution.userPreference.recipeConfigs[recipeConfigData.Key].forceUseIA = false; // 取消该配方使用IA的设定
+                        }
                     }
                 }
             }
@@ -3084,6 +3149,45 @@ namespace DSPCalculator.UI
             else
             {
                 UIRealtimeTip.Popup("calc复制失败提示".Translate());
+            }
+        }
+
+        public void OnPresetOreButtonClick()
+        {
+            UIItemPicker.showAll = true;
+            if (windowObj.GetComponent<RectTransform>().anchoredPosition.x > -150 && !isLargeWindow)
+                UIItemPicker.Popup(new Vector2(-300f, 100f), OnRawOreSelected);
+            else
+                UIItemPicker.Popup(windowObj.GetComponent<RectTransform>().anchoredPosition + new Vector2(300f, -200f), OnRawOreSelected);
+        }
+
+        public void OnPresetOreButtonRightClick()
+        {
+            VFAudio.Create("ui-click-0", null, Vector3.zero, true, 4, -1, -1L);
+            if (solution.userPreference.itemConfigs.Count > 0)
+            {
+                foreach (var itemConfig in solution.userPreference.itemConfigs)
+                {
+                    solution.userPreference.itemConfigs[itemConfig.Key].consideredAsOre = false;
+                    solution.userPreference.itemConfigs[itemConfig.Key].forceNotOre = false;
+                }
+                nextFrameRecalc = true;
+            }
+            UIRealtimeTip.Popup("还原配置成功".Translate(),false);
+        }
+
+        public void OnRawOreSelected(ItemProto item)
+        {
+            UIItemPicker.showAll = false;
+            if (item != null)
+            {
+                if(!solution.userPreference.itemConfigs.ContainsKey(item.ID))
+                    solution.userPreference.itemConfigs[item.ID] = new ItemConfig(item.ID);
+                solution.userPreference.itemConfigs[item.ID].consideredAsOre = true;
+                solution.userPreference.itemConfigs[item.ID].forceNotOre = false;
+                nextFrameRecalc = true;
+                UIRealtimeTip.Popup("已设置为原矿".Translate(),false);
+                VFAudio.Create("ui-click-0", null, Vector3.zero, true, 4, -1, -1L);
             }
         }
 

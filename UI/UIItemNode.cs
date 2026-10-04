@@ -399,10 +399,13 @@ namespace DSPCalculator.UI
                     int posXDelta = 40;
                     int iconSize = 40;
                     int totalCount = recipeProto.Results.Length + recipeProto.Items.Length;
-                    if (totalCount >= 7) // 过长配方，图标变小
+                    if (totalCount >= 6) // 过长配方，图标变小
                     {
-                        posXDelta = 32;
-                        iconSize = 32;
+                        int shrink = (totalCount - 5) * 4;
+                        if(shrink > 20)
+                            shrink = 20;
+                        posXDelta = 40 - shrink;
+                        iconSize = 40 - shrink;
                     }
 
                     for (int i = 0; i < recipeProto.Results.Length; i++)
@@ -875,7 +878,8 @@ namespace DSPCalculator.UI
             }
             else
             {
-                UIRecipePicker.Popup(new Vector2(100f, 200f), OnRecipePickerReturn, (ERecipeType)(-itemNode.itemId));
+                RecipePickerPatcher.itemIdFilter = itemNode.itemId;
+                UIRecipePicker.Popup(new Vector2(100f, 200f), OnRecipePickerReturn, (ERecipeType)255);
             }
         }
 
@@ -895,6 +899,7 @@ namespace DSPCalculator.UI
                 }
                 parentCalcWindow.RefreshAll();
             }
+            RecipePickerPatcher.itemIdFilter = 0;
         }
 
         public void OnClearRecipePreferenceButtonClick()

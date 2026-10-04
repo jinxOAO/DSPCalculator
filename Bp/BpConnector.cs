@@ -1271,13 +1271,14 @@ namespace DSPCalculator.Bp
             float x2 = fromBelt.localOffset_x;
             float y2 = fromBelt.localOffset_y;
             // 从toBelt一路向上直到目标层的zBase高度
+            float localOffSetAppend = 0.0001f + (toZ + 1) * 0.0016f;
             for (int z = toZ + 1; z <= zBase; z++)
             {
                 BlueprintBuilding b = new BlueprintBuilding();
                 b.index = buildings.Count;
                 b.areaIndex = 0;
-                b.localOffset_x = x1;
-                b.localOffset_y = y1;
+                b.localOffset_x = x1 + localOffSetAppend;
+                b.localOffset_y = y1 + localOffSetAppend;
                 b.localOffset_z = z;
                 b.localOffset_x2 = b.localOffset_x;
                 b.localOffset_y2 = b.localOffset_y;
@@ -1293,6 +1294,7 @@ namespace DSPCalculator.Bp
                 buildings.Add(b);
                 //gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                 last = b;
+                localOffSetAppend -= 0.0016f;
             }
             // 在层上横跨
             float beltDis = 1.4f;
@@ -1399,13 +1401,14 @@ namespace DSPCalculator.Bp
                 }
             }
             // 然后从目标层的zBase高度一路向下直到fromBelt
+            localOffSetAppend = 0.0001f;
             for (int z = zBase; z > fromZ; z--)
             {
                 BlueprintBuilding b = new BlueprintBuilding();
                 b.index = buildings.Count;
                 b.areaIndex = 0;
-                b.localOffset_x = x2;
-                b.localOffset_y = y2;
+                b.localOffset_x = x2 + localOffSetAppend;
+                b.localOffset_y = y2 + localOffSetAppend;
                 b.localOffset_z = z;
                 b.localOffset_x2 = b.localOffset_x;
                 b.localOffset_y2 = b.localOffset_y;
@@ -1421,6 +1424,7 @@ namespace DSPCalculator.Bp
                 buildings.Add(b);
                 //gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                 last = b;
+                localOffSetAppend += 0.0016f;
             }
             // 最后连接fromBelt
             fromBelt.outputToSlot = 1;
@@ -1461,13 +1465,14 @@ namespace DSPCalculator.Bp
             float x2 = fromBelt.localOffset_x;
             float y2 = fromBelt.localOffset_y;
             // 从toBelt一路向上直到目标层的zBase高度
+            float localOffSetAppend = 0.0001f + (toZ + 1) * 0.0016f;
             for (int z = toZ + 1; z <= zBase; z++)
             {
                 BlueprintBuilding b = new BlueprintBuilding();
                 b.index = buildings.Count;
                 b.areaIndex = 0;
-                b.localOffset_x = x1;
-                b.localOffset_y = y1;
+                b.localOffset_x = x1 + localOffSetAppend;
+                b.localOffset_y = y1 + localOffSetAppend;
                 b.localOffset_z = z;
                 b.localOffset_x2 = b.localOffset_x;
                 b.localOffset_y2 = b.localOffset_y;
@@ -1483,6 +1488,7 @@ namespace DSPCalculator.Bp
                 buildings.Add(b);
                 //gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                 last = b;
+                localOffSetAppend -= 0.0016f;
             }
             // 在层上正交连接
             float inflectionX, inflectionY;
@@ -1559,13 +1565,14 @@ namespace DSPCalculator.Bp
 
            
             // 然后从目标层的zBase高度一路向下直到fromBelt
+            localOffSetAppend = 0.0001f;
             for (int z = zBase; z > fromZ; z--)
             {
                 BlueprintBuilding b = new BlueprintBuilding();
                 b.index = buildings.Count;
                 b.areaIndex = 0;
-                b.localOffset_x = x2;
-                b.localOffset_y = y2;
+                b.localOffset_x = x2 + localOffSetAppend;
+                b.localOffset_y = y2 + localOffSetAppend;
                 b.localOffset_z = z;
                 b.localOffset_x2 = b.localOffset_x;
                 b.localOffset_y2 = b.localOffset_y;
@@ -1581,6 +1588,7 @@ namespace DSPCalculator.Bp
                 buildings.Add(b);
                 //gridMap.SetBuilding((int)Math.Round(b.localOffset_x), (int)Math.Round(b.localOffset_y), b.index);
                 last = b;
+                localOffSetAppend += 0.0016f;
             }
             // 最后连接fromBelt
             fromBelt.outputToSlot = 1;
