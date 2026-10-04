@@ -91,6 +91,12 @@ namespace DSPCalculator
             RegisterTranslation("增产剂生产消耗比产出多警告", "The production process of proliferator consumes more of itself than it produces, which cannot be calculated. Please reset the configurations.", "增产剂生产过程对自身的消耗比产出多，无法计算。请重置用户设置。", "The production process of proliferator consumes more of itself than it produces, which cannot be calculated. Please reset the configurations.");
             RegisterTranslation("求解出错警告", "There is no correct solution in solving process! \nPlease try reset all configurations.", "配方求解过程出现无解情况！\n请尝试还原默认配置。", "There is no correct solution in solving process! \nPlease try reset all configurations.");
 
+            RegisterTranslation("线性规划算法", "Linear Programming Solver", "线性规划算法", "Linear Programming Solver");
+            RegisterTranslation("有向图算法", "Directed Graph Solver", "有向图算法", "Directed Graph Solver");
+            RegisterTranslation("线性规划算法描述", "Use Linear Programming algorithm instead of the default Directed Graph algorithm. LP can handle recipe cycles, multi-recipe combinations, and byproduct balancing automatically.\nThis is an experimental feature. If the result is incorrect, switch back to the default algorithm.", "使用线性规划算法替代默认的有向图算法。线性规划可以自动处理配方成环、多配方组合和副产物平衡等问题。\n此为实验性功能，若结果不正确请切换回默认算法。", "Use Linear Programming algorithm instead of the default Directed Graph algorithm. LP can handle recipe cycles, multi-recipe combinations, and byproduct balancing automatically.\nThis is an experimental feature. If the result is incorrect, switch back to the default algorithm.");
+            RegisterTranslation("线性规划求解失败警告", "Linear Programming solver failed: no feasible production plan was found.\nThis result has been temporarily calculated with the Directed Graph algorithm.\n\nSuggestions:\n1. Switch the solver toggle below the target product icon to the Directed Graph algorithm and recalculate;\n2. Or clear all specified recipe requirements (recipe rules), then try again.", "线性规划求解失败！未找到可行的生产方案。\n本次结果已暂时改用有向图算法计算。\n\n建议：\n① 将目标产物图标下方的算法开关切换为“有向图算法”后重新计算；\n② 或取消所有强制指定的配方（配方规则），然后重试。", "Linear Programming solver failed: no feasible production plan was found.\nThis result has been temporarily calculated with the Directed Graph algorithm.\n\nSuggestions:\n1. Switch the solver toggle below the target product icon to the Directed Graph algorithm and recalculate;\n2. Or clear all specified recipe requirements (recipe rules), then try again.");
+            RegisterTranslation("线性规划求解失败浮动提示", "Linear Programming solver failed; this result was temporarily calculated with the Directed Graph algorithm.", "线性规划求解失败，本次结果已临时改用有向图算法计算。", "Linear Programming solver failed; this result was temporarily calculated with the Directed Graph algorithm.");
+
             RegisterTranslation("混带需求", "Mix-Belt Demands", "混带需求", "Mix-Belt Demands");
             RegisterTranslation("条calc", "lines", "条", "lines");
             RegisterTranslation("标记为已完成", "Mark as completed", "标记为已完成", "Mark as completed");
@@ -288,6 +294,11 @@ namespace DSPCalculator
 
             RegisterTranslationByLang(lcid,"增产剂生产消耗比产出多警告", "O processo de produção do proliferador consome mais de si mesmo do que produz, tornando o cálculo impossível. Por favor, redefina as configurações.");
             RegisterTranslationByLang(lcid,"求解出错警告", "Não foi possível encontrar uma solução para a receita! \nPor favor, tente restaurar as configurações padrão.");
+
+            RegisterTranslationByLang(lcid,"线性规划算法", "Programação Linear");
+            RegisterTranslationByLang(lcid,"有向图算法", "Grafo Direcionado");
+            RegisterTranslationByLang(lcid,"线性规划算法描述", "Usa o algoritmo de Programação Linear em vez do algoritmo padrão de Grafo Direcionado. A Programação Linear resolve automaticamente problemas como loops de receitas, combinações de múltiplas receitas e equilíbrio de subprodutos.\nEste é um recurso experimental. Se o resultado estiver incorreto, volte para o algoritmo padrão.");
+            RegisterTranslationByLang(lcid,"线性规划求解失败警告", "A resolução por Programação Linear falhou: nenhum plano de produção viável foi encontrado.\nEste resultado foi calculado temporariamente com o algoritmo de Grafo Direcionado.\n\nSugestões:\n1. Mude a chave de algoritmo abaixo do ícone do produto alvo para o algoritmo de Grafo Direcionado e recalcule;\n2. Ou limpe todas as receitas especificadas (regras de receita) e tente novamente.");
 
             RegisterTranslationByLang(lcid,"混带需求", "Demandas de Esteira Mista");
             RegisterTranslationByLang(lcid,"条calc", "linhas");

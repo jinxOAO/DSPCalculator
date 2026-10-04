@@ -31,8 +31,8 @@ namespace DSPCalculator
     {
         public const string NAME = "DSPCalculator";
         public const string GUID = "com.GniMaerd.DSPCalculator";
-        public const string VERSION = "0.5.25";
-        public const int VERSIONINT = 512;
+        public const string VERSION = "1.0.0";
+        public const int VERSIONINT = 513;
 
         // ---------------------------------------------------------------------------
         public static bool developerMode = false; //           发布前修改             |
@@ -53,6 +53,7 @@ namespace DSPCalculator
         public static ConfigEntry<bool> ClickToSwitchRecipeMode;
         public static ConfigEntry<bool> OnlyCountUnfinishedFacilities;
         public static ConfigEntry<string> DefaultNewWindowData;
+        public static ConfigEntry<bool> DefaultLinearSolver;
 
         //public static ConfigEntry<bool> assemblerNumberKMG; // 生产设施是否用使用最大千分位符号
         //public static ConfigEntry<int> assemblerNumberDecimalPlaces; // 生产设施数量显示的小数位数，-1表示默认3位有效数字，正数表示恒定保留x位小数
@@ -77,6 +78,7 @@ namespace DSPCalculator
 
             OnlyCountUnfinishedFacilities = Config.Bind<bool>("config", "OnlyCountUnfinishedFacilities", false, "如果设置为true，一旦你将某个物品产出勾选为已完成，其需求的生产设施将不再被计入右侧面板的生产设施需求总数。If set to true, once you check an item as finished, its required production facilities will no longer be included in the total production facility demand on the right panel.");
             DefaultNewWindowData = Config.Bind<string>("config", "DefaultNewWindowData", "", "不要编辑此项内容，除非你知道你在做什么。Never Edit this unless you know what you are doing.");
+            DefaultLinearSolver = Config.Bind<bool>("config", "DefaultLinearSolver", true, "新打开的计算器窗口默认使用的求解算法。true为线性规划算法，false为有向图算法。每次在游戏中切换算法开关时会自动更新此项。The default solver algorithm for newly opened calculator windows. true for Linear Programming, false for Directed Graph. Automatically updated in game whenever you toggle the solver switch.");
 
             Harmony.CreateAndPatchAll(typeof(DSPCalculatorPlugin));
             Harmony.CreateAndPatchAll(typeof(RecipePickerPatcher));

@@ -112,6 +112,9 @@
     <Compile Include="DSPCalculatorPlugin.cs" />
     <Compile Include="Logic\CalcDB.cs" />
     <Compile Include="Logic\ItemNode.cs" />
+    <Compile Include="Logic\LP\LPModel.cs" />
+    <Compile Include="Logic\LP\LPSimplex.cs" />
+    <Compile Include="Logic\LP\LPProductionCalculator.cs" />
     <Compile Include="Logic\RecipeInfo.cs" />
     <Compile Include="Logic\RecipePickerPatcher.cs" />
     <Compile Include="Logic\SolutionTree.cs" />

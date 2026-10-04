@@ -1,5 +1,6 @@
 ﻿using DSPCalculator.Bp;
 using DSPCalculator.UI;
+using DSPCalculator.Logic.LP;
 using JetBrains.Annotations;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Factorization;
@@ -38,6 +39,17 @@ namespace DSPCalculator.Logic
         public Dictionary<int, double> proliferatorCountSelfSprayed; // 如果是自喷涂过的增产剂需求量
 
         public bool tempNotShrinkRoot; // 在主产物首次发现溢出时(tempNotShrinkRoot为false)，直接暴力修改targetSpeed然后重新计算，修改后置tempNotShrinkRoot为true。
+
+        private bool lpFailPopupShown; // 线性规划求解失败的弹窗是否已显示，防止反复重算时堆叠弹窗；LP一次成功后重置
+
+        /// <summary>
+        /// 复位 LP 失败弹窗抑制标志。由玩家主动切换算法等用户级操作调用，
+        /// 保证每次"从头尝试线性规划"都至少能看到一次报错，而不是被上一次失败永久静音。
+        /// </summary>
+        public void ResetLpFailPopup()
+        {
+            lpFailPopupShown = false;
+        }
 
         public bool unsolved { get { return nodeStack.Count > 0; } }
 
@@ -183,6 +195,13 @@ namespace DSPCalculator.Logic
             {
                 RefreshBlueprintDicts(); // 根据userPreference生成后续节点蓝图生成所需的相关字典信息
 
+                // ===== 线性规划路径 =====
+                if (userPreference.useLinearSolver)
+                {
+                    return SolveLinear();
+                }
+
+                // ===== 原有 DFS 路径 =====
                 // 如果需要计算增产剂生产线，还需要解决增产剂的路线
                 if(userPreference.solveProliferators)
                 {
@@ -232,6 +251,72 @@ namespace DSPCalculator.Logic
                 // TestLog2();
             }
             return false;
+        }
+
+        /// <summary>
+        /// 线性规划求解路径。结果回填到相同的 recipeInfos/itemNodes 结构，
+        /// 保证 UI 和蓝图生成（Bp）接口无需修改即可工作。
+        /// </summary>
+        private bool SolveLinear()
+        {
+            LPProductionCalculator lpCalc = new LPProductionCalculator(this);
+            bool success;
+            LPProductionCalculator.LPFailReason reason = LPProductionCalculator.LPFailReason.None;
+            try
+            {
+                success = lpCalc.Solve();
+                reason = lpCalc.failReason;
+            }
+            catch (Exception e)
+            {
+                Utils.logger.LogError("线性规划求解过程发生异常：" + e.Message + "\n" + e.StackTrace);
+                success = false;
+                reason = LPProductionCalculator.LPFailReason.Infeasible; // 异常同样视为求解出错，需提示玩家
+            }
+
+            if (!success)
+            {
+                // 无解/无界等求解出错时，每次都必须给玩家可见的提示，而不是只写 log。
+                // NoModel（需求全为原矿等）不属于求解出错，不提示。
+                // 提示分级：一次重算链中首次失败用弹窗（含详细建议）；后续反复失败
+                // （如切换配方循环）不再堆叠弹窗，改用 UIRealtimeTip 浮动提示，保证不静默。
+                // lpFailPopupShown 在 LP 成功或玩家主动切换算法时复位（ResetLpFailPopup）。
+                if (reason == LPProductionCalculator.LPFailReason.Infeasible || reason == LPProductionCalculator.LPFailReason.Unbounded)
+                {
+                    if (!lpFailPopupShown)
+                    {
+                        lpFailPopupShown = true;
+                        UIMessageBox.Show("calc警告".Translate(), "线性规划求解失败警告".Translate(), "calc确定".Translate(), 1, new UIMessageBox.Response(() => { }));
+                    }
+                    else
+                    {
+                        UIRealtimeTip.Popup("线性规划求解失败浮动提示".Translate(), false);
+                    }
+                }
+
+                // LP 失败时回退到 DFS（可选：也可以直接返回 false）
+                Utils.logger.LogWarning("线性规划求解失败，回退至有向图方案");
+                // 回退前必须 ClearTree：外层 ReSolve 的 ClearTree 之后，LP 可能已经部分污染了树
+                // （典型场景：PopulateSolutionTree 回填到一半抛异常被 catch 成失败，此时
+                // root/itemNodes/recipeInfos 里残留半截 LP 结构）。手动切 DFS 之所以正常，是因为
+                // 它总是经过 ReSolve 的 ClearTree；这里不补清，DFS 就会叠在残留结构上算出错误结果。
+                ClearTree();
+                userPreference.useLinearSolver = false; // 临时关闭以走 DFS
+                bool dfsResult = Solve();
+                userPreference.useLinearSolver = true; // 恢复
+                return dfsResult;
+            }
+
+            lpFailPopupShown = false; // LP 成功后重置，允许下次出错时再次提示
+
+            // 计算增产剂用量（用于显示；recipeInfos 已由 LP 填充）
+            CalcProliferator();
+
+            // 说明：增产剂并入产线（solveProliferators）已由 LP 在约束矩阵中原生建模求解，
+            // 增产剂生产节点已回填到 itemNodes/recipeInfos，无需再调用 DFS 专用的
+            // CalcProliferatorInProductLine()（其依赖 nodeStack 与 DFS 选路，会在 LP 结果上崩溃）。
+
+            return true;
         }
 
         /// <summary>
@@ -831,6 +916,21 @@ namespace DSPCalculator.Logic
                         proliferatorCountSelfSprayed[itemId] = proliferatorCount[itemId];
                 }
             }
+
+            // [临时诊断] DFS 侧增产剂统计量 —— 排查完毕与 LP 诊断日志一起删除
+            if (LPProductionCalculator.lpDiag)
+            {
+                foreach (var kv in proliferatorCount)
+                {
+                    int pid = kv.Key;
+                    double self = proliferatorCountSelfSprayed.ContainsKey(pid) ? proliferatorCountSelfSprayed[pid] : 0;
+                    int hp = LDB.items.Select(pid) != null ? LDB.items.Select(pid).HpMax : 0;
+                    int ab = CalcDB.proliferatorAbilitiesMap.ContainsKey(pid) ? CalcDB.proliferatorAbilitiesMap[pid] : 0;
+                    int prolif = (int)(hp * (1.0 + Utils.GetIncMilli(ab, userPreference)));
+                    Utils.logger.LogInfo($"[LPDIAG] DFS CalcProliferator: 增产剂[{LDB.items.Select(pid)?.name ?? pid.ToString()}] 原始喷涂需求 D={kv.Value:0.####}/s, " +
+                        $"折减后 selfSprayed={self:0.####}/s (HpMax={hp} ability={ab} proliferatedCount={prolif} 折减系数={(prolif - 1 > 0 ? (double)hp / (prolif - 1) : 1):0.####})");
+                }
+            }
         }
 
 
@@ -978,6 +1078,20 @@ namespace DSPCalculator.Logic
             }
 
             // 到此，解没问题
+            // [临时诊断] DFS 增产剂方程组全过程 —— 排查后删除
+            if (LPProductionCalculator.lpDiag)
+            {
+                var sbDfs = new System.Text.StringBuilder();
+                sbDfs.AppendLine("[LPDIAG] ===== DFS 增产剂并入产线方程组 =====");
+                for (int i = 0; i < 3; i++)
+                    sbDfs.AppendLine($"[LPDIAG] DFS consumeRatio[{CalcDB.proliferatorItemIds[i]}行] = {consumeRatio[i,0]:0.######}, {consumeRatio[i,1]:0.######}, {consumeRatio[i,2]:0.######}");
+                for (int i = 0; i < 3; i++)
+                    sbDfs.AppendLine($"[LPDIAG] DFS 方程{i}: 系数[{coefficients[i,0]:0.######}, {coefficients[i,1]:0.######}, {coefficients[i,2]:0.######}] 常数={constants[i]:0.####}");
+                sbDfs.Append("[LPDIAG] DFS 方程解 result:");
+                for (int i = 0; i < result.Count; i++)
+                    sbDfs.Append($" 增产剂[{LDB.items.Select(CalcDB.proliferatorItemIds[i])?.name ?? "?"}]={result[i]:0.####}/s,");
+                Utils.logger.LogInfo(sbDfs.ToString());
+            }
             for (int i = 0; i < result.Count; i++)
             {
                 if (result[i] > 0)
@@ -985,6 +1099,23 @@ namespace DSPCalculator.Logic
                     int proliferatorId = CalcDB.proliferatorItemIds[i];
                     CalcTree(proliferatorId, result[i]);
                 }
+            }
+
+            // [临时诊断] DFS 增产剂产线终态 —— 排查后删除
+            if (LPProductionCalculator.lpDiag)
+            {
+                var sbTerm = new System.Text.StringBuilder("[LPDIAG] DFS 增产剂节点终态:");
+                foreach (int pid in CalcDB.proliferatorItemIds)
+                {
+                    if (itemNodes.ContainsKey(pid))
+                    {
+                        var nd = itemNodes[pid];
+                        string mainR = nd.mainRecipe != null ? (CalcDB.recipeDict.ContainsKey(nd.mainRecipe.ID) ? CalcDB.recipeDict[nd.mainRecipe.ID].oriProto?.name ?? nd.mainRecipe.ID.ToString() : nd.mainRecipe.ID.ToString()) : "无";
+                        sbTerm.Append($" [{LDB.items.Select(pid)?.name ?? pid.ToString()}] need={nd.needSpeed:0.####} satisfied={nd.satisfiedSpeed:0.####} fromOre={nd.speedFromOre:0.####} main配方={mainR} count={nd.mainRecipe?.count ?? 0:0.####};");
+                    }
+                    else sbTerm.Append($" [{LDB.items.Select(pid)?.name ?? pid.ToString()}] 无节点;");
+                }
+                Utils.logger.LogInfo(sbTerm.ToString());
             }
             // 再次执行一遍去除溢出任务
             double recalcRatio = RemoveOverflow();

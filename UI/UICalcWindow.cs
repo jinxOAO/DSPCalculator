@@ -29,8 +29,11 @@ namespace DSPCalculator.UI
         public const int sideCellCountPerRow = 3;
         public const float sidePanelWidth = 400;
         public static float targetIconAnchoredPosX = 52;
-        public static float targetIconAnchoredPosYLargeWindow = -80;
+        public static float targetSpeedInputAnchoredPosYLargeWindow = -80;
+        public static float targetIconAnchoredPosYLargeWindow = -90;
         public static float targetIconAnchoredPosYSmallWindow = -60;
+        public static float solverTogglePosX = 108;
+        public static float solverTogglePosY = -114;
         public const int assemblerDemandCountPerRow = 4;
         public const int TYPE_FILTER = 100000;
         public static Color itemIconNormalColor = new Color(0.6f, 0.6f, 0.6f, 1);
@@ -126,6 +129,8 @@ namespace DSPCalculator.UI
         public Transform sideContentTrans; // 右侧防止小型溢出产物、原材料等的父级物体的transform
         public GameObject incToggleObj; // 全局增产切换按钮
         public Text incText;
+        public GameObject lpSolverToggleObj; // 线性规划/有向图算法切换按钮（复用增产剂 switch 样式）
+        public Text lpSolverText;
         public GameObject proliferatorSelectionObj; // 全局增产剂选择按钮
         public GameObject assemblerSelectionObj; // 全局工厂选择按钮
         public Dictionary<int, UIButton> proliferatorUsedButtons; // 增产剂选择按钮列表
@@ -495,7 +500,7 @@ namespace DSPCalculator.UI
                 RectTransform rect = targetProductIconObj.GetComponent<RectTransform>();
                 rect.anchorMax = new Vector2(0, 1);
                 rect.anchorMin = new Vector2(0, 1);
-                rect.anchoredPosition3D = new Vector3(targetIconAnchoredPosX, targetIconAnchoredPosYLargeWindow, 0);
+                rect.anchoredPosition3D = new Vector3(targetIconAnchoredPosX, targetSpeedInputAnchoredPosYLargeWindow, 0);
                 rect.sizeDelta = new Vector2(54, 54); // 原本是64
                 targetProductIconObj.transform.Find("white").GetComponent<RectTransform>().sizeDelta = new Vector2(40, 40); // 原本是54
 
@@ -537,7 +542,7 @@ namespace DSPCalculator.UI
             speedInputObj.transform.localPosition = new Vector3(120, 0, 0);
             speedInputObj.GetComponent<RectTransform>().sizeDelta = new Vector2(110, 30);
             speedInputObj.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-            speedInputObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(90, targetIconAnchoredPosYLargeWindow, 0); 
+            speedInputObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(90, targetSpeedInputAnchoredPosYLargeWindow, 0); 
             speedInputObj.GetComponent<InputField>().text = "3600";
             speedInputObj.GetComponent<InputField>().contentType = InputField.ContentType.DecimalNumber;
             speedInputObj.GetComponent<InputField>().characterLimit = 12;
@@ -555,7 +560,7 @@ namespace DSPCalculator.UI
             perMinTextObj.name = "per-minute";
             perMinTextObj.GetComponent<RectTransform>().anchorMax = new Vector2(0, 1);
             perMinTextObj.GetComponent<RectTransform>().anchorMin = new Vector2(0, 1);
-            perMinTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(210, targetIconAnchoredPosYLargeWindow, 0);
+            perMinTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(210, targetSpeedInputAnchoredPosYLargeWindow, 0);
             perMinTextObj.GetComponent<Text>().text = "/min";
 
             
@@ -971,6 +976,55 @@ namespace DSPCalculator.UI
             showHideMixBeltInfoObj.GetComponent<Button>().onClick.AddListener(OnMixbeltInfoCbClick);
             showHideMixBeltInfoObj.SetActive(DSPCalculatorPlugin.showMixBeltCheckbox);
             showHideMixBeltInfoObj.transform.Find("text").GetComponent<Localizer>().stringKey = "混带显示标题";
+
+            // 线性规划算法切换（增产剂 inc-switch 样式），
+            // 切换按钮在左（与目标产物图标对齐），文字描述在右。
+            lpSolverToggleObj = GameObject.Instantiate(incTogglePrefabObj, panelParent);
+            lpSolverToggleObj.name = "lp-solver-setting";
+            // 诊断结论：克隆体上没有任何布局组件；位置写回发生在激活过渡（SetActive(true) 首次触发全部 OnEnable）时，
+            // inc-switch 会被重置回模板原生位置 (207,0)。switch 上的 Localizer 是该 OnEnable 链上唯一有副作用的组件
+            // （OnEnable → Refresh → 写 image.sprite，对本克隆完全无用），直接从克隆体上移除（治本），
+            // 并在块末尾用 SetLpSolverToggleLayout() 在激活后重申布局（兜底）。
+            GameObject.DestroyImmediate(lpSolverToggleObj.transform.Find("inc-switch").GetComponent<Localizer>());
+            RectTransform lpRootRect = lpSolverToggleObj.GetComponent<RectTransform>();
+            lpRootRect.anchorMin = new Vector2(0, 1);
+            lpRootRect.anchorMax = new Vector2(0, 1);
+            lpRootRect.pivot = new Vector2(0, 0.5f);
+            lpRootRect.anchoredPosition3D = new Vector3(solverTogglePosX, solverTogglePosY, 0);
+
+            RectTransform lpSwitchRect = lpSolverToggleObj.transform.Find("inc-switch").GetComponent<RectTransform>();
+            lpSwitchRect.anchorMin = new Vector2(0, 0.5f);
+            lpSwitchRect.anchorMax = new Vector2(0, 0.5f);
+            lpSwitchRect.pivot = new Vector2(0.5f, 0.5f);
+            lpSwitchRect.anchoredPosition3D = new Vector3(0, 0, 0);
+
+            lpSolverText = lpSolverToggleObj.transform.Find("inc-effect-type-text").GetComponent<Text>();
+            RectTransform lpTextRect = lpSolverText.GetComponent<RectTransform>();
+            lpTextRect.anchorMin = new Vector2(0, 0.5f);
+            lpTextRect.anchorMax = new Vector2(0, 0.5f);
+            lpTextRect.pivot = new Vector2(0, 0.5f);
+            lpTextRect.anchoredPosition3D = new Vector3(30, 0, 0);
+            lpSolverText.alignment = TextAnchor.MiddleLeft;
+
+            lpSolverToggleObj.transform.Find("inc-switch").GetComponent<Button>().onClick.RemoveAllListeners();
+            lpSolverToggleObj.transform.Find("inc-switch").GetComponent<Button>().interactable = true;
+            lpSolverToggleObj.transform.Find("inc-switch").GetComponent<Button>().onClick.AddListener(() => { OnUseLinearSolverChange(); });
+
+            //// 悬浮提示：尽量挂到 root 的 UIButton 上，root 没有则挂到 inc-switch 的 UIButton 上（都可能不存在，做空判断）
+            //UIButton lpTipBtn = lpSolverToggleObj.GetComponent<UIButton>();
+            //if (lpTipBtn == null)
+            //    lpTipBtn = lpSolverToggleObj.transform.Find("inc-switch").GetComponent<UIButton>();
+            //if (lpTipBtn != null)
+            //{
+            //    lpTipBtn.tips.tipTitle = "线性规划算法".Translate();
+            //    lpTipBtn.tips.tipText = "线性规划算法描述".Translate();
+            //    lpTipBtn.tips.corner = 1;
+            //    lpTipBtn.tips.delay = 0.1f;
+            //    lpTipBtn.tips.width = 300;
+            //}
+            lpSolverToggleObj.SetActive(true);
+            RefreshLpSolverToggle();
+            SetLpSolverToggleLayout(); // 关键：布局在激活过渡之后再重申一次（激活是写回源头，见方法注释）
 
             // 蓝图设置信息面板初始化
             InitBpPreferceUI(infoPanel1Trans);
@@ -1590,15 +1644,24 @@ namespace DSPCalculator.UI
                 viewGroupObj.GetComponent<RectTransform>().sizeDelta = new Vector2(viewGroupWidth, mainContentHeight);
 
                 // 顶部选择配方的需要在小窗口状态下改变
-                float fixedPosY = (curWidth - smallWindowWidth) / (largeWindowWidth - smallWindowWidth) * (targetIconAnchoredPosYLargeWindow - targetIconAnchoredPosYSmallWindow) + targetIconAnchoredPosYSmallWindow;
+                float fixedPosProp = (curWidth - smallWindowWidth) / (largeWindowWidth - smallWindowWidth);
+                float fixedSpeedInputPosY =  fixedPosProp * (targetSpeedInputAnchoredPosYLargeWindow - targetIconAnchoredPosYSmallWindow) + targetIconAnchoredPosYSmallWindow;
+                float fixedIconPosY = fixedPosProp * (targetIconAnchoredPosYLargeWindow - targetIconAnchoredPosYSmallWindow) + targetIconAnchoredPosYSmallWindow;
                 float oriX = targetProductIconObj.GetComponent<RectTransform>().anchoredPosition.x;
-                targetProductIconObj.GetComponent<RectTransform>().anchoredPosition = new Vector2 (oriX, fixedPosY);
+                targetProductIconObj.GetComponent<RectTransform>().anchoredPosition = new Vector2 (oriX, fixedIconPosY);
                 oriX = speedInputObj.GetComponent<RectTransform>().anchoredPosition.x;
-                speedInputObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
+                speedInputObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedSpeedInputPosY);
                 oriX = perMinTextObj.GetComponent<RectTransform>().anchoredPosition.x;
-                perMinTextObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
+                perMinTextObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedSpeedInputPosY);
                 oriX = genBpButtonObj.GetComponent<RectTransform>().anchoredPosition.x;
-                genBpButtonObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
+                genBpButtonObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedSpeedInputPosY);
+                if (lpSolverToggleObj != null)
+                {
+                    float fixedsolverTogglePosY = (1 - fixedPosProp) * (targetIconAnchoredPosYSmallWindow - targetSpeedInputAnchoredPosYLargeWindow) + solverTogglePosY;
+                    RectTransform lpRt = lpSolverToggleObj.GetComponent<RectTransform>();
+                    // 与初始布局保持一致：y 相对目标图标偏移量随窗口大小插值（大窗口时恰好等于 solverSwicthPosY）
+                    lpRt.anchoredPosition = new Vector2(solverTogglePosX, fixedsolverTogglePosY);
+                }
 
             }
             else if(curWidth > targetWindowWidth && curWidth - targetWindowWidth > 0.01f)
@@ -1616,15 +1679,24 @@ namespace DSPCalculator.UI
                 viewGroupObj.GetComponent<RectTransform>().sizeDelta = new Vector2(viewGroupWidth, mainContentHeight);
 
                 // 顶部选择配方的需要在小窗口状态下改变
-                float fixedPosY = (curWidth - smallWindowWidth) / (largeWindowWidth - smallWindowWidth) * (targetIconAnchoredPosYLargeWindow-targetIconAnchoredPosYSmallWindow) + targetIconAnchoredPosYSmallWindow;
+                float fixedPosProp = (curWidth - smallWindowWidth) / (largeWindowWidth - smallWindowWidth);
+                float fixedSpeedInputPosY = fixedPosProp * (targetSpeedInputAnchoredPosYLargeWindow - targetIconAnchoredPosYSmallWindow) + targetIconAnchoredPosYSmallWindow;
+                float fixedIconPosY = fixedPosProp * (targetIconAnchoredPosYLargeWindow - targetIconAnchoredPosYSmallWindow) + targetIconAnchoredPosYSmallWindow;
                 float oriX = targetProductIconObj.GetComponent<RectTransform>().anchoredPosition.x;
-                targetProductIconObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
+                targetProductIconObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedIconPosY);
                 oriX = speedInputObj.GetComponent<RectTransform>().anchoredPosition.x;
-                speedInputObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
+                speedInputObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedSpeedInputPosY);
                 oriX = perMinTextObj.GetComponent<RectTransform>().anchoredPosition.x;
-                perMinTextObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
+                perMinTextObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedSpeedInputPosY);
                 oriX = genBpButtonObj.GetComponent<RectTransform>().anchoredPosition.x;
-                genBpButtonObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedPosY);
+                genBpButtonObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(oriX, fixedSpeedInputPosY);
+                if (lpSolverToggleObj != null)
+                {
+                    float fixedsolverTogglePosY = (1 - fixedPosProp) * (targetIconAnchoredPosYSmallWindow - targetSpeedInputAnchoredPosYLargeWindow) + solverTogglePosY;
+                    RectTransform lpRt = lpSolverToggleObj.GetComponent<RectTransform>();
+                    // 与初始布局保持一致：y 相对目标图标偏移量随窗口大小插值（大窗口时恰好等于 solverSwicthPosY）
+                    lpRt.anchoredPosition = new Vector2(solverTogglePosX, fixedsolverTogglePosY);
+                }
 
             }
 
@@ -1849,6 +1921,7 @@ namespace DSPCalculator.UI
 
             windowObj.transform.SetAsLastSibling();
             windowObj.SetActive(true);
+            SetLpSolverToggleLayout(); // 窗口激活会触发克隆体 OnEnable 链写回 switch 位置，激活后重申
             titleText.text = "量化计算器".Translate();
             RefreshCheckBoxes();
         }
@@ -1901,6 +1974,7 @@ namespace DSPCalculator.UI
                 incToggleObj.SetActive(false);
                 proliferatorSelectionObj.SetActive(false);
                 targetProductTextObj.SetActive(false);
+                if (lpSolverToggleObj != null) lpSolverToggleObj.SetActive(false);
                 switchSizeButtonObj.GetComponent<Image>().sprite = rightTriangleSprite;
             }
             else if (oriWidth <= 0.5f * largeWindowWidth && curWidth > 0.5f * largeWindowWidth)
@@ -1908,6 +1982,11 @@ namespace DSPCalculator.UI
                 incToggleObj.SetActive(true);
                 proliferatorSelectionObj.SetActive(true);
                 targetProductTextObj.SetActive(true);
+                if (lpSolverToggleObj != null)
+                {
+                    lpSolverToggleObj.SetActive(true);
+                    SetLpSolverToggleLayout(); // 激活过渡会触发 OnEnable 链写回 switch 位置，激活后重申
+                }
                 switchSizeButtonObj.GetComponent<Image>().sprite = leftTriangleSprite;
             }
             if (oriWidth >= 0.9f * largeWindowWidth && curWidth < 0.9f * largeWindowWidth)
@@ -1933,6 +2012,7 @@ namespace DSPCalculator.UI
             RefreshAssemblerDemandsDisplay();
             RefreshAssemblerButtonDisplay();
             RefreshIncToggle();
+            RefreshLpSolverToggle();
             RefreshProliferatorButtonDisplay();
             RefreshCheckBoxes();
             RefreshSideInfoPanels();
@@ -2730,6 +2810,8 @@ namespace DSPCalculator.UI
         public void ClearAllUserPreference()
         {
             solution.ClearUserPreference();
+            // “默认”求解算法与 config 中持久化的开关状态保持一致，而非 UserPreference 构造函数的硬编码值
+            solution.userPreference.useLinearSolver = DSPCalculatorPlugin.DefaultLinearSolver.Value;
             double forceSpeed;
             double.TryParse(speedInputObj.GetComponent<InputField>().text, out forceSpeed);
             solution.ReSolve(forceSpeed);
@@ -2782,6 +2864,10 @@ namespace DSPCalculator.UI
                     DSPCalculatorPlugin.DefaultNewWindowData.ConfigFile.Save();
                 }
             }
+            // 新窗口的默认求解算法始终以 config 中持久化的开关状态为准
+            // （优先级高于“保存为默认配置”快照数据中所带的算法值）
+            solution.userPreference.useLinearSolver = DSPCalculatorPlugin.DefaultLinearSolver.Value;
+            RefreshLpSolverToggle();
         }
 
         public void RefreshCheckBoxes()
@@ -2862,6 +2948,60 @@ namespace DSPCalculator.UI
                     cbSolveProlifer.sprite= checkboxOffSprite;
                 txtSolveProlifer.text = "增产剂并入产线".Translate();
             }
+        }
+
+        /// <summary>
+        /// 刷新线性规划/有向图算法切换开关（复用增产剂 switch 的样式与配色）
+        /// </summary>
+        public void RefreshLpSolverToggle()
+        {
+            if (lpSolverToggleObj == null)
+                return;
+            GameObject lpThumb = lpSolverToggleObj.transform.Find("inc-switch/switch-thumb").gameObject;
+            bool useLP = solution.userPreference.useLinearSolver;
+            if (useLP)
+            {
+                lpThumb.GetComponent<RectTransform>().anchoredPosition = new Vector2(-10, 0);
+                lpSolverText.text = "线性规划算法".Translate();
+                lpSolverText.color = incModeTextColor;
+                lpSolverToggleObj.transform.Find("inc-switch").GetComponent<Image>().color = incModeImageColor;
+            }
+            else
+            {
+                lpThumb.GetComponent<RectTransform>().anchoredPosition = new Vector2(10, 0);
+                lpSolverText.text = "有向图算法".Translate();
+                lpSolverText.color = accModeTextColor;
+                lpSolverToggleObj.transform.Find("inc-switch").GetComponent<Image>().color = accModeImageColor;
+            }
+        }
+
+        // 重新断言 lp-solver-setting 的三层布局（root / inc-switch / inc-effect-type-text），幂等，可随时调用。
+        // 缘由（已通过逐段探针定位）：克隆体上的 inc-switch 会在激活过渡（SetActive(true) 触发的 OnEnable 链）中
+        // 被写回模板原生位置 (207,0)，激活之前做的任何位置设定都可能被其覆盖；
+        // 因此每次激活（窗口创建、重开窗口、收起→展开）之后都要调用本方法重申一次。
+        // switch 上的 Localizer 是该 OnEnable 链上唯一有副作用的组件，已在构造函数中从克隆体移除（治本），
+        // 本方法是兜底（保险）：即使未来发现别的写回者也同样免疫。root 位置取大窗口常量，与收起/展开及 resize 插值逻辑一致。
+        public void SetLpSolverToggleLayout()
+        {
+            if (lpSolverToggleObj == null)
+                return;
+            RectTransform rootRect = lpSolverToggleObj.GetComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0, 1);
+            rootRect.anchorMax = new Vector2(0, 1);
+            rootRect.pivot = new Vector2(0, 0.5f);
+            rootRect.anchoredPosition3D = new Vector3(solverTogglePosX, solverTogglePosY, 0);
+
+            RectTransform switchRect = lpSolverToggleObj.transform.Find("inc-switch").GetComponent<RectTransform>();
+            switchRect.anchorMin = new Vector2(0, 0.5f);
+            switchRect.anchorMax = new Vector2(0, 0.5f);
+            switchRect.pivot = new Vector2(0.5f, 0.5f);
+            switchRect.anchoredPosition3D = new Vector3(0, 0, 0);
+
+            RectTransform textRect = lpSolverToggleObj.transform.Find("inc-effect-type-text").GetComponent<RectTransform>();
+            textRect.anchorMin = new Vector2(0, 0.5f);
+            textRect.anchorMax = new Vector2(0, 0.5f);
+            textRect.pivot = new Vector2(0, 0.5f);
+            textRect.anchoredPosition3D = new Vector3(30, 0, 0);
         }
 
         public void GenerateBlackboxBpAndPaste()
@@ -3063,6 +3203,25 @@ namespace DSPCalculator.UI
             RefreshCheckBoxes();
 
             nextFrameRecalc = true;
+        }
+
+        public void OnUseLinearSolverChange()
+        {
+            bool ori = solution.userPreference.useLinearSolver;
+            bool res = !ori;
+            solution.userPreference.useLinearSolver = res;
+
+            // 将当前选择的算法持久化进 config，供之后所有新打开的窗口（含重启游戏后）作为默认算法
+            DSPCalculatorPlugin.DefaultLinearSolver.Value = res;
+            DSPCalculatorPlugin.DefaultLinearSolver.ConfigFile.Save();
+
+            // 玩家主动切换算法视为一次全新的尝试：复位失败弹窗抑制标志，
+            // 否则第一次 LP 失败弹窗后，切走再切回 LP 会永久静音失败（用户以为 LP 成功了）。
+            solution.ResetLpFailPopup();
+
+            RefreshLpSolverToggle();
+
+            nextFrameRecalc = true; // 切换算法后立即重新计算
         }
 
         public void OnSideInfoPageChange(int page)

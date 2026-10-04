@@ -32,6 +32,7 @@ namespace DSPCalculator.Logic
         public Dictionary<int, int> finishedRecipes; // 用来记录那些已完成的配方。只有在修改目标产物或者速度的时候才会重置，更改增产剂等重新计算时均不会重置
         public bool roundUpAssemgblerNum; // 生产设施数量显示是否向上取整
         public bool solveProliferators; // 是否将增产剂作为生产线一并需要产出的物品，默认为否，即外部输入增产剂成品
+        public bool useLinearSolver; // 是否使用线性规划算法替代有向图 DFS 算法。新窗口的默认值由 config 项 DefaultLinearSolver 决定（会随游戏中切换开关自动更新）
 
         public int bpRowCount;
         public int bpResourceCoater;
@@ -62,6 +63,7 @@ namespace DSPCalculator.Logic
             customizeAccMilli = false;
             roundUpAssemgblerNum = DSPCalculatorPlugin.RoundUpAssemblerNum.Value;
             solveProliferators = false;
+            useLinearSolver = true; // 默认启用线性规划算法
             showMixBeltInfo = false;
             incMilliOverride = 0.25;
             accMilliOverride = 1;
@@ -101,6 +103,7 @@ namespace DSPCalculator.Logic
             copied.customizeIncMilli = customizeIncMilli;
             copied.customizeAccMilli = customizeAccMilli;
             copied.solveProliferators = solveProliferators;
+            copied.useLinearSolver = useLinearSolver;
             copied.showMixBeltInfo= showMixBeltInfo;
             copied.incMilliOverride = incMilliOverride;
             copied.accMilliOverride = accMilliOverride;
@@ -136,6 +139,7 @@ namespace DSPCalculator.Logic
             copied.customizeIncMilli = customizeIncMilli;
             copied.customizeAccMilli = customizeAccMilli;
             copied.solveProliferators = solveProliferators;
+            copied.useLinearSolver = useLinearSolver;
             copied.showMixBeltInfo = showMixBeltInfo;
             copied.incMilliOverride = incMilliOverride;
             copied.accMilliOverride = accMilliOverride;
@@ -271,6 +275,7 @@ namespace DSPCalculator.Logic
             w.Write(bpSorterTechLimit);
             w.Write(bpStackSetting);
             w.Write(bpConnectBlackboxCoater);
+            w.Write(useLinearSolver);
         }
         public void Import(BinaryReader r)
         {
@@ -331,6 +336,8 @@ namespace DSPCalculator.Logic
             bpSorterTechLimit = r.ReadByte() > 0;
             bpStackSetting = r.ReadInt32();
             bpConnectBlackboxCoater = r.ReadByte() > 0;
+            // 版本兼容：旧存档可能没有此字段
+            try { useLinearSolver = r.ReadByte() > 0; } catch (EndOfStreamException) { useLinearSolver = false; }
         }
     }
 
