@@ -78,7 +78,7 @@ namespace DSPCalculator
 
             OnlyCountUnfinishedFacilities = Config.Bind<bool>("config", "OnlyCountUnfinishedFacilities", false, "如果设置为true，一旦你将某个物品产出勾选为已完成，其需求的生产设施将不再被计入右侧面板的生产设施需求总数。If set to true, once you check an item as finished, its required production facilities will no longer be included in the total production facility demand on the right panel.");
             DefaultNewWindowData = Config.Bind<string>("config", "DefaultNewWindowData", "", "不要编辑此项内容，除非你知道你在做什么。Never Edit this unless you know what you are doing.");
-            DefaultLinearSolver = Config.Bind<bool>("config", "DefaultLinearSolver", true, "新打开的计算器窗口默认使用的求解算法。true为线性规划算法，false为有向图算法。每次在游戏中切换算法开关时会自动更新此项。The default solver algorithm for newly opened calculator windows. true for Linear Programming, false for Directed Graph. Automatically updated in game whenever you toggle the solver switch.");
+            DefaultLinearSolver = Config.Bind<bool>("config", "DefaultLinearSolver", true, "新打开的计算器窗口默认使用的求解算法。true为线性规划算法，false为有向图算法。The default solver algorithm for newly opened calculator windows. true for Linear Programming, false for Directed Graph. ");
 
             Harmony.CreateAndPatchAll(typeof(DSPCalculatorPlugin));
             Harmony.CreateAndPatchAll(typeof(RecipePickerPatcher));

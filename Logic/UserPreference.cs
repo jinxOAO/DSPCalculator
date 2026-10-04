@@ -108,6 +108,8 @@ namespace DSPCalculator.Logic
             copied.incMilliOverride = incMilliOverride;
             copied.accMilliOverride = accMilliOverride;
             copied.globalAssemblerIdByType = globalAssemblerIdByType;
+            copied.globalUseIA = globalUseIA; // 必须拷贝：否则子树（如增产剂产线 ShallowCopy）丢失星际组装厂设定，导致 useIA 判定回退、isInc 随全局开关波动
+            copied.globalIAType = globalIAType;
             return copied;
         }
 
@@ -148,6 +150,8 @@ namespace DSPCalculator.Logic
             {
                 copied.globalAssemblerIdByType[globalAssemblerId.Key] = globalAssemblerId.Value;
             }
+            copied.globalUseIA = globalUseIA; // 同 ShallowCopy：必须拷贝星际组装厂设定，否则子树 useIA 判定回退
+            copied.globalIAType = globalIAType;
             return copied;
         }
 

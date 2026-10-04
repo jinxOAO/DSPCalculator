@@ -916,21 +916,6 @@ namespace DSPCalculator.Logic
                         proliferatorCountSelfSprayed[itemId] = proliferatorCount[itemId];
                 }
             }
-
-            // [临时诊断] DFS 侧增产剂统计量 —— 排查完毕与 LP 诊断日志一起删除
-            if (LPProductionCalculator.lpDiag)
-            {
-                foreach (var kv in proliferatorCount)
-                {
-                    int pid = kv.Key;
-                    double self = proliferatorCountSelfSprayed.ContainsKey(pid) ? proliferatorCountSelfSprayed[pid] : 0;
-                    int hp = LDB.items.Select(pid) != null ? LDB.items.Select(pid).HpMax : 0;
-                    int ab = CalcDB.proliferatorAbilitiesMap.ContainsKey(pid) ? CalcDB.proliferatorAbilitiesMap[pid] : 0;
-                    int prolif = (int)(hp * (1.0 + Utils.GetIncMilli(ab, userPreference)));
-                    Utils.logger.LogInfo($"[LPDIAG] DFS CalcProliferator: 增产剂[{LDB.items.Select(pid)?.name ?? pid.ToString()}] 原始喷涂需求 D={kv.Value:0.####}/s, " +
-                        $"折减后 selfSprayed={self:0.####}/s (HpMax={hp} ability={ab} proliferatedCount={prolif} 折减系数={(prolif - 1 > 0 ? (double)hp / (prolif - 1) : 1):0.####})");
-                }
-            }
         }
 
 
@@ -1078,20 +1063,6 @@ namespace DSPCalculator.Logic
             }
 
             // 到此，解没问题
-            // [临时诊断] DFS 增产剂方程组全过程 —— 排查后删除
-            if (LPProductionCalculator.lpDiag)
-            {
-                var sbDfs = new System.Text.StringBuilder();
-                sbDfs.AppendLine("[LPDIAG] ===== DFS 增产剂并入产线方程组 =====");
-                for (int i = 0; i < 3; i++)
-                    sbDfs.AppendLine($"[LPDIAG] DFS consumeRatio[{CalcDB.proliferatorItemIds[i]}行] = {consumeRatio[i,0]:0.######}, {consumeRatio[i,1]:0.######}, {consumeRatio[i,2]:0.######}");
-                for (int i = 0; i < 3; i++)
-                    sbDfs.AppendLine($"[LPDIAG] DFS 方程{i}: 系数[{coefficients[i,0]:0.######}, {coefficients[i,1]:0.######}, {coefficients[i,2]:0.######}] 常数={constants[i]:0.####}");
-                sbDfs.Append("[LPDIAG] DFS 方程解 result:");
-                for (int i = 0; i < result.Count; i++)
-                    sbDfs.Append($" 增产剂[{LDB.items.Select(CalcDB.proliferatorItemIds[i])?.name ?? "?"}]={result[i]:0.####}/s,");
-                Utils.logger.LogInfo(sbDfs.ToString());
-            }
             for (int i = 0; i < result.Count; i++)
             {
                 if (result[i] > 0)
@@ -1101,22 +1072,6 @@ namespace DSPCalculator.Logic
                 }
             }
 
-            // [临时诊断] DFS 增产剂产线终态 —— 排查后删除
-            if (LPProductionCalculator.lpDiag)
-            {
-                var sbTerm = new System.Text.StringBuilder("[LPDIAG] DFS 增产剂节点终态:");
-                foreach (int pid in CalcDB.proliferatorItemIds)
-                {
-                    if (itemNodes.ContainsKey(pid))
-                    {
-                        var nd = itemNodes[pid];
-                        string mainR = nd.mainRecipe != null ? (CalcDB.recipeDict.ContainsKey(nd.mainRecipe.ID) ? CalcDB.recipeDict[nd.mainRecipe.ID].oriProto?.name ?? nd.mainRecipe.ID.ToString() : nd.mainRecipe.ID.ToString()) : "无";
-                        sbTerm.Append($" [{LDB.items.Select(pid)?.name ?? pid.ToString()}] need={nd.needSpeed:0.####} satisfied={nd.satisfiedSpeed:0.####} fromOre={nd.speedFromOre:0.####} main配方={mainR} count={nd.mainRecipe?.count ?? 0:0.####};");
-                    }
-                    else sbTerm.Append($" [{LDB.items.Select(pid)?.name ?? pid.ToString()}] 无节点;");
-                }
-                Utils.logger.LogInfo(sbTerm.ToString());
-            }
             // 再次执行一遍去除溢出任务
             double recalcRatio = RemoveOverflow();
             if (recalcRatio > 0)

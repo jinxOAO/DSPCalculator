@@ -49,25 +49,20 @@ namespace DSPCalculator.Logic.LP
         public bool Solve()
         {
             failReason = LPFailReason.None;
+            recipeInfoCache = null; // pref 可能已被用户修改，重建每配方判定缓存
             if (!BuildModel())
             {
                 failReason = LPFailReason.NoModel; // 需求全为原矿等无需建模的情况，不算求解出错
-                if (lpDiag) LpDiagEvent("BuildModel=false (NoModel：需求全为原矿/无可收集配方/无目标)");
                 return false;
             }
 
-            if (lpDiag)
-                LpDiagEvent($"BuildModel OK: 配方变量={candidateRecipeIds.Count} 约束物品={constrainedItemIds.Count}");
-
             LPModel model = ConstructLPModel();
-            if (lpDiag) LpDiagDumpModel(model, "model built");
             LPResult result = LPSimplex.Solve(model);
 
             if (!result.feasible)
             {
                 failReason = LPFailReason.Infeasible;
                 Debug.LogWarning("LP求解：无可行解，可能配方设定存在矛盾");
-                if (lpDiag) LpDiagDumpModel(model, "INFEASIBLE 失败现场");
                 LogInfeasibleDiagnostics(result);
                 return false;
             }
@@ -75,35 +70,10 @@ namespace DSPCalculator.Logic.LP
             {
                 failReason = LPFailReason.Unbounded;
                 Debug.LogWarning("LP求解：目标函数无界");
-                if (lpDiag) LpDiagDumpModel(model, "UNBOUNDED 失败现场");
                 return false;
             }
 
             PopulateSolutionTree(result);
-            if (lpDiag)
-            {
-                var sbX = new System.Text.StringBuilder("[LPDIAG] LP 成功, 使用中的配方 xR: ");
-                for (int r = 0; r < candidateRecipeIds.Count; r++)
-                {
-                    if (result.solution != null && r < result.solution.Length && result.solution[r] > 1e-8)
-                        sbX.Append($"{LpDiagRecipeName(CalcDB.recipeDict[candidateRecipeIds[r]])}={result.solution[r]:0.####}, ");
-                }
-                LpDiagEvent(sbX.ToString());
-
-                // 增产剂节点终态（与 DFS 侧同格式，便于对数）
-                var sbTerm = new System.Text.StringBuilder("[LPDIAG] LP 增产剂节点终态:");
-                foreach (int pid in CalcDB.proliferatorItemIds)
-                {
-                    if (solutionTree.itemNodes.ContainsKey(pid))
-                    {
-                        var nd = solutionTree.itemNodes[pid];
-                        string mainR = nd.mainRecipe != null && nd.mainRecipe.recipeNorm != null ? LpDiagRecipeName(nd.mainRecipe.recipeNorm) : "无";
-                        sbTerm.Append($" [{LpDiagItemName(pid)}] need={nd.needSpeed:0.####} satisfied={nd.satisfiedSpeed:0.####} fromOre={nd.speedFromOre:0.####} main配方={mainR} count={nd.mainRecipe?.count ?? 0:0.####};");
-                    }
-                    else sbTerm.Append($" [{LpDiagItemName(pid)}] 无节点;");
-                }
-                LpDiagEvent(sbTerm.ToString());
-            }
             return true;
         }
 
@@ -294,9 +264,8 @@ namespace DSPCalculator.Logic.LP
             double diracBonus = GetDiracBonus(recipe);
             double proliferatorBonus = GetProliferatorBonus(recipe);
             
-            // 增产剂自喷涂特例（对齐 DFS CalcProliferator）：该配方若是增产剂生产线且用户未另行设置喷涂，
-            // 其产出按"喷涂增产后每轮 gross 个"计（不叠加 bonusFactor/dirac 等其他加成，与 DFS 折减公式一致）
-            bool selfSpray = GetSelfSprayModel(recipe, out int selfSprayProlif, out int selfSprayGross);
+            // 注意：增产剂配方自喷涂增产的是"每剂耐久"而非"每轮产出个数"，产出速率此处不特化
+            // （自喷涂的影响体现在约束行的喷涂消耗分母与增产剂线的自耗项，见 ConstructLPModel）
             
             // 产出速率 = productCounts[j] / time * bonusFactor * (1 + dirac + proliferator)
             for (int j = 0; j < recipe.products.Length; j++)
@@ -304,11 +273,7 @@ namespace DSPCalculator.Logic.LP
                 if (recipe.productCounts[j] > 0)
                 {
                     int itemId = recipe.products[j];
-                    double rate;
-                    if (selfSpray && itemId == selfSprayProlif)
-                        rate = (double)selfSprayGross / time;
-                    else
-                        rate = (double)recipe.productCounts[j] / time * bonusFactor * (1.0 + diracBonus + proliferatorBonus);
+                    double rate = (double)recipe.productCounts[j] / time * bonusFactor * (1.0 + diracBonus + proliferatorBonus);
                     if (outputRates.ContainsKey(itemId))
                         outputRates[itemId] += rate;
                     else
@@ -343,13 +308,8 @@ namespace DSPCalculator.Logic.LP
                     // bluebuff 适配: resources[0] 返还一份产量（使用 oriProto 原始产量）
                     if (pref.bluebuff && IsBluebuffEligible(recipe) && j == 0 && recipe.resources[0] == itemId)
                     {
-                        double prolifMultiplier = 1.0;
-                        if (IsIncrementMode(recipe))
-                        {
-                            int incLvl = GetEffectiveIncLevel(recipe);
-                            prolifMultiplier = 1.0 + (incLvl > 0 ? Utils.GetIncMilli(incLvl, pref) : 0);
-                        }
-                        double returnRate = rawOutput / time * prolifMultiplier;
+                        // 返还倍率走 RecipeInfo 权威判定（isInc 门控 + 特化 bonusInc + 等级越界护栏）
+                        double returnRate = rawOutput / time * GetReturnMultiplier(recipe);
                         rate = Math.Max(0, rate - returnRate);
                     }
 
@@ -365,13 +325,7 @@ namespace DSPCalculator.Logic.LP
 
                         if (returnIndex > 0 && j == returnIndex && returnIndex < recipe.resources.Length)
                         {
-                            double prolifMultiplier = 1.0;
-                            if (IsIncrementMode(recipe))
-                            {
-                                int incLvl = GetEffectiveIncLevel(recipe);
-                                prolifMultiplier = 1.0 + (incLvl > 0 ? Utils.GetIncMilli(incLvl, pref) : 0);
-                            }
-                            double returnRate = 2.0 * rawOutput / time * prolifMultiplier;
+                            double returnRate = 2.0 * rawOutput / time * GetReturnMultiplier(recipe);
                             rate = Math.Max(0, rate - returnRate);
                         }
                     }
@@ -391,49 +345,61 @@ namespace DSPCalculator.Logic.LP
 
         private double GetBonusFactor(NormalizedRecipe recipe)
         {
-            if (CompatManager.GB && recipe.ID == CalcDB.dfSmelterId && !ShouldUseIA(recipe))
-                return 2.0;
-            // 实际应该查 assemblerItemId == dfSmelterId... 
-            // 但由于 LP 阶段不决定具体用哪个工厂，这里检查 recipe 是否能用 2319
-            // 更精确：只有当配方 type 为 Smelt 且 GB 开启时
-            if (CompatManager.GB && recipe.type == (int)ERecipeType.Smelt && !ShouldUseIA(recipe))
-            {
-                int assemblerId = GetPreferredAssemblerItemId(recipe);
-                if (assemblerId == CalcDB.dfSmelterId)
-                    return 2.0;
-            }
-            return 1.0;
+            // 克隆 RecipeInfo.bonusFactor（DFS 权威）：按实际选取设施 assemblerItemId 判定黑雾冶炼台双倍，
+            // 含 GB 开关与 !useIA 护栏；旧版用 "Smelt 类型 + 首选设施" 近似且拿 recipe.ID 比较设施 id，
+            // 与 DFS 的逐配方 config/global 设施优先级判定存在漂移，统一改走 probe
+            return GetProbe(recipe).bonusFactor;
         }
 
         private double GetDiracBonus(NormalizedRecipe recipe)
         {
-            if (pref.dirac && recipe.type == (int)ERecipeType.Particle
-                && recipe.products.Length > 0 && recipe.products[0] == 1122)
-                return 0.5;
-            return 0.0;
+            // 克隆 RecipeInfo.CalcOutputDiracInc（DFS 权威）：粒子工厂首产物 1122 且有副产物
+            // （products.Length > 1）才 +50%，旧近似漏了副产物条件会错增单一产物配方
+            return GetProbe(recipe).CalcOutputDiracInc(recipe.products.Length > 0 ? recipe.products[0] : 0);
         }
 
         private double GetProliferatorBonus(NormalizedRecipe recipe)
         {
-            // MMS 特化加成
-            if (CompatManager.MMS && ShouldUseIA(recipe))
-            {
-                int specType = pref.globalIAType;
-                int specLevel = GetSpecLevelForLP(recipe, specType);
-                if (specLevel > 0)
-                {
-                    if (specType == 3) return 0.25;
-                    else if (specType == 4 || specType == 5) return 0.25 * specLevel;
-                }
-            }
+            // 完全对齐 RecipeInfo 产出侧语义（DFS L316-319）：
+            // 特化加成 bonusInc（spec3/4/5，按逐配方 IASpecializationType 组合判定，非增产模式也叠加）
+            // + 增产剂加成 milli（仅当 isInc 且 incLevel 在增幅表范围内；spec2 强制 incLevel=4 的
+            // "化工特化免费增产"与 IA 无特化锁 0 均由 RecipeInfo getter 天然给出）。
+            RecipeInfo ri = GetProbe(recipe);
+            double bonus = ri.bonusInc;
+            if (ri.isInc && ri.incLevel >= 0 && ri.incLevel < Cargo.incTableMilli.Length)
+                bonus += Utils.GetIncMilli(ri.incLevel, pref);
+            return bonus;
+        }
 
-            // 增产剂加成
-            int incLevel = GetEffectiveIncLevel(recipe);
-            if (incLevel > 0 && recipe.productive)
+        /// <summary>
+        /// 蓝 buff / 能量迸发的返还倍率，对齐 RecipeInfo 返还侧语义（DFS L363-366）：
+        /// 增产模式且等级在表范围内时 ×(1 + milli + bonusInc)，否则按原始产量不乘。
+        /// </summary>
+        private double GetReturnMultiplier(NormalizedRecipe recipe)
+        {
+            RecipeInfo ri = GetProbe(recipe);
+            if (ri.isInc && ri.incLevel >= 0 && ri.incLevel < Cargo.incTableMilli.Length)
+                return 1.0 + Utils.GetIncMilli(ri.incLevel, pref) + ri.bonusInc;
+            return 1.0;
+        }
+
+        /// <summary>
+        /// 每配方 RecipeInfo 复用缓存（同一次求解内 pref 不变），让 LP 的产出/返还/特化判定
+        /// 与 DFS 走同一份权威 getter，避免第二套实现产生偏差。Solve 开始时清空。
+        /// </summary>
+        private Dictionary<int, RecipeInfo> recipeInfoCache;
+
+        private RecipeInfo GetProbe(NormalizedRecipe recipe)
+        {
+            if (recipeInfoCache == null)
+                recipeInfoCache = new Dictionary<int, RecipeInfo>();
+            if (!recipeInfoCache.TryGetValue(recipe.ID, out RecipeInfo ri))
             {
-                return Utils.GetIncMilli(incLevel, pref);
+                ri = new RecipeInfo(recipe, pref);
+                ri.count = 1.0; // 消耗系数按单位执行计算（GetProliferatorUsed 是 count 的线性函数）
+                recipeInfoCache[recipe.ID] = ri;
             }
-            return 0.0;
+            return ri;
         }
 
         /// <summary>
@@ -448,8 +414,7 @@ namespace DSPCalculator.Logic.LP
             if (!pref.solveProliferators)
                 return;
             // count=1 时 GetProliferatorUsed 返回的量即为每单位执行的消耗系数（该式为 count 的线性函数）
-            RecipeInfo probe = new RecipeInfo(recipe, pref);
-            probe.count = 1.0;
+            RecipeInfo probe = GetProbe(recipe);
             probe.GetProliferatorUsed(out prolifId, out perUnitRate);
             if (prolifId <= 0 || perUnitRate <= 1e-12)
             {
@@ -459,17 +424,21 @@ namespace DSPCalculator.Logic.LP
         }
 
         /// <summary>
-        /// 增产剂自喷涂建模（与 DFS CalcProliferator 的折减公式采用相同的公式与触发条件）：
-        /// 并入产线时，增产剂生产线总是被视为用它自己喷涂（与用户的配方设置无关）：
-        /// 每轮产出 = (int)(HpMax × (1 + 自身 ability 增幅))，其中喷涂自身产品消耗 1 剂增产剂，
-        /// 净外卖 = 每轮产出 − 1。仅当满足 DFS 触发条件（每轮产出 − 1 > HpMax）时生效。
-        /// 若用户已显式给该增产剂配方设置了喷涂（GetProliferatorUsage 已有消耗项），通用建模
-        /// 已包含加成与消耗，本特例不再叠加，避免重复计数。
+        /// 增产剂自喷涂建模（对齐 DFS CalcProliferator 的折减公式）：
+        /// 自喷涂规则：只有被用作"喷漆剂"（喷涂产线原材料）的那部分增产剂，才会在下线时先用自己
+        /// 喷一遍获得耐久增产（HpMax → gross = (int)(HpMax × (1 + 自身ability增幅))，如三级 60→75）；
+        /// 被当作原材料去合成更高阶增产剂、或作为目标产出的部分【不】自喷涂，直接按下游产线原料需求计。
+        /// 对喷涂消耗的影响（与 DFS 折减代数等价）：喷涂任务 T 件/秒时，
+        /// 喷漆剂生产量 = T/gross 剂（增产后每剂喷 gross 件）+ 其自身被喷的补充 T/(gross×(gross−1))...
+        /// 收敛为 T×HpMax/(gross−1) 相对未增产基准 T×1/HpMax 的折减，即系数乘 HpMax/(gross−1)
+        /// （三级 ×60/74、二级 ×24/27；一级 12→13 无净增不折减）。
+        /// 触发条件与 DFS 一致：gross − 1 > HpMax；数值全部取自游戏数据，不写死。
         /// </summary>
-        private bool GetSelfSprayModel(NormalizedRecipe recipe, out int prolifItemId, out int grossPerRun)
+        private bool GetSelfSprayDurability(NormalizedRecipe recipe, out int prolifItemId, out double baseDurability, out double grossDurability)
         {
             prolifItemId = 0;
-            grossPerRun = 0;
+            baseDurability = 0;
+            grossDurability = 0;
             if (!pref.solveProliferators)
                 return false;
             for (int j = 0; j < recipe.products.Length; j++)
@@ -477,10 +446,6 @@ namespace DSPCalculator.Logic.LP
                 int pid = recipe.products[j];
                 if (!CalcDB.proliferatorAbilitiesMap.ContainsKey(pid))
                     continue;
-                // 用户已设置该增产剂配方喷涂时不叠加
-                GetProliferatorUsage(recipe, out int uId, out double uRate);
-                if (uId > 0 && uRate > 0.0)
-                    return false;
                 ItemProto proto = LDB.items.Select(pid);
                 if (proto == null)
                     return false;
@@ -490,7 +455,8 @@ namespace DSPCalculator.Logic.LP
                 if (gross - 1 > oriCount) // 与 DFS 折减公式一致的不等式条件
                 {
                     prolifItemId = pid;
-                    grossPerRun = gross;
+                    baseDurability = oriCount;
+                    grossDurability = gross;
                     return true;
                 }
                 return false;
@@ -498,26 +464,46 @@ namespace DSPCalculator.Logic.LP
             return false;
         }
 
-        private bool ShouldUseIA(NormalizedRecipe recipe)
+        /// <summary>
+        /// 缓存：并入产线场景下，哪些增产剂被自喷涂增产（prolifId → [基础耐久 HpMax, 增产后耐久 gross]）。
+        /// 用于把"其他产线消耗该增产剂"的分母从 HpMax 换算为 gross。
+        /// </summary>
+        private Dictionary<int, double[]> selfSprayDurabilityCache;
+
+        private void EnsureSelfSprayDurabilityCache()
         {
-            if (!CompatManager.MMS) return false;
-            // 简化判定：如果全局使用 IA 且没有强制非 IA 设施
-            if (pref.globalUseIA)
+            if (selfSprayDurabilityCache != null)
+                return;
+            selfSprayDurabilityCache = new Dictionary<int, double[]>();
+            if (!pref.solveProliferators)
+                return;
+            for (int r = 0; r < candidateRecipeIds.Count; r++)
             {
-                if (pref.recipeConfigs.ContainsKey(recipe.ID))
-                {
-                    var config = pref.recipeConfigs[recipe.ID];
-                    if (config.forceUseIA) return true;
-                    if (config.assemblerItemId > 0) return false;
-                }
+                NormalizedRecipe recipe = CalcDB.recipeDict[candidateRecipeIds[r]];
+                if (GetSelfSprayDurability(recipe, out int pid, out double baseDur, out double grossDur))
+                    selfSprayDurabilityCache[pid] = new double[] { baseDur, grossDur };
+            }
+        }
+
+        private bool GetProlifSelfSprayDurability(int prolifId, out double baseDurability, out double grossDurability)
+        {
+            EnsureSelfSprayDurabilityCache();
+            baseDurability = 0;
+            grossDurability = 0;
+            if (selfSprayDurabilityCache.ContainsKey(prolifId))
+            {
+                baseDurability = selfSprayDurabilityCache[prolifId][0];
+                grossDurability = selfSprayDurabilityCache[prolifId][1];
                 return true;
             }
-            if (pref.recipeConfigs.ContainsKey(recipe.ID))
-            {
-                var config = pref.recipeConfigs[recipe.ID];
-                if (config.forceUseIA && config.IAType >= 0) return true;
-            }
             return false;
+        }
+
+        private bool ShouldUseIA(NormalizedRecipe recipe)
+        {
+            // 克隆 RecipeInfo.useIA（= IASpecializationType >= 0），与 DFS 的逐配方组合判定一致：
+            // 含配方专属 forceUseIA/IAType/assemblerItemId 与 globalUseIA/globalIAType 的优先级关系
+            return CompatManager.MMS && GetProbe(recipe).useIA;
         }
 
         private bool IsBluebuffEligible(NormalizedRecipe recipe)
@@ -530,79 +516,6 @@ namespace DSPCalculator.Logic.LP
             int mainProduct = recipe.products[0];
             if (mainProduct == 1803 || mainProduct == 6006) return false;
             return true;
-        }
-
-        private bool IsEnergyBurstEligible(NormalizedRecipe recipe, int rocketId)
-        {
-            if (rocketId >= 9488 && rocketId <= 9492) return true;
-            if (rocketId == 9510 || rocketId == 1503) return true;
-            if (CompatManager.GB && rocketId == 1503) return true;
-            return false;
-        }
-
-        /// <summary>
-        /// 判断配方是否处于"增产模式"（而非加速模式）
-        /// </summary>
-        private bool IsIncrementMode(NormalizedRecipe recipe)
-        {
-            if (!recipe.productive) return false;
-            if (pref.recipeConfigs.ContainsKey(recipe.ID) && pref.recipeConfigs[recipe.ID].forceIncMode >= 0)
-                return pref.recipeConfigs[recipe.ID].forceIncMode == 1;
-            return pref.globalIsInc;
-        }
-
-        private int GetSpecLevelForLP(NormalizedRecipe recipe, int specType)
-        {
-            if (!CompatManager.MMS || specType <= 0) return 0;
-            switch (specType)
-            {
-                case 1: if (recipe.type == (int)ERecipeType.Smelt) return 1; break;
-                case 2: if (recipe.type == (int)ERecipeType.Chemical || recipe.type == (int)ERecipeType.Refine || recipe.type == 16) return 1; break;
-                case 3:
-                    if (ContainsItem(recipe, 1121) || ContainsItem(recipe, 1122)) return 1;
-                    break;
-                case 4:
-                    if (ProductContains(recipe, 1303) || ProductContains(recipe, 1305) || ProductContains(recipe, 9486)) return 2;
-                    if (ResourceContains(recipe, 1303) || ResourceContains(recipe, 1305) || ResourceContains(recipe, 9486)) return 1;
-                    break;
-                case 5: return 4; // 简化，需要 itemProto.isAmmo 检查
-            }
-            return 0;
-        }
-
-        private int GetEffectiveIncLevel(NormalizedRecipe recipe)
-        {
-            if (pref.recipeConfigs.ContainsKey(recipe.ID) && pref.recipeConfigs[recipe.ID].incLevel >= 0)
-                return pref.recipeConfigs[recipe.ID].incLevel;
-            return pref.globalIncLevel;
-        }
-
-        private int GetPreferredAssemblerItemId(NormalizedRecipe recipe)
-        {
-            if (pref.recipeConfigs.ContainsKey(recipe.ID) && pref.recipeConfigs[recipe.ID].assemblerItemId > 0)
-                return pref.recipeConfigs[recipe.ID].assemblerItemId;
-            if (pref.globalAssemblerIdByType.ContainsKey(recipe.type) && pref.globalAssemblerIdByType[recipe.type] > 0)
-                return pref.globalAssemblerIdByType[recipe.type];
-            if (CalcDB.assemblerListByType.ContainsKey(recipe.type) && CalcDB.assemblerListByType[recipe.type].Count > 0)
-                return CalcDB.assemblerListByType[recipe.type][0].ID;
-            return -1;
-        }
-
-        private bool ContainsItem(NormalizedRecipe r, int itemId)
-        {
-            foreach (int p in r.products) if (p == itemId) return true;
-            foreach (int res in r.resources) if (res == itemId) return true;
-            return false;
-        }
-        private bool ProductContains(NormalizedRecipe r, int itemId)
-        {
-            foreach (int p in r.products) if (p == itemId) return true;
-            return false;
-        }
-        private bool ResourceContains(NormalizedRecipe r, int itemId)
-        {
-            foreach (int res in r.resources) if (res == itemId) return true;
-            return false;
         }
 
         #endregion
@@ -664,6 +577,9 @@ namespace DSPCalculator.Logic.LP
             // 增产剂并线：为每个消耗增产剂的配方，在其对应增产剂约束行上追加负向消耗系数。
             // 这样 Σ(增产剂净产出) - Σ(各配方消耗) - surplus >= 0，LP 会自动生产足量增产剂，
             // 并将增产剂生产节点回填到 itemNodes，使 UI 与 Bp（含黑盒 coater 串联）无需改动即可工作。
+            // 喷涂消耗系数按自喷涂折减（对齐 DFS 折减公式，见 GetSelfSprayDurability）：
+            // 被当喷漆剂使用的增产剂会自喷获得耐久增产，生产量 = coef × HpMax/(gross−1)；
+            // 被当作配方原料或目标产出的部分走各自的资源行/需求，天然不经过本折减（与 DFS 一致）。
             if (pref.solveProliferators)
             {
                 for (int r = 0; r < candidateRecipeIds.Count; r++)
@@ -673,14 +589,9 @@ namespace DSPCalculator.Logic.LP
                     if (prolifId > 0 && perUnitRate > 0.0 && itemConstraintIdx.ContainsKey(prolifId))
                     {
                         int prow = itemConstraintIdx[prolifId];
+                        if (GetProlifSelfSprayDurability(prolifId, out double bDur, out double gDur) && gDur - bDur > 1.0)
+                            perUnitRate *= bDur / (gDur - 1.0); // = ÷gross 再补自喷损耗，等价 DFS ×HpMax/(gross−1)
                         model.AddConstraintCoeff(prow, r, -perUnitRate);
-                    }
-                    // 增产剂自喷涂：产线每轮额外消耗 1 剂喷涂自身产品（产出侧已在 GetEffectiveRates
-                    // 按增产后 gross 计，此处扣 1 后净外卖 = gross − 1，与 DFS 折减公式等价）
-                    else if (GetSelfSprayModel(recipe, out int spId, out _) && itemConstraintIdx.ContainsKey(spId))
-                    {
-                        double tt = recipe.time < 0.001 ? 0.001 : recipe.time;
-                        model.AddConstraintCoeff(itemConstraintIdx[spId], r, -1.0 / tt);
                     }
                 }
             }
@@ -776,15 +687,11 @@ namespace DSPCalculator.Logic.LP
                     GetProliferatorUsage(recipe, out int prolifId, out double perUnitRate);
                     if (prolifId > 0 && perUnitRate > 0.0)
                     {
+                        // 与约束矩阵一致：喷漆剂用量的自喷涂折减 ×HpMax/(gross−1)
+                        if (GetProlifSelfSprayDurability(prolifId, out double bDur, out double gDur) && gDur - bDur > 1.0)
+                            perUnitRate *= bDur / (gDur - 1.0);
                         ItemNode pNode = GetOrCreateItemNode(prolifId);
                         pNode.needSpeed += perUnitRate * xR;
-                    }
-                    else if (GetSelfSprayModel(recipe, out int spId, out _))
-                    {
-                        // 自喷涂消耗：与约束矩阵中 −1/time 同项，保证增产剂节点产需平衡
-                        double tt = recipe.time < 0.001 ? 0.001 : recipe.time;
-                        ItemNode pNode = GetOrCreateItemNode(spId);
-                        pNode.needSpeed += xR / tt;
                     }
                 }
             }
@@ -991,136 +898,6 @@ namespace DSPCalculator.Logic.LP
             }
             return true;
         }
-
-        #region [临时诊断] LP 求解全量日志 —— 问题排查完毕后整区删除
-        public static bool lpDiag = true; // [临时诊断] 删除时连同所有 lpDiag 判断与本区域一起移除
-
-        private void LpDiagEvent(string msg)
-        {
-            Utils.logger.LogInfo("[LPDIAG] " + msg);
-        }
-
-        /// <summary>
-        /// 全模型快照：目标与偏好、强制配方及是否入模、每个配方变量的成本/有效净速率/返还削减明细、
-        /// 每条约束行的需求与全部非零系数。失败现场与建模完成后各打一份。
-        /// </summary>
-        private void LpDiagDumpModel(LPModel model, string stage)
-        {
-            if (!lpDiag) return;
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine("[LPDIAG] ========== " + stage + " ==========");
-
-            sb.Append("[LPDIAG] targets:");
-            for (int i = 0; i < solutionTree.targets.Count; i++)
-            {
-                var t = solutionTree.targets[i];
-                if (t.itemId > 0)
-                    sb.Append($" {LpDiagItemName(t.itemId)}({t.itemId})@{t.speed:0.####}/s;");
-            }
-            sb.AppendLine();
-
-            int forcedCount = 0;
-            foreach (var ic in pref.itemConfigs.Values)
-                if (ic.recipeID > 0) forcedCount++;
-            sb.AppendLine($"[LPDIAG] prefs: bluebuff={pref.bluebuff} energyBurst={pref.energyBurst} dirac={pref.dirac} inferior={pref.inferior} " +
-                $"solveProlif={pref.solveProliferators} globalUseIA={pref.globalUseIA} globalInc={pref.globalIsInc}/lvl{pref.globalIncLevel} " +
-                $"forced={forcedCount} finished={pref.finishedRecipes.Count} itemConfigs={pref.itemConfigs.Count}");
-
-            // 原矿标记（consideredAsOre / forceNotOre）
-            var oreFlags = new System.Text.StringBuilder();
-            foreach (var ic in pref.itemConfigs.Values)
-            {
-                if (ic.consideredAsOre) oreFlags.Append($" [视为原矿]{LpDiagItemName(ic.ID)}({ic.ID})");
-                if (ic.forceNotOre) oreFlags.Append($" [强制非原矿]{LpDiagItemName(ic.ID)}({ic.ID})");
-            }
-            if (oreFlags.Length > 0) sb.AppendLine("[LPDIAG] oreFlags:" + oreFlags);
-
-            // 强制配方是否在模型里（排查"强制配方被吞"最直接的证据）
-            foreach (var ic in pref.itemConfigs.Values)
-            {
-                if (ic.recipeID > 0)
-                {
-                    bool inModel = recipeVarIdx.ContainsKey(ic.recipeID);
-                    string rname = CalcDB.recipeDict.ContainsKey(ic.recipeID) ? LpDiagRecipeName(CalcDB.recipeDict[ic.recipeID]) : ("配方" + ic.recipeID);
-                    string producerItem = "";
-                    if (CalcDB.recipeDict.ContainsKey(ic.recipeID))
-                    {
-                        var nr = CalcDB.recipeDict[ic.recipeID];
-                        producerItem = " 产物:[" + string.Join(",", SysLpDiagProducts(nr)) + "]";
-                    }
-                    sb.AppendLine($"[LPDIAG] 强制: 物品 {LpDiagItemName(ic.ID)}({ic.ID}) -> {rname} [{(inModel ? "已入模" : "未入模!!")}]{producerItem}" +
-                        $" 该物品IsRawOre={IsRawOre(ic.ID)}");
-                }
-            }
-
-            sb.AppendLine($"[LPDIAG] model: vars={model.numVars}(recipe {candidateRecipeIds.Count} + surplus {constrainedItemIds.Count}) rows={model.numConstraints}");
-
-            // ===== 配方变量 =====
-            for (int r = 0; r < candidateRecipeIds.Count; r++)
-            {
-                NormalizedRecipe recipe = CalcDB.recipeDict[candidateRecipeIds[r]];
-                GetEffectiveRates(recipe, out var outputs, out var inputs);
-
-                var rates = new System.Text.StringBuilder();
-                foreach (var o in outputs) rates.Append($" +{LpDiagItemName(o.Key)}:{o.Value:0.####}");
-                foreach (var q in inputs) rates.Append($" -{LpDiagItemName(q.Key)}:{q.Value:0.####}");
-
-                // 返还削减明细：原始消耗 vs 有效消耗（蓝buff/能量迸发的作用直观呈现）
-                var reduced = new System.Text.StringBuilder();
-                double tt = recipe.time < 0.001 ? 0.001 : recipe.time;
-                for (int j = 0; j < recipe.resources.Length; j++)
-                {
-                    if (recipe.resourceCounts[j] <= 0) continue;
-                    double raw = recipe.resourceCounts[j] / tt;
-                    double eff = inputs.ContainsKey(recipe.resources[j]) ? inputs[recipe.resources[j]] : 0.0;
-                    if (raw - eff > 1e-9)
-                        reduced.Append($" [{LpDiagItemName(recipe.resources[j])} 原始{raw:0.####}->有效{eff:0.####}]");
-                }
-
-                sb.AppendLine($"[LPDIAG]  x{r} {LpDiagRecipeName(recipe)}(id{recipe.ID}) cost={model.objective[r]:0.####} time={recipe.time:0.###}" +
-                    $" 净速率:{rates}{(reduced.Length > 0 ? " 返还:" + reduced : "")}" +
-                    $" 工厂={(ShouldUseIA(recipe) ? "IA" : "普通")} incMode={(IsIncrementMode(recipe) ? GetEffectiveIncLevel(recipe) : 0)}" +
-                    (GetSelfSprayModel(recipe, out int spId2, out int spGross2) ? $" 自喷涂[{LpDiagItemName(spId2)} 每轮{spGross2} 自耗1]" : ""));
-            }
-
-            // ===== 约束行 =====
-            for (int i = 0; i < constrainedItemIds.Count; i++)
-            {
-                int itemId = constrainedItemIds[i];
-                double demand = GetItemDemand(itemId);
-                var coefs = new System.Text.StringBuilder();
-                for (int r = 0; r < candidateRecipeIds.Count; r++)
-                {
-                    double v = model.A[i, r];
-                    if (System.Math.Abs(v) > 1e-12) coefs.Append($" x{r}:{v:0.####}");
-                }
-                sb.AppendLine($"[LPDIAG] row{i} {LpDiagItemName(itemId)}({itemId}) demand={demand:0.####} 系数[{coefs.ToString().Trim()}] surplusX={candidateRecipeIds.Count + i}");
-            }
-
-            Utils.logger.LogInfo(sb.ToString());
-        }
-
-        private System.Collections.Generic.IEnumerable<string> SysLpDiagProducts(NormalizedRecipe recipe)
-        {
-            for (int j = 0; j < recipe.products.Length; j++)
-            {
-                if (recipe.productCounts[j] > 0)
-                    yield return LpDiagItemName(recipe.products[j]) + "*" + recipe.productCounts[j];
-            }
-        }
-
-        private static string LpDiagItemName(int itemId)
-        {
-            var p = LDB.items.Select(itemId);
-            return p != null ? p.name : ("物品" + itemId);
-        }
-
-        private static string LpDiagRecipeName(NormalizedRecipe r)
-        {
-            string n = r.oriProto != null ? r.oriProto.name : null;
-            return string.IsNullOrEmpty(n) ? ("配方" + r.ID) : n;
-        }
-        #endregion
 
         #endregion
     }

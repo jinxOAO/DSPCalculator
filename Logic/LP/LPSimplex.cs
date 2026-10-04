@@ -79,20 +79,6 @@ namespace DSPCalculator.Logic.LP
             {
                 Utils.logger.LogWarning("LP Simplex: 阶段一超出迭代上限");
             }
-            if (LPProductionCalculator.lpDiag)
-            {
-                int basicArt = 0;
-                double maxRes = 0;
-                for (int i = 0; i < m; i++)
-                {
-                    if (basis[i] >= n)
-                    {
-                        basicArt++;
-                        if (T[i + 1, cols] > maxRes) maxRes = T[i + 1, cols];
-                    }
-                }
-                Utils.logger.LogInfo($"[LPDIAG] simplex 阶段一: iter={(iter1 < 0 ? "UNBOUNDED!（阶段一正常不会无界）" : iter1.ToString())} 基中人工变量={basicArt}/{m} 最大残差={maxRes:0.######} aborted={aborted}");
-            }
 
             // 可行性判定：基中人工变量残差超过问题尺度容差 → 真无解，收集证据行
             var infeasibleRows = new List<int>();
@@ -157,10 +143,6 @@ namespace DSPCalculator.Logic.LP
             if (aborted2)
             {
                 Utils.logger.LogWarning("LP Simplex: 阶段二超出迭代上限");
-            }
-            if (LPProductionCalculator.lpDiag)
-            {
-                Utils.logger.LogInfo($"[LPDIAG] simplex 阶段二: iter={(iter2 < 0 ? "无界(返回-1)" : iter2.ToString())} aborted={aborted2}");
             }
             if (iter2 < 0)
             {
@@ -265,12 +247,6 @@ namespace DSPCalculator.Logic.LP
 
                 if (leaveRow < 0)
                 {
-                    if (LPProductionCalculator.lpDiag)
-                    {
-                        var coefs = new System.Text.StringBuilder();
-                        for (int i = 0; i < m; i++) coefs.Append($" r{i}:{T[i + 1, enterCol]:0.####}");
-                        Utils.logger.LogInfo($"[LPDIAG] simplex 无界判定: 进入列={enterCol}（该列在所有约束行系数<=0 且检验数<0）系数分布 [{coefs}]");
-                    }
                     return -1; // 无界
                 }
 
